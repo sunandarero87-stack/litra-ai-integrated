@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pembelajaran Berbasis Chatbot AI - SMP Negeri 1 Balikpapan</title>
+    <meta name="description"
+        content="Sistem Pembelajaran Berbasis Chatbot AI untuk mata pelajaran Informatika SMP Negeri 1 Balikpapan">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Login Page -->
+    <div id="page-login" class="page active">
+        <div class="login-container">
+            <div class="login-card glass-card">
+                <div class="login-header">
+                    <div class="login-logo">
+                       <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h1>Sistem Pembelajaran</h1>
+                    <h2>Berbasis Chatbot AI</h2>
+                    <p class="school-name">SMP Negeri 1 Balikpapan</p>
+                </div>
+                <form id="login-form" onsubmit="return handleLogin(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Username</label>
+                        <input type="text" id="login-username" required placeholder="Masukkan username"
+                            autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Password</label>
+                        <input type="password" id="login-password" required placeholder="Masukkan password"
+                            autocomplete="current-password">
+                    </div>
+                    <div id="login-error" class="error-msg hidden"></div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-sign-in-alt"></i> Masuk
+                    </button>
+                </form>
+                <div class="login-footer">
+                    <p>Structur Design by Sunandar Ero</p>
+                </div>
+            </div>
+            <div class="login-decoration">
+                <div class="floating-shapes">
+                    <div class="shape shape-1"></div>
+                    <div class="shape shape-2"></div>
+                    <div class="shape shape-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Page -->
+    <div id="page-change-password" class="page">
+        <div class="login-container">
+            <div class="login-card glass-card">
+                <div class="login-header">
+                    <div class="login-logo warning">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h1>Ganti Password</h1>
+                    <p class="subtitle">Anda wajib mengganti password awal sebelum melanjutkan</p>
+                </div>
+                <form id="change-password-form" onsubmit="return handleChangePassword(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Password Baru</label>
+                        <input type="password" id="new-password" required placeholder="Min. 6 karakter" minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Konfirmasi Password Baru</label>
+                        <input type="password" id="confirm-password" required placeholder="Ulangi password baru">
+                    </div>
+                    <div id="change-pwd-error" class="error-msg hidden"></div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <i class="fas fa-check"></i> Simpan Password Baru
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Shell -->
+    <div id="app-shell" class="page">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fas fa-robot"></i>
+                    <span>Litra-AI</span>
+                </div>
+                <button class="sidebar-close" onclick="toggleSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="sidebar-user">
+                <div class="sidebar-avatar" id="sidebar-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="sidebar-user-info">
+                    <span class="sidebar-username" id="sidebar-username">User</span>
+                    <span class="sidebar-role" id="sidebar-role">Role</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav" id="sidebar-nav">
+                <!-- Populated by JS based on role -->
+            </nav>
+            <div class="sidebar-bottom">
+                <button class="btn btn-outline btn-full" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i> Keluar
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-wrapper">
+            <header class="topbar">
+                <button class="hamburger" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="topbar-title" id="topbar-title">Dashboard</h1>
+                <div class="topbar-actions">
+                    <button class="topbar-profile" onclick="navigateTo('profile')">
+                        <div class="topbar-avatar" id="topbar-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </button>
+                </div>
+            </header>
+
+            <main class="main-content" id="main-content">
+                <!-- All page contents rendered here -->
+            </main>
+
+            <footer class="app-footer">
+                <p>Design by Sunandar Ero</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="chatbot.js"></script>
+    <script src="pages-student.js"></script>
+    <script src="pages-teacher.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
