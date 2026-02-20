@@ -100,7 +100,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Get or create model
         const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-pro-preview-05-06",
+            model: "gemini-1.5-flash",
             systemInstruction: SYSTEM_INSTRUCTION,
             generationConfig: {
                 temperature: 0.8,
@@ -142,7 +142,7 @@ app.post('/api/chat', async (req, res) => {
         res.json({
             success: true,
             reply: text,
-            model: "gemini-2.5-pro-preview-05-06"
+            model: "gemini-1.5-flash"
         });
 
     } catch (error) {
@@ -193,7 +193,7 @@ app.listen(PORT, () => {
         console.log('');
     } else {
         console.log('✅ Gemini API Key terkonfigurasi');
-        console.log('✅ Model: gemini-2.5-pro-preview-05-06');
+        console.log('✅ Model: gemini-1.5-flash');
         console.log('');
     }
 });
