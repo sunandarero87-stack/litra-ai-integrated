@@ -22,9 +22,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ---- Database Connection ----
-mongoose.connect(MONGODB_URI)
+const mongooseOptions = {
+    serverSelectionTimeoutMS: 5000, // Tunggu 5 detik sebelum timeout
+    socketTimeoutMS: 45000,
+};
+
+mongoose.connect(MONGODB_URI, mongooseOptions)
     .then(() => console.log('✅ Terhubung ke MongoDB'))
-    .catch(err => console.error('❌ Gagal terhubung ke MongoDB:', err));
+    .catch(err => {
+        console.error('❌ Gagal terhubung ke MongoDB:', err.message);
+        console.log('💡 Tips: Pastikan MONGODB_URI di Railway Variables sudah benar.');
+    });
 
 // ---- API Routes ----
 
