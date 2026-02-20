@@ -42,25 +42,20 @@ app.get('/api/health', (req, res) => {
 });
 
 // ---- Start Server ----
-app.listen(PORT, () => {
-    console.log('');
-    console.log('╔══════════════════════════════════════════════╗');
-    console.log('║   🤖 Litra-AI Backend Server (AI-INTEGRATED)║');
-    console.log('║   Sistem Pembelajaran Berbasis Chatbot AI    ║');
-    console.log('║   SMP Negeri 1 Balikpapan                    ║');
-    console.log('╠══════════════════════════════════════════════╣');
-    console.log(`║   🌐 http://localhost:${PORT}                    ║`);
-    console.log(`║   📡 API: http://localhost:${PORT}/api/chat      ║`);
-    console.log('╚══════════════════════════════════════════════╝');
-    console.log('');
+app.listen(PORT, '0.0.0.0', () => {
+    console.log('\n🚀 Litra-AI Backend is running!');
+    console.log(`📡 Port: ${PORT}`);
+    console.log(`🔗 URL: http://0.0.0.0:${PORT}`);
 
+    // Safety check for critical config
     if (!process.env.AI_API_KEY || process.env.AI_API_KEY === 'YOUR_API_KEY') {
-        console.log('⚠️  PERHATIAN: AI_API_KEY belum dikonfigurasi!');
-        console.log('   Edit file backend/.env dan masukkan API Key kamu.');
-        console.log('');
+        console.log('❌ FATAL: AI_API_KEY is not configured in Environment Variables!');
+    }
+
+    if (!process.env.MONGODB_URI) {
+        console.log('⚠️  WARNING: MONGODB_URI is not set, using default localhost (this will fail on Railway)');
     } else {
-        console.log('✅ AI Service terkonfigurasi');
-        console.log(`✅ Model: ${process.env.AI_MODEL}`);
-        console.log('');
+        console.log('✅ Database URI is set.');
     }
 });
+
