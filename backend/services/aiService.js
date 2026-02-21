@@ -5,40 +5,13 @@ const AI_API_KEY = process.env.AI_API_KEY;
 const AI_BASE_URL = process.env.AI_BASE_URL;
 const AI_MODEL = process.env.AI_MODEL;
 
-const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten Guru Profesional untuk mata pelajaran Informatika SMP. 
-Tugasmu membantu siswa memahami Analisis Data, kegunaannya dalam kehidupan sehari-hari, serta penggunaan Microsoft Excel (rumus dan fitur). 
-
-PRINSIP MENDIDIK:
-Kamu harus mendidik siswa dengan menggunakan "Prinsip 7 Kebiasaan Anak Indonesia Hebat":
-1. Bangun Pagi (Kedisiplinan & Manajemen Waktu)
-2. Beribadah (Spiritualitas & Moral)
-3. Berolahraga (Kesehatan Fisik & Mental)
-4. Makan Sehat dan Bergizi (Nutrisi & Konsentrasi)
-5. Gemar Belajar (Kreativitas & Wawasan)
-6. Bermasyarakat (Sosial & Empati)
-7. Tidur Cepat (Pemulihan & Fokus)
-
-Integrasikan nilai-nilai ini dalam interaksimu. Gunakan bahasa yang sopan, memotivasi, dan profesional layaknya guru yang teladan.
-Jika siswa bertanya tentang materi, jelaskan dengan sabar. Jika siswa terlihat lelah atau kurang fokus, ingatkan tentang kebiasaan sehat (seperti makan bergizi atau tidur tepat waktu).
-Jangan memberikan jawaban langsung untuk tugas, melainkan berikan bimbingan (scaffolding).`;
+const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten chatbot yang bebas menjawab semua pertanyaan siswa dengan sopan.`;
 
 /**
  * Generate AI Response with context
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory) {
     try {
-        // Validation for Stage 3 (Assessment)
-        if (stage === 3) {
-            const forbiddenKeywords = ['jawaban', 'bocoran', 'cara mengerjakan', 'apa isi', 'nomor', 'soal'];
-            const lowerQuestion = question.toLowerCase();
-
-            const isAskingForAnswer = forbiddenKeywords.some(keyword => lowerQuestion.includes(keyword));
-
-            if (isAskingForAnswer) {
-                return "Sebagai asisten guru yang profesional, saya tidak dapat memberikan jawaban langsung saat asesmen. Silakan kerjakan secara mandiri dengan jujur, sesuai dengan nilai integritas anak hebat Indonesia.";
-            }
-        }
-
         const messages = [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'system', content: `KONTEKS MATERI:\n${materialContext}` },

@@ -5,17 +5,8 @@
 
 const ChatbotEngine = {
     botName: "Litra-AI",
-    greeting: `Halo! 👋 Saya **Litra-AI**, asisten virtual Pak Nandar untuk mata pelajaran Informatika.
+    greeting: `Halo! 👋 Saya **Litra-AI**, asisten virtualmu. Silakan tanyakan apa saja, saya bebas menjawab semua pertanyaanmu dengan sopan. 😊`,
 
-Saya siap membantu kamu belajar tentang **Analisis Data** sesuai kurikulum Merdeka Fase D Kelas 7.
-
-Kamu bisa bertanya tentang:
-📊 Pengertian dan kegunaan Analisis Data
-📈 Microsoft Excel dan fitur-fiturnya
-🔢 Rumus-rumus Excel (SUM, AVERAGE, MAX, MIN, IF, dll)
-💡 Cara menggunakan Excel untuk analisis data
-
-Silakan ketik pertanyaanmu! 😊`,
 
     // Knowledge base topics
     topics: {
