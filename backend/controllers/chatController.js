@@ -11,28 +11,23 @@ exports.handleChat = async (req, res) => {
             return res.status(400).json({ error: 'Message dan username wajib diisi' });
         }
 
-        // 1. Get Student Info (or create if not exists for demo purposes)
         let student = await Student.findOne({ username });
         if (!student) {
             student = await Student.create({ username, stage: 1 });
         }
 
-        // 2. Get Active Materials
         const materials = await Material.find({ active: true });
         const materialContext = materials.map(m => m.content).join('\n\n');
 
-        // 3. Get Last 5 Chat Logs for context
         const historyLogs = await ChatLog.find({ username })
             .sort({ timestamp: -1 })
             .limit(5);
 
-        // Reverse to get chronological order
         const history = historyLogs.reverse().map(log => ({
             role: log.role,
             content: log.content
         }));
 
-        // 4. Generate AI Response
         const reply = await aiService.generateResponse(
             username,
             message,
@@ -52,5 +47,41 @@ exports.handleChat = async (req, res) => {
         res.status(500).json({
             error: 'Gagal memproses pesan: ' + error.message
         });
+    }
+};
+
+exports.handleReflections = async (req, res) => {
+    try {
+        const { username } = req.body;
+        const historyLogs = await ChatLog.find({ username }).sort({ timestamp: -1 }).limit(10);
+        const history = historyLogs.reverse().map(log => ({
+            role: log.role,
+            content: log.content
+        }));
+
+        const reflections = await aiService.generateReflections(username, history);
+        res.json({ success: true, reflections });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.handleAssessmentGeneration = async (req, res) => {
+    try {
+        const { username, reflectionAnswers } = req.body;
+        const questions = await aiService.generateAssessment(username, reflectionAnswers);
+        res.json({ success: true, questions });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.handleAnalysis = async (req, res) => {
+    try {
+        const { username, reflectionAnswers } = req.body;
+        const analysis = await aiService.analyzeReadiness(username, reflectionAnswers);
+        res.json({ success: true, analysis });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 };

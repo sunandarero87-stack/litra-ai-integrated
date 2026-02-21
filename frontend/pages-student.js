@@ -51,9 +51,9 @@ function renderStudentDashboard(main) {
             ${t2Status === 'completed' ? '<i class="fas fa-check-circle lock-icon" style="color:var(--success)"></i>' : ''}
             <div class="tahap-icon quiz"><i class="fas fa-pencil-alt"></i></div>
             <h3>Tahap 2</h3>
-            <p>Latihan Soal (20 soal)</p>
+            <p>Refleksi (5 Soal Essay)</p>
             <p class="tahap-status" style="color:${t2Status === 'completed' ? 'var(--success)' : t2Status === 'locked' ? 'var(--text-muted)' : 'var(--accent)'}">
-                ${t2Status === 'completed' ? '✅ Selesai' : t2Status === 'locked' ? '🔒 Terkunci' : '📝 Mulai Latihan'}
+                ${t2Status === 'completed' ? '✅ Selesai' : t2Status === 'locked' ? '🔒 Terkunci' : '📝 Mulai Refleksi'}
             </p>
         </div>
         <div class="tahap-card ${t3Status}" onclick="${t3Status !== 'locked' ? "navigateTo('tahap3')" : ''}">
@@ -180,91 +180,139 @@ function completeTahap1() {
     navigateTo('dashboard');
 }
 
-// ---- TAHAP 2: LATIHAN SOAL ----
-let practiceAnswers = {};
-let practiceCurrentQ = 0;
-let practiceSubmitted = false;
+// ---- TAHAP 2: REFLEKSI (ESSAY) ----
+let reflectionQuestions = [];
+let reflectionAnswers = {};
+let reflectionLoading = false;
 
-function renderTahap2(main) {
-    practiceAnswers = {};
-    practiceCurrentQ = 0;
-    practiceSubmitted = false;
+async function renderTahap2(main) {
     const progress = getProgress(currentUser.username);
     if (progress.tahap2Complete) {
-        main.innerHTML = `<div class="score-display"><div class="score-circle pass">✅<small>SELESAI</small></div><p>Kamu sudah menyelesaikan Tahap 2!</p><p>Skor: ${progress.tahap2Score}/20</p><button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button></div>`;
+        main.innerHTML = `
+        <div class="score-display">
+            <div class="score-circle pass">✅<small>SELESAI</small></div>
+            <p>Kamu sudah menyelesaikan Tahap 2: Refleksi!</p>
+            <p>Status: SIAP ASESMEN</p>
+            <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
+        </div>`;
         return;
     }
-    showPracticeQuestion(main);
-}
 
-function showPracticeQuestion(main) {
-    const q = PRACTICE_QUESTIONS[practiceCurrentQ];
-    const total = PRACTICE_QUESTIONS.length;
+    if (reflectionQuestions.length === 0 && !reflectionLoading) {
+        reflectionLoading = true;
+        main.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Membangkitkan Pertanyaan Refleksi Berdasarkan Belajarmu...</div>`;
+
+        try {
+            const response = await fetch('/api/reflections', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username })
+            });
+            const data = await response.json();
+            if (data.success) {
+                reflectionQuestions = data.reflections;
+                reflectionLoading = false;
+                renderTahap2(main);
+            } else {
+                throw new Error(data.error);
+            }
+        } catch (e) {
+            console.error(e);
+            reflectionQuestions = [
+                "Apa hal terpenting yang kamu pelajari hari ini tentang Analisis Data?",
+                "Bagian mana dari Microsoft Excel yang menurutmu paling menantang?",
+                "Bagaimana kamu akan menggunakan rumus Excel yang baru kamu pelajari untuk membantu tugas sekolahmu?",
+                "Apakah kamu sudah mempraktikkan kebiasaan 'Gemar Belajar' dengan bertanya aktif hari ini? Jelaskan.",
+                "Apa targetmu selanjutnya setelah memahami materi ini?"
+            ];
+            reflectionLoading = false;
+            renderTahap2(main);
+        }
+        return;
+    }
+
     main.innerHTML = `
     <div class="quiz-container">
         <div class="quiz-header">
-            <span class="quiz-progress-text">Soal ${practiceCurrentQ + 1} dari ${total}</span>
-            <div class="progress-bar" style="flex:1;max-width:300px"><div class="progress-fill" style="width:${((practiceCurrentQ + 1) / total) * 100}%"></div></div>
+            <h3>📝 Tahap 2: Refleksi Belajar</h3>
+            <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan Litra-AI.</p>
         </div>
-        <div class="question-card">
-            <div class="question-number">Soal ${practiceCurrentQ + 1}</div>
-            <div class="question-text">${q.question}</div>
-            <div class="options-list">
-                ${q.options.map((opt, i) => `
-                    <div class="option-item ${practiceAnswers[q.id] === i ? 'selected' : ''}" onclick="selectPracticeAnswer(${q.id}, ${i})">
-                        <div class="option-radio"></div>
-                        <span>${opt}</span>
-                    </div>`).join('')}
-            </div>
+        <div class="card mt-2">
+            <form id="reflection-form">
+                ${reflectionQuestions.map((q, i) => `
+                <div class="question-group mb-2">
+                    <label class="d-block mb-1"><strong>${i + 1}. ${q}</strong></label>
+                    <textarea 
+                        class="form-input reflection-input" 
+                        rows="3" 
+                        onpaste="return false;" 
+                        oncopy="return false;" 
+                        oncontextmenu="return false;"
+                        data-question="${q}"
+                        placeholder="Ketik jawabanmu di sini... (Copy-paste dilarang)"
+                        required
+                    ></textarea>
+                </div>`).join('')}
+                <div class="quiz-nav">
+                    <button type="button" class="btn btn-outline" onclick="navigateTo('dashboard')">Batal</button>
+                    <button type="submit" class="btn btn-success" id="submit-reflection">
+                        <i class="fas fa-paper-plane"></i> Kirim Refleksi
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="quiz-nav">
-            <button class="btn btn-outline" ${practiceCurrentQ === 0 ? 'disabled' : ''} onclick="practiceCurrentQ--;showPracticeQuestion(document.getElementById('main-content'))">
-                <i class="fas fa-arrow-left"></i> Sebelumnya
-            </button>
-            ${practiceCurrentQ < total - 1 ?
-            `<button class="btn btn-primary" onclick="practiceCurrentQ++;showPracticeQuestion(document.getElementById('main-content'))">Selanjutnya <i class="fas fa-arrow-right"></i></button>` :
-            `<button class="btn btn-success" onclick="submitPractice()"><i class="fas fa-check"></i> Kirim Jawaban</button>`
+    </div>`;
+
+    document.getElementById('reflection-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submit-reflection');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menganalisis Refleksi...';
+
+        const inputs = document.querySelectorAll('.reflection-input');
+        const answers = Array.from(inputs).map(input => ({
+            question: input.dataset.question,
+            answer: input.value
+        }));
+
+        try {
+            // 1. Analyze Readiness
+            const analysisRes = await fetch('/api/assessment/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username, reflectionAnswers: answers })
+            });
+            const analysisData = await analysisRes.json();
+
+            // 2. Generate Assessment Questions
+            const genRes = await fetch('/api/assessment/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username, reflectionAnswers: answers })
+            });
+            const genData = await genRes.json();
+
+            // Update local progress with generated questions and analysis
+            const progress = getProgress(currentUser.username);
+            progress.tahap2Complete = true;
+            progress.aiReadiness = analysisData.analysis;
+            progress.isReady = analysisData.ready;
+            progress.generatedAssessment = genData.questions;
+            updateProgress(currentUser.username, progress);
+
+            // Notify Guru Recommendation in background (handled by progress object usually)
+
+            alert('🎉 Refleksi berhasil dikirim! AI telah menganalisis kesiapanmu.');
+            navigateTo('dashboard');
+        } catch (err) {
+            console.error(err);
+            alert('Gagal mengirim refleksi. Silakan coba lagi.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Refleksi';
         }
-        </div>
-    </div>`;
-}
-
-function selectPracticeAnswer(qId, optIdx) {
-    practiceAnswers[qId] = optIdx;
-    showPracticeQuestion(document.getElementById('main-content'));
-}
-
-function submitPractice() {
-    const answered = Object.keys(practiceAnswers).length;
-    if (answered < PRACTICE_QUESTIONS.length) {
-        if (!confirm(`Kamu baru menjawab ${answered}/${PRACTICE_QUESTIONS.length} soal. Yakin mau kirim?`)) return;
-    }
-    let score = 0;
-    PRACTICE_QUESTIONS.forEach(q => {
-        if (practiceAnswers[q.id] === q.correct) score++;
     });
-
-    const pass = score >= 15;
-    const main = document.getElementById('main-content');
-    main.innerHTML = `
-    <div class="quiz-container">
-        <div class="score-display">
-            <div class="score-circle ${pass ? 'pass' : 'fail'}">
-                ${score}/20
-                <small>${pass ? 'LULUS' : 'BELUM LULUS'}</small>
-            </div>
-            <h2>${pass ? '🎉 Selamat!' : '😔 Belum Berhasil'}</h2>
-            <p>${pass ? 'Kamu berhasil! Sekarang Tahap 3 (Asesmen) sudah terbuka.' : 'Kamu harus menjawab minimal 15 soal dengan benar. Coba lagi!'}</p>
-            <button class="btn ${pass ? 'btn-primary' : 'btn-warning'} mt-2" onclick="${pass ? "navigateTo('dashboard')" : "renderTahap2(document.getElementById('main-content'))"}">
-                ${pass ? 'Kembali ke Dashboard' : 'Coba Lagi'}
-            </button>
-        </div>
-    </div>`;
-
-    if (pass) {
-        updateProgress(currentUser.username, { tahap2Complete: true, tahap2Score: score });
-    }
 }
+
 
 // ---- TAHAP 3: ASESMEN ----
 let assessmentAnswers = {};
@@ -391,8 +439,13 @@ function updateTimerDisplay() {
 }
 
 function showAssessmentQuestion(main) {
-    const q = ASSESSMENT_QUESTIONS[assessmentCurrentQ];
-    const total = ASSESSMENT_QUESTIONS.length;
+    const progress = getProgress(currentUser.username);
+    const questions = progress.generatedAssessment && progress.generatedAssessment.length > 0
+        ? progress.generatedAssessment
+        : ASSESSMENT_QUESTIONS;
+
+    const q = questions[assessmentCurrentQ];
+    const total = questions.length;
     const mins = Math.floor(assessmentTimeLeft / 60);
     const secs = assessmentTimeLeft % 60;
 
@@ -404,11 +457,11 @@ function showAssessmentQuestion(main) {
         </div>
         <div class="progress-bar mb-2"><div class="progress-fill" style="width:${((assessmentCurrentQ + 1) / total) * 100}%"></div></div>
         <div class="question-card">
-            <div class="question-number">Soal ${assessmentCurrentQ + 1} <span class="question-type-badge ${q.type}">${q.type === 'literasi' ? '📖 Literasi' : '🔢 Numerasi'}</span></div>
+            <div class="question-number">Soal ${assessmentCurrentQ + 1} <span class="question-type-badge ${q.type || 'literasi'}">${(q.type || 'literasi') === 'literasi' ? '📖 Literasi' : '🔢 Numerasi'}</span></div>
             <div class="question-text" style="white-space:pre-line">${q.question}</div>
             <div class="options-list">
                 ${q.options.map((opt, i) => `
-                    <div class="option-item ${assessmentAnswers[q.id] === i ? 'selected' : ''}" onclick="selectAssessmentAnswer(${q.id}, ${i})">
+                    <div class="option-item ${assessmentAnswers[q.id || assessmentCurrentQ] === i ? 'selected' : ''}" onclick="selectAssessmentAnswer(${q.id || assessmentCurrentQ}, ${i})">
                         <div class="option-radio"></div>
                         <span>${opt}</span>
                     </div>`).join('')}
@@ -436,13 +489,20 @@ function submitAssessment() {
     document.removeEventListener('visibilitychange', handleTabSwitch);
     assessmentActive = false;
 
+    const progress = getProgress(currentUser.username);
+    const questions = progress.generatedAssessment && progress.generatedAssessment.length > 0
+        ? progress.generatedAssessment
+        : ASSESSMENT_QUESTIONS;
+
     let score = 0, literasi = 0, numerasi = 0, litTotal = 0, numTotal = 0;
-    ASSESSMENT_QUESTIONS.forEach(q => {
-        if (q.type === 'literasi') { litTotal++; if (assessmentAnswers[q.id] === q.correct) { score++; literasi++; } }
-        else { numTotal++; if (assessmentAnswers[q.id] === q.correct) { score++; numerasi++; } }
+    questions.forEach((q, idx) => {
+        const qId = q.id || idx;
+        const qType = q.type || 'literasi';
+        if (qType === 'literasi') { litTotal++; if (assessmentAnswers[qId] === q.correct) { score++; literasi++; } }
+        else { numTotal++; if (assessmentAnswers[qId] === q.correct) { score++; numerasi++; } }
     });
 
-    const total = ASSESSMENT_QUESTIONS.length;
+    const total = questions.length;
     const pct = Math.round((score / total) * 100);
     const pass = pct >= 70;
 
@@ -450,6 +510,7 @@ function submitAssessment() {
     const results = getAssessmentResults();
     results[currentUser.username] = { score, total, literasi, numerasi, litTotal, numTotal, pct, pass, date: new Date().toISOString(), violations: tabViolationCount };
     saveAssessmentResults(results);
+
 
     updateProgress(currentUser.username, { tahap3Complete: true });
 

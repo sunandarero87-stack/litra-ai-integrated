@@ -1318,6 +1318,61 @@ tr:hover td {
 .material-item i { color: var(--primary-light); }
 .material-item span { flex: 1; font-size: 0.9rem; }
 
+/* ============= NEW STYLES FOR STAGE 2 & 3 ============= */
+
+.reflection-input {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+    font-size: 0.95rem;
+    background: var(--bg-input) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+    padding: 1rem !important;
+    transition: all var(--transition-normal) !important;
+}
+
+.reflection-input:focus {
+    border-color: var(--primary-light) !important;
+    box-shadow: 0 0 15px rgba(79, 195, 247, 0.2) !important;
+    background: var(--bg-card-hover) !important;
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    gap: 1.5rem;
+    color: var(--primary-light);
+    font-weight: 600;
+    text-align: center;
+}
+
+.loading-state i {
+    font-size: 2.5rem;
+}
+
+.question-type-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+}
+.question-type-badge.literasi { background: rgba(33, 150, 243, 0.2); color: #42a5f5; }
+.question-type-badge.numerasi { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+
+.ai-recommendation-card {
+    border-left: 4px solid var(--primary-light);
+    background: rgba(26, 115, 232, 0.05);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    margin-top: 1rem;
+}
+
 /* ============= ANIMATIONS ============= */
 @keyframes fadeIn {
     from { opacity: 0; }

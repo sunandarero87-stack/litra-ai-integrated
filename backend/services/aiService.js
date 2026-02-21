@@ -5,19 +5,25 @@ const AI_API_KEY = process.env.AI_API_KEY;
 const AI_BASE_URL = process.env.AI_BASE_URL;
 const AI_MODEL = process.env.AI_MODEL;
 
-const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten Pak Nandar untuk mata pelajaran Informatika SMP. 
-Tugasmu membantu siswa kelas 7 memahami Analisis Data, kegunaannya dalam kehidupan sehari-hari, serta penggunaan Microsoft Excel (rumus dan fitur). 
-Gunakan bahasa sederhana, edukatif, dan bertahap. 
-Jangan membahas topik di luar Informatika SMP. 
-Jika siswa menjawab salah, arahkan dengan petunjuk, bukan langsung memberi jawaban.`;
+const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten Guru Profesional untuk mata pelajaran Informatika SMP. 
+Tugasmu membantu siswa memahami Analisis Data, kegunaannya dalam kehidupan sehari-hari, serta penggunaan Microsoft Excel (rumus dan fitur). 
+
+PRINSIP MENDIDIK:
+Kamu harus mendidik siswa dengan menggunakan "Prinsip 7 Kebiasaan Anak Indonesia Hebat":
+1. Bangun Pagi (Kedisiplinan & Manajemen Waktu)
+2. Beribadah (Spiritualitas & Moral)
+3. Berolahraga (Kesehatan Fisik & Mental)
+4. Makan Sehat dan Bergizi (Nutrisi & Konsentrasi)
+5. Gemar Belajar (Kreativitas & Wawasan)
+6. Bermasyarakat (Sosial & Empati)
+7. Tidur Cepat (Pemulihan & Fokus)
+
+Integrasikan nilai-nilai ini dalam interaksimu. Gunakan bahasa yang sopan, memotivasi, dan profesional layaknya guru yang teladan.
+Jika siswa bertanya tentang materi, jelaskan dengan sabar. Jika siswa terlihat lelah atau kurang fokus, ingatkan tentang kebiasaan sehat (seperti makan bergizi atau tidur tepat waktu).
+Jangan memberikan jawaban langsung untuk tugas, melainkan berikan bimbingan (scaffolding).`;
 
 /**
  * Generate AI Response with context
- * @param {string} username - Student username
- * @param {string} question - Student question
- * @param {number} stage - Student stage (1: Belajar, 2: Latihan, 3: Asesmen)
- * @param {string} materialContext - Text from teacher materials
- * @param {Array} chatHistory - Last 5 messages [{role: 'user'|'bot', content: ''}]
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory) {
     try {
@@ -29,26 +35,16 @@ async function generateResponse(username, question, stage, materialContext, chat
             const isAskingForAnswer = forbiddenKeywords.some(keyword => lowerQuestion.includes(keyword));
 
             if (isAskingForAnswer) {
-                // Log violation
-                await ChatLog.create({
-                    username,
-                    role: 'user',
-                    content: question,
-                    metadata: { stage, violations: true }
-                });
-
-                return "Silakan kerjakan soal secara mandiri.";
+                return "Sebagai asisten guru yang profesional, saya tidak dapat memberikan jawaban langsung saat asesmen. Silakan kerjakan secara mandiri dengan jujur, sesuai dengan nilai integritas anak hebat Indonesia.";
             }
         }
 
-        // Prepare Messages
         const messages = [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'system', content: `KONTEKS MATERI:\n${materialContext}` },
             { role: 'system', content: `TAHAP SISWA: Tahap ${stage}` }
         ];
 
-        // Add history (max 5)
         chatHistory.slice(-5).forEach(msg => {
             messages.push({
                 role: msg.role === 'bot' ? 'assistant' : 'user',
@@ -56,10 +52,8 @@ async function generateResponse(username, question, stage, materialContext, chat
             });
         });
 
-        // Add current question
         messages.push({ role: 'user', content: question });
 
-        // Call AI API
         const response = await axios.post(AI_BASE_URL, {
             model: AI_MODEL,
             messages: messages,
@@ -74,27 +68,24 @@ async function generateResponse(username, question, stage, materialContext, chat
         const aiReply = response.data.choices[0].message.content;
         const usage = response.data.usage;
 
-        // Save to Database
-        await ChatLog.create({
-            username,
-            role: 'bot',
-            content: aiReply,
-            model: AI_MODEL,
-            tokens: {
-                prompt_tokens: usage.prompt_tokens,
-                completion_tokens: usage.completion_tokens,
-                total_tokens: usage.total_tokens
-            },
-            metadata: { stage }
-        });
-
-        // Also save user message to history
-        await ChatLog.create({
-            username,
-            role: 'user',
-            content: question,
-            metadata: { stage }
-        });
+        // Save to Database (logging only, assuming model exists)
+        try {
+            await ChatLog.create({
+                username,
+                role: 'bot',
+                content: aiReply,
+                model: AI_MODEL,
+                tokens: {
+                    prompt_tokens: usage.prompt_tokens,
+                    completion_tokens: usage.completion_tokens,
+                    total_tokens: usage.total_tokens
+                },
+                metadata: { stage }
+            });
+            await ChatLog.create({ username, role: 'user', content: question, metadata: { stage } });
+        } catch (e) {
+            console.warn('Logging failed but responding anyway');
+        }
 
         return aiReply;
 
@@ -104,6 +95,145 @@ async function generateResponse(username, question, stage, materialContext, chat
     }
 }
 
+/**
+ * Generate 5 reflection questions based on chat history
+ */
+async function generateReflections(username, chatHistory) {
+    try {
+        const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
+        const prompt = `Berdasarkan riwayat percakapan antara siswa dan AI berikut, buatlah 5 pertanyaan refleksi essay yang mendalam. 
+Pertanyaan harus membantu siswa merenungkan apa yang telah mereka pelajari, kesulitan yang dihadapi, dan bagaimana mereka akan menerapkan ilmu tersebut. 
+Hubungkan juga dengan salah satu dari 7 Kebiasaan Anak Hebat Indonesia jika memungkinkan.
+
+RIWAYAT PERCAKAPAN:
+${historyText}
+
+Format Output (JSON Array of strings):
+["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]`;
+
+        const response = await axios.post(AI_BASE_URL, {
+            model: AI_MODEL,
+            messages: [
+                { role: 'system', content: 'Kamu adalah pakar pendidikan yang membuat soal refleksi.' },
+                { role: 'user', content: prompt }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.8
+        }, {
+            headers: {
+                'Authorization': `Bearer ${AI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const content = response.data.choices[0].message.content;
+        // The AI might return { "questions": [...] } or just the array if we are lucky, 
+        // but with response_format: json_object it needs a key.
+        const parsed = JSON.parse(content);
+        return parsed.questions || parsed.reflections || Object.values(parsed)[0];
+    } catch (error) {
+        console.error('Reflection Generation Error:', error.message);
+        return [
+            "Apa hal terpenting yang kamu pelajari hari ini tentang Analisis Data?",
+            "Bagian mana dari Microsoft Excel yang menurutmu paling menantang?",
+            "Bagaimana kamu akan menggunakan rumus Excel yang baru kamu pelajari untuk membantu tugas sekolahmu?",
+            "Apakah kamu sudah mempraktikkan kebiasaan 'Gemar Belajar' dengan bertanya aktif hari ini? Jelaskan.",
+            "Apa targetmu selanjutnya setelah memahami materi ini?"
+        ];
+    }
+}
+
+/**
+ * Generate Assessment Questions based on Reflection Analysis
+ */
+async function generateAssessment(username, reflectionAnswers) {
+    try {
+        const reflectionText = reflectionAnswers.map((r, i) => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
+        const prompt = `Berdasarkan hasil refleksi siswa berikut, buatkan 5 soal asesmen (pilihan ganda) yang sesuai dengan tingkat kesiapan siswa. 
+Jika siswa terlihat sudah mahir, berikan soal yang lebih sulit (HOTS). Jika siswa masih ragu, berikan soal penguatan konsep.
+Sertakan kunci jawaban dan penjelasan singkat.
+
+HASIL REFLEKSI SISWA:
+${reflectionText}
+
+Format Output (JSON Array of objects):
+[
+  {
+    "question": "teks soal",
+    "options": ["A", "B", "C", "D"],
+    "correct": 0,
+    "explanation": "penjelasan"
+  },
+  ...
+]`;
+
+        const response = await axios.post(AI_BASE_URL, {
+            model: AI_MODEL,
+            messages: [
+                { role: 'system', content: 'Kamu adalah pembuat soal ujian profesional Informatika.' },
+                { role: 'user', content: prompt }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.7
+        }, {
+            headers: {
+                'Authorization': `Bearer ${AI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const content = response.data.choices[0].message.content;
+        const parsed = JSON.parse(content);
+        return parsed.questions || parsed.assessment || Object.values(parsed)[0];
+    } catch (error) {
+        console.error('Assessment Generation Error:', error.message);
+        return []; // Fallback to default questions if this fails
+    }
+}
+
+/**
+ * Analyze Reflections to provide recommendations for Teacher
+ */
+async function analyzeReadiness(username, reflectionAnswers) {
+    try {
+        const reflectionText = reflectionAnswers.map((r, i) => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
+        const prompt = `Analisislah jawaban refleksi siswa berikut. Apakah siswa ini sudah SIAP untuk mengikuti asesmen? Berikan alasan singkat dan rekomendasi untuk guru.
+
+HASIL REFLEKSI SISWA:
+${reflectionText}
+
+Format Output (JSON Object):
+{
+  "ready": true/false,
+  "analysis": "alasan kesiapan",
+  "recommendation": "rekomendasi untuk guru"
+}`;
+
+        const response = await axios.post(AI_BASE_URL, {
+            model: AI_MODEL,
+            messages: [
+                { role: 'system', content: 'Kamu adalah asisten guru yang menganalisis perkembangan siswa.' },
+                { role: 'user', content: prompt }
+            ],
+            response_format: { type: "json_object" },
+            temperature: 0.5
+        }, {
+            headers: {
+                'Authorization': `Bearer ${AI_API_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        return JSON.parse(response.data.choices[0].message.content);
+    } catch (error) {
+        return { ready: true, analysis: "Analisis otomatis gagal, namun siswa telah menyelesaikan refleksi.", recommendation: "Periksa jawaban refleksi secara manual." };
+    }
+}
+
 module.exports = {
-    generateResponse
+    generateResponse,
+    generateReflections,
+    generateAssessment,
+    analyzeReadiness
 };
+

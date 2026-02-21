@@ -6,10 +6,13 @@ function renderTeacherDashboard(main) {
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
     const results = getAssessmentResults();
-    let passed = 0, failed = 0, total = 0;
+    let passed = 0, failed = 0, total = 0, readyForAssessment = 0;
+
     students.forEach(s => {
         const r = results[s.username];
         if (r) { total++; r.pass ? passed++ : failed++; }
+        const p = getProgress(s.username);
+        if (p.tahap2Complete && p.isReady) readyForAssessment++;
     });
 
     main.innerHTML = `
@@ -20,27 +23,29 @@ function renderTeacherDashboard(main) {
     <div class="grid-4">
         <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-info"><h3>${students.length}</h3><p>Total Siswa</p></div></div>
         <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3>${passed}</h3><p>Lulus Asesmen</p></div></div>
-        <div class="stat-card"><div class="stat-icon red"><i class="fas fa-times-circle"></i></div><div class="stat-info"><h3>${failed}</h3><p>Belum Lulus</p></div></div>
-        <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>${students.length - total}</h3><p>Belum Asesmen</p></div></div>
+        <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-robot"></i></div><div class="stat-info"><h3>${readyForAssessment}</h3><p>Rekomendasi AI</p></div></div>
+        <div class="stat-card"><div class="stat-icon red"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>${students.length - total}</h3><p>Belum Asesmen</p></div></div>
     </div>
     <div class="card mt-2">
         <div class="card-header"><h3 class="card-title">📋 Status Progres Siswa</h3></div>
         <div class="table-container">
             <table>
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Tahap</th><th>Status</th><th>Nilai</th></tr></thead>
+                <thead><tr><th>Nama</th><th>Kelas</th><th>Tahap</th><th>Rekomendasi AI</th><th>Status Hasil</th></tr></thead>
                 <tbody>
                     ${students.map(s => {
         const p = getProgress(s.username);
         const r = results[s.username];
         const stage = p.tahap3Complete ? 'Selesai' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
         const badge = r ? (r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>') : '<span class="badge badge-warning">Proses</span>';
-        return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${badge}</td><td>${r ? r.pct + '%' : '-'}</td></tr>`;
+        const aiRec = p.tahap2Complete ? (p.isReady ? '<span class="text-success"><i class="fas fa-check-circle"></i> SIAP</span>' : '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> PERLU BIMBINGAN</span>') : '<span class="text-muted">-</span>';
+        return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${aiRec}</td><td>${badge}</td></tr>`;
     }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
 }
+
 
 // ---- STUDENT RESULTS ----
 function renderStudentResults(main) {
@@ -168,23 +173,36 @@ function renderAssessmentMgmt(main) {
         <div class="card-header"><h3 class="card-title">✅ Persetujuan Siswa untuk Asesmen</h3></div>
         <div class="table-container">
             <table>
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Progres</th><th>Status Approval</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>Nama</th><th>Kelas</th><th>Progres</th><th>Analisis AI (Kesiapan)</th><th>Aksi Approval</th></tr></thead>
                 <tbody>
                     ${students.map(s => {
         const p = getProgress(s.username);
         const approved = approvals[s.username];
-        const ready = p.tahap2Complete;
+        const hasReflection = p.tahap2Complete;
+        const aiAnalysis = p.aiReadiness || 'Belum ada refleksi';
+        const readyColor = p.isReady ? 'var(--success)' : hasReflection ? 'var(--warning)' : 'var(--text-muted)';
+
         return `<tr>
                             <td>${s.name}</td><td>${s.kelas || '-'}</td>
-                            <td>${ready ? '<span class="badge badge-success">Siap</span>' : '<span class="badge badge-warning">Belum Siap</span>'}</td>
-                            <td>${approved ? '<span class="badge badge-success">Disetujui</span>' : '<span class="badge badge-info">Menunggu</span>'}</td>
-                            <td>${!approved && ready ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}')"><i class="fas fa-check"></i> Approve</button>` : approved ? '<span class="text-muted">✅ Done</span>' : '<span class="text-muted">-</span>'}</td>
+                            <td>${hasReflection ? '<span class="badge badge-success">Refleksi Selesai</span>' : '<span class="badge badge-warning">Belum Refleksi</span>'}</td>
+                            <td style="max-width:300px">
+                                <div style="color:${readyColor}; font-weight:bold; margin-bottom:4px">
+                                    ${p.isReady ? '✅ Direkomendasikan' : hasReflection ? '⚠️ Perlu Penguatan' : '⏳ Menunggu'}
+                                </div>
+                                <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
+                            </td>
+                            <td>
+                                ${approved ? '<span class="badge badge-success">Disetujui</span>' :
+                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}')">Approve</button>` :
+                    '<span class="text-muted">Menunggu Refleksi</span>'}
+                            </td>
                         </tr>`;
     }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada siswa</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
+
 }
 
 function saveAssessmentDuration() {
