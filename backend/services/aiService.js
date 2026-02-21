@@ -1,47 +1,35 @@
-const axios = require('axios');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const ChatLog = require('../models/ChatLog');
 
+// Configuration
 const AI_API_KEY = process.env.AI_API_KEY;
-const AI_BASE_URL = process.env.AI_BASE_URL;
-const AI_MODEL = process.env.AI_MODEL;
+const AI_MODEL = process.env.AI_MODEL || "gemini-1.5-flash";
+
+const genAI = new GoogleGenerativeAI(AI_API_KEY);
 
 const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten chatbot yang bebas menjawab semua pertanyaan siswa dengan sopan.`;
 
 /**
- * Generate AI Response with context
+ * Generate AI Response with context using Native SDK
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory) {
     try {
-        const messages = [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'system', content: `KONTEKS MATERI:\n${materialContext}` },
-            { role: 'system', content: `TAHAP SISWA: Tahap ${stage}` }
-        ];
-
-        chatHistory.slice(-5).forEach(msg => {
-            messages.push({
-                role: msg.role === 'bot' ? 'assistant' : 'user',
-                content: msg.content
-            });
-        });
-
-        messages.push({ role: 'user', content: question });
-
-        const response = await axios.post(AI_BASE_URL, {
+        const model = genAI.getGenerativeModel({
             model: AI_MODEL,
-            messages: messages,
-            temperature: 0.7
-        }, {
-            headers: {
-                'Authorization': `Bearer ${AI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
+            systemInstruction: `${SYSTEM_PROMPT}\n\nKONTEKS MATERI:\n${materialContext}\n\nTAHAP SISWA: Tahap ${stage}`
         });
 
-        const aiReply = response.data.choices[0].message.content;
-        const usage = response.data.usage;
+        // Convert history to Google Gemini format
+        const history = chatHistory.slice(-5).map(msg => ({
+            role: msg.role === 'bot' ? 'model' : 'user',
+            parts: [{ text: msg.content }],
+        }));
 
-        // Save to Database (logging only, assuming model exists)
+        const chat = model.startChat({ history });
+        const result = await chat.sendMessage(question);
+        const aiReply = result.response.text();
+
+        // Save to Database (logging)
         try {
             await ChatLog.create({
                 username,
@@ -49,9 +37,9 @@ async function generateResponse(username, question, stage, materialContext, chat
                 content: aiReply,
                 model: AI_MODEL,
                 tokens: {
-                    prompt_tokens: usage.prompt_tokens,
-                    completion_tokens: usage.completion_tokens,
-                    total_tokens: usage.total_tokens
+                    prompt_tokens: 0, // SDK doesn't return this as easily as OpenAI/Axios
+                    completion_tokens: 0,
+                    total_tokens: 0
                 },
                 metadata: { stage }
             });
@@ -63,13 +51,9 @@ async function generateResponse(username, question, stage, materialContext, chat
         return aiReply;
 
     } catch (error) {
-        const errorDetail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
         console.error('--- AI SERVICE ERROR ---');
-        console.error('URL:', AI_BASE_URL);
-        console.error('Model:', AI_MODEL);
-        console.error('Detail:', errorDetail);
-        console.error('------------------------');
-        throw new Error(`AI Error: ${errorDetail}`);
+        console.error('Error:', error.message);
+        throw new Error(`AI Error: ${error.message}`);
     }
 }
 
@@ -78,45 +62,37 @@ async function generateResponse(username, question, stage, materialContext, chat
  */
 async function generateReflections(username, chatHistory) {
     try {
+        const model = genAI.getGenerativeModel({
+            model: AI_MODEL,
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
-        const prompt = `Berdasarkan riwayat percakapan antara siswa dan AI berikut, buatlah 5 pertanyaan refleksi essay yang mendalam. 
+        const prompt = `Kamu adalah pakar pendidikan yang membuat soal refleksi.
+Berdasarkan riwayat percakapan antara siswa dan AI berikut, buatlah 5 pertanyaan refleksi essay yang mendalam. 
 Pertanyaan harus membantu siswa merenungkan apa yang telah mereka pelajari, kesulitan yang dihadapi, dan bagaimana mereka akan menerapkan ilmu tersebut. 
-Hubungkan juga dengan salah satu dari 7 Kebiasaan Anak Hebat Indonesia jika memungkinkan.
 
 RIWAYAT PERCAKAPAN:
 ${historyText}
 
-Format Output (JSON Array of strings):
-["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]`;
+Format Output (JSON):
+{
+  "questions": ["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]
+}`;
 
-        const response = await axios.post(AI_BASE_URL, {
-            model: AI_MODEL,
-            messages: [
-                { role: 'system', content: 'Kamu adalah pakar pendidikan yang membuat soal refleksi.' },
-                { role: 'user', content: prompt }
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.8
-        }, {
-            headers: {
-                'Authorization': `Bearer ${AI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const content = response.data.choices[0].message.content;
-        // The AI might return { "questions": [...] } or just the array if we are lucky, 
-        // but with response_format: json_object it needs a key.
+        const result = await model.generateContent(prompt);
+        const content = result.response.text();
         const parsed = JSON.parse(content);
-        return parsed.questions || parsed.reflections || Object.values(parsed)[0];
+
+        return parsed.questions || Object.values(parsed)[0];
     } catch (error) {
         console.error('Reflection Generation Error:', error.message);
         return [
-            "Apa hal terpenting yang kamu pelajari hari ini tentang Analisis Data?",
-            "Bagian mana dari Microsoft Excel yang menurutmu paling menantang?",
-            "Bagaimana kamu akan menggunakan rumus Excel yang baru kamu pelajari untuk membantu tugas sekolahmu?",
-            "Apakah kamu sudah mempraktikkan kebiasaan 'Gemar Belajar' dengan bertanya aktif hari ini? Jelaskan.",
-            "Apa targetmu selanjutnya setelah memahami materi ini?"
+            "Apa hal terpenting yang kamu pelajari hari ini?",
+            "Bagian mana yang menurutmu paling menantang?",
+            "Bagaimana kamu akan menggunakan ilmu baru ini?",
+            "Apakah kamu sudah mempraktikkan kebiasaan 'Gemar Belajar'?",
+            "Apa targetmu selanjutnya?"
         ];
     }
 }
@@ -126,46 +102,40 @@ Format Output (JSON Array of strings):
  */
 async function generateAssessment(username, reflectionAnswers) {
     try {
+        const model = genAI.getGenerativeModel({
+            model: AI_MODEL,
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
         const reflectionText = reflectionAnswers.map((r, i) => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
-        const prompt = `Berdasarkan hasil refleksi siswa berikut, buatkan 5 soal asesmen (pilihan ganda) yang sesuai dengan tingkat kesiapan siswa. 
+        const prompt = `Kamu adalah pembuat soal ujian profesional Informatika.
+Berdasarkan hasil refleksi siswa berikut, buatkan 5 soal asesmen (pilihan ganda) yang sesuai dengan tingkat kesiapan siswa. 
 Jika siswa terlihat sudah mahir, berikan soal yang lebih sulit (HOTS). Jika siswa masih ragu, berikan soal penguatan konsep.
 Sertakan kunci jawaban dan penjelasan singkat.
 
 HASIL REFLEKSI SISWA:
 ${reflectionText}
 
-Format Output (JSON Array of objects):
-[
-  {
-    "question": "teks soal",
-    "options": ["A", "B", "C", "D"],
-    "correct": 0,
-    "explanation": "penjelasan"
-  },
-  ...
-]`;
+Format Output (JSON):
+{
+  "questions": [
+    {
+      "question": "teks soal",
+      "options": ["pilihan A", "pilihan B", "pilihan C", "pilihan D"],
+      "correct": 0,
+      "explanation": "penjelasan"
+    }
+  ]
+}`;
 
-        const response = await axios.post(AI_BASE_URL, {
-            model: AI_MODEL,
-            messages: [
-                { role: 'system', content: 'Kamu adalah pembuat soal ujian profesional Informatika.' },
-                { role: 'user', content: prompt }
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.7
-        }, {
-            headers: {
-                'Authorization': `Bearer ${AI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        const content = response.data.choices[0].message.content;
+        const result = await model.generateContent(prompt);
+        const content = result.response.text();
         const parsed = JSON.parse(content);
-        return parsed.questions || parsed.assessment || Object.values(parsed)[0];
+
+        return parsed.questions || Object.values(parsed)[0];
     } catch (error) {
         console.error('Assessment Generation Error:', error.message);
-        return []; // Fallback to default questions if this fails
+        return [];
     }
 }
 
@@ -174,37 +144,33 @@ Format Output (JSON Array of objects):
  */
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
+        const model = genAI.getGenerativeModel({
+            model: AI_MODEL,
+            generationConfig: { responseMimeType: "application/json" }
+        });
+
         const reflectionText = reflectionAnswers.map((r, i) => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
         const prompt = `Analisislah jawaban refleksi siswa berikut. Apakah siswa ini sudah SIAP untuk mengikuti asesmen? Berikan alasan singkat dan rekomendasi untuk guru.
 
 HASIL REFLEKSI SISWA:
 ${reflectionText}
 
-Format Output (JSON Object):
+Format Output (JSON):
 {
-  "ready": true/false,
+  "ready": true,
   "analysis": "alasan kesiapan",
   "recommendation": "rekomendasi untuk guru"
 }`;
 
-        const response = await axios.post(AI_BASE_URL, {
-            model: AI_MODEL,
-            messages: [
-                { role: 'system', content: 'Kamu adalah asisten guru yang menganalisis perkembangan siswa.' },
-                { role: 'user', content: prompt }
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.5
-        }, {
-            headers: {
-                'Authorization': `Bearer ${AI_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        return JSON.parse(response.data.choices[0].message.content);
+        const result = await model.generateContent(prompt);
+        const parsed = JSON.parse(result.response.text());
+        return parsed;
     } catch (error) {
-        return { ready: true, analysis: "Analisis otomatis gagal, namun siswa telah menyelesaikan refleksi.", recommendation: "Periksa jawaban refleksi secara manual." };
+        return {
+            ready: true,
+            analysis: "Analisis otomatis gagal.",
+            recommendation: "Periksa secara manual."
+        };
     }
 }
 
@@ -214,4 +180,3 @@ module.exports = {
     generateAssessment,
     analyzeReadiness
 };
-
