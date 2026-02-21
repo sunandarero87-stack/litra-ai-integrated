@@ -63,8 +63,13 @@ async function generateResponse(username, question, stage, materialContext, chat
         return aiReply;
 
     } catch (error) {
-        console.error('AI Service Error:', error.response?.data || error.message);
-        throw new Error('Gagal mendapatkan respons dari AI.');
+        const errorDetail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+        console.error('--- AI SERVICE ERROR ---');
+        console.error('URL:', AI_BASE_URL);
+        console.error('Model:', AI_MODEL);
+        console.error('Detail:', errorDetail);
+        console.error('------------------------');
+        throw new Error(`AI Error: ${errorDetail}`);
     }
 }
 
