@@ -1,177 +1,112 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const ChatLog = require('../models/ChatLog');
 
-// Configuration
-const AI_API_KEY = (process.env.AI_API_KEY || "").trim();
-const AI_MODEL = (process.env.AI_MODEL || "gemini-1.5-flash-latest").trim();
+// Configuration - Kita bersihkan semuanya dari spasi atau karakter aneh
+const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
+const AI_MODEL = (process.env.AI_MODEL || "gemini-1.5-flash").replace(/\s/g, "");
 
 const genAI = new GoogleGenerativeAI(AI_API_KEY);
 
 const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten chatbot yang bebas menjawab semua pertanyaan siswa dengan sopan.`;
 
 /**
- * Generate AI Response with context using Native SDK
+ * Generate AI Response
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory) {
     try {
-        const model = genAI.getGenerativeModel({
-            model: AI_MODEL,
-            systemInstruction: `${SYSTEM_PROMPT}\n\nKONTEKS MATERI:\n${materialContext}\n\nTAHAP SISWA: Tahap ${stage}`
-        });
+        // Gunakan model tanpa systemInstruction dulu krn terkadang versi v1beta di bbrp region bermasalah
+        const model = genAI.getGenerativeModel({ model: AI_MODEL });
 
-        // Convert history to Google Gemini format
+        // Gabungkan sistem prompt ke instruksi awal
+        const fullSystemInstruction = `${SYSTEM_PROMPT}\n\nKONTEKS MATERI:\n${materialContext}\n\nTAHAP SISWA: Tahap ${stage}`;
+
+        // Konversi history ke format Google Gemini
         const history = chatHistory.slice(-5).map(msg => ({
             role: msg.role === 'bot' ? 'model' : 'user',
             parts: [{ text: msg.content }],
         }));
 
-        const chat = model.startChat({ history });
+        // Tambahkan instruksi sistem di awal history jika kosong, atau selipkan di pesan
+        const chat = model.startChat({
+            history: [
+                { role: "user", parts: [{ text: "Halo, tolong ikuti instruksi ini: " + fullSystemInstruction }] },
+                { role: "model", parts: [{ text: "Baik, saya adalah Litra-AI. Saya siap membantu sesuai instruksi tersebut." }] },
+                ...history
+            ]
+        });
+
         const result = await chat.sendMessage(question);
         const aiReply = result.response.text();
 
-        // Save to Database (logging)
+        // Logging sederhana
         try {
             await ChatLog.create({
-                username,
-                role: 'bot',
-                content: aiReply,
-                model: AI_MODEL,
-                tokens: {
-                    prompt_tokens: 0, // SDK doesn't return this as easily as OpenAI/Axios
-                    completion_tokens: 0,
-                    total_tokens: 0
-                },
+                username, role: 'bot', content: aiReply, model: AI_MODEL,
                 metadata: { stage }
             });
             await ChatLog.create({ username, role: 'user', content: question, metadata: { stage } });
         } catch (e) {
-            console.warn('Logging failed but responding anyway');
+            console.warn('Logging failed');
         }
 
         return aiReply;
 
     } catch (error) {
         console.error('--- AI SERVICE ERROR ---');
-        console.error('Error:', error.message);
+        console.error('Model used:', AI_MODEL);
+        console.error('Error Detail:', error.message);
+
+        // Jika 404, mungkin model gemini-1.5-flash benar-benar tidak ada di region tersebut
+        if (error.message.includes("404") && AI_MODEL !== "gemini-pro") {
+            console.warn("⚠️ Flash model not found, trying fallback to gemini-pro...");
+            process.env.AI_MODEL = "gemini-pro"; // Temporary fallback
+            return generateResponse(username, question, stage, materialContext, chatHistory);
+        }
+
         throw new Error(`AI Error: ${error.message}`);
     }
 }
 
 /**
- * Generate 5 reflection questions based on chat history
+ * Generate 5 reflection questions
  */
 async function generateReflections(username, chatHistory) {
     try {
-        const model = genAI.getGenerativeModel({
-            model: AI_MODEL,
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
+        const model = genAI.getGenerativeModel({ model: AI_MODEL });
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
-        const prompt = `Kamu adalah pakar pendidikan yang membuat soal refleksi.
-Berdasarkan riwayat percakapan antara siswa dan AI berikut, buatlah 5 pertanyaan refleksi essay yang mendalam. 
-Pertanyaan harus membantu siswa merenungkan apa yang telah mereka pelajari, kesulitan yang dihadapi, dan bagaimana mereka akan menerapkan ilmu tersebut. 
-
-RIWAYAT PERCAKAPAN:
-${historyText}
-
-Format Output (JSON):
-{
-  "questions": ["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]
-}`;
+        const prompt = `Kamu adalah pakar pendidikan. Buatlah 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}`;
 
         const result = await model.generateContent(prompt);
-        const content = result.response.text();
-        const parsed = JSON.parse(content);
-
-        return parsed.questions || Object.values(parsed)[0];
+        const text = result.response.text();
+        // Bersihkan markdown jika ada
+        const jsonStr = text.replace(/```json|```/g, "").trim();
+        return JSON.parse(jsonStr);
     } catch (error) {
-        console.error('Reflection Generation Error:', error.message);
-        return [
-            "Apa hal terpenting yang kamu pelajari hari ini?",
-            "Bagian mana yang menurutmu paling menantang?",
-            "Bagaimana kamu akan menggunakan ilmu baru ini?",
-            "Apakah kamu sudah mempraktikkan kebiasaan 'Gemar Belajar'?",
-            "Apa targetmu selanjutnya?"
-        ];
+        return ["Apa yang kamu pelajari?", "Apa yang sulit?", "Bagaimana perasaanmu?", "Apa targetmu?", "Ada pertanyaan lain?"];
     }
 }
 
-/**
- * Generate Assessment Questions based on Reflection Analysis
- */
 async function generateAssessment(username, reflectionAnswers) {
     try {
-        const model = genAI.getGenerativeModel({
-            model: AI_MODEL,
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        const reflectionText = reflectionAnswers.map((r, i) => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
-        const prompt = `Kamu adalah pembuat soal ujian profesional Informatika.
-Berdasarkan hasil refleksi siswa berikut, buatkan 5 soal asesmen (pilihan ganda) yang sesuai dengan tingkat kesiapan siswa. 
-Jika siswa terlihat sudah mahir, berikan soal yang lebih sulit (HOTS). Jika siswa masih ragu, berikan soal penguatan konsep.
-Sertakan kunci jawaban dan penjelasan singkat.
-
-HASIL REFLEKSI SISWA:
-${reflectionText}
-
-Format Output (JSON):
-{
-  "questions": [
-    {
-      "question": "teks soal",
-      "options": ["pilihan A", "pilihan B", "pilihan C", "pilihan D"],
-      "correct": 0,
-      "explanation": "penjelasan"
-    }
-  ]
-}`;
-
+        const model = genAI.getGenerativeModel({ model: AI_MODEL });
+        const reflectionText = reflectionAnswers.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n');
+        const prompt = `Buat 5 soal pilihan ganda berdasarkan refleksi ini dalam format JSON array of objects. \n\nREFLEKSI:\n${reflectionText}`;
         const result = await model.generateContent(prompt);
-        const content = result.response.text();
-        const parsed = JSON.parse(content);
-
-        return parsed.questions || Object.values(parsed)[0];
-    } catch (error) {
-        console.error('Assessment Generation Error:', error.message);
-        return [];
-    }
+        const text = result.response.text();
+        const jsonStr = text.replace(/```json|```/g, "").trim();
+        return JSON.parse(jsonStr);
+    } catch (e) { return []; }
 }
 
-/**
- * Analyze Reflections to provide recommendations for Teacher
- */
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
-        const model = genAI.getGenerativeModel({
-            model: AI_MODEL,
-            generationConfig: { responseMimeType: "application/json" }
-        });
-
-        const reflectionText = reflectionAnswers.map((r, i) => `Q: ${r.question}\nA: ${r.answer}`).join('\n\n');
-        const prompt = `Analisislah jawaban refleksi siswa berikut. Apakah siswa ini sudah SIAP untuk mengikuti asesmen? Berikan alasan singkat dan rekomendasi untuk guru.
-
-HASIL REFLEKSI SISWA:
-${reflectionText}
-
-Format Output (JSON):
-{
-  "ready": true,
-  "analysis": "alasan kesiapan",
-  "recommendation": "rekomendasi untuk guru"
-}`;
-
+        const model = genAI.getGenerativeModel({ model: AI_MODEL });
+        const prompt = `Analisislah apakah siswa siap asesmen (JSON format {ready:bool, analysis:string, recommendation:string}): ${JSON.stringify(reflectionAnswers)}`;
         const result = await model.generateContent(prompt);
-        const parsed = JSON.parse(result.response.text());
-        return parsed;
-    } catch (error) {
-        return {
-            ready: true,
-            analysis: "Analisis otomatis gagal.",
-            recommendation: "Periksa secara manual."
-        };
-    }
+        const text = result.response.text();
+        const jsonStr = text.replace(/```json|```/g, "").trim();
+        return JSON.parse(jsonStr);
+    } catch (e) { return { ready: true, analysis: "Analisis gagal", recommendation: "Cek manual" }; }
 }
 
 module.exports = {
