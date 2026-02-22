@@ -109,7 +109,7 @@ function renderMaterials(main) {
         <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
             <i class="fas fa-cloud-upload-alt"></i>
             <p>Klik untuk upload materi (PDF, DOC, DOCX)</p>
-            <p class="text-muted" style="font-size:0.8rem">Materi akan otomatis dipelajari oleh Chatbot AI</p>
+            <p class="text-muted" style="font-size:0.8rem">Siswa akan membaca materi ini di Tahap 1</p>
             <input type="file" id="material-upload" accept=".pdf,.doc,.docx" style="display:none" onchange="handleMaterialUpload(event)">
         </div>
         <div class="material-list" id="material-list">
@@ -132,7 +132,7 @@ function handleMaterialUpload(event) {
     const materials = getMaterials();
     materials.push({ name: file.name, type: ext, date: new Date().toISOString(), size: file.size });
     saveMaterials(materials);
-    alert('✅ Materi berhasil diupload! Chatbot AI akan mempelajari materi ini.');
+    alert('✅ Materi berhasil diupload!');
     renderMaterials(document.getElementById('main-content'));
 }
 
@@ -332,73 +332,7 @@ function handleExcelUpload(event) {
     event.target.value = '';
 }
 
-// ---- CHAT HISTORY (Admin only) ----
-function renderChatHistory(main) {
-    if (currentUser.role !== 'admin') { main.innerHTML = '<p class="text-muted">Akses ditolak.</p>'; return; }
-    const histories = getChatHistories();
-    const users = getUsers();
-    const studentChats = Object.keys(histories).map(uname => {
-        const user = users.find(u => u.username === uname);
-        return { username: uname, name: user ? user.name : uname, messages: histories[uname].length };
-    });
 
-    main.innerHTML = `
-    <div class="card">
-        <div class="card-header"><h3 class="card-title">💬 Riwayat Chat Siswa</h3></div>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Nama Siswa</th><th>Username</th><th>Jumlah Pesan</th><th>Aksi</th></tr></thead>
-                <tbody>
-                    ${studentChats.map(c => `<tr>
-                        <td>${c.name}</td><td>${c.username}</td><td>${c.messages}</td>
-                        <td>
-                            <button class="btn btn-sm btn-primary" onclick="viewChat('${c.username}')"><i class="fas fa-eye"></i> Lihat</button>
-                            <button class="btn btn-sm btn-success" onclick="downloadChat('${c.username}')"><i class="fas fa-download"></i> Unduh .txt</button>
-                        </td>
-                    </tr>`).join('') || '<tr><td colspan="4" class="text-center text-muted">Belum ada riwayat chat</td></tr>'}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div id="chat-view-container"></div>`;
-}
-
-function viewChat(username) {
-    const histories = getChatHistories();
-    const messages = histories[username] || [];
-    const users = getUsers();
-    const user = users.find(u => u.username === username);
-
-    document.getElementById('chat-view-container').innerHTML = `
-    <div class="card mt-2">
-        <div class="card-header"><h3 class="card-title">Chat: ${user ? user.name : username}</h3><button class="btn btn-sm btn-outline" onclick="this.closest('.card').remove()">Tutup</button></div>
-        <div style="max-height:400px;overflow-y:auto;padding:1rem">
-            ${messages.map(m => `
-                <div style="margin-bottom:0.75rem;${m.role === 'user' ? 'text-align:right' : ''}">
-                    <small class="text-muted">${m.role === 'user' ? '👤 Siswa' : '🤖 Litra-AI'} - ${new Date(m.time).toLocaleString('id-ID')}</small>
-                    <div style="background:${m.role === 'user' ? 'var(--primary)' : 'var(--bg-input)'};padding:0.5rem 0.75rem;border-radius:8px;display:inline-block;max-width:80%;text-align:left;margin-top:0.25rem">
-                        ${ChatbotEngine.formatMessage(m.text)}
-                    </div>
-                </div>`).join('') || '<p class="text-muted text-center">Tidak ada pesan</p>'}
-        </div>
-    </div>`;
-}
-
-function downloadChat(username) {
-    const histories = getChatHistories();
-    const messages = histories[username] || [];
-    const users = getUsers();
-    const user = users.find(u => u.username === username);
-    let text = `Riwayat Chat - ${user ? user.name : username}\nSistem Pembelajaran Berbasis Chatbot AI\nSMP Negeri 1 Balikpapan\n${'='.repeat(50)}\n\n`;
-    messages.forEach(m => {
-        text += `[${new Date(m.time).toLocaleString('id-ID')}] ${m.role === 'user' ? 'SISWA' : 'LITRA-AI'}:\n${m.text}\n\n`;
-    });
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `chat_${username}.txt`;
-    link.click();
-}
 
 // ---- PROFILE ----
 function renderProfile(main) {

@@ -192,7 +192,6 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
-            <button class="nav-item" onclick="navigateTo('chat-history')"><i class="fas fa-comments"></i> Riwayat Chat</button>
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
     }
@@ -218,7 +217,7 @@ function navigateTo(page) {
     const titles = {
         'dashboard': 'Dashboard',
         'profile': 'Profil Saya',
-        'tahap1': 'Tahap 1 - Pembelajaran dengan Chatbot AI',
+        'tahap1': 'Tahap 1 - Materi Pembelajaran',
         'tahap2': 'Tahap 2 - Latihan Soal',
         'tahap3': 'Tahap 3 - Asesmen Utama',
         'student-results': 'Hasil Penilaian Siswa',

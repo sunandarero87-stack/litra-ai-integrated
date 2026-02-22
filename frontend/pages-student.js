@@ -39,9 +39,9 @@ function renderStudentDashboard(main) {
         <div class="tahap-card ${t1Status}" onclick="${t1Status !== 'locked' ? "navigateTo('tahap1')" : ''}">
             ${t1Status === 'locked' ? '<i class="fas fa-lock lock-icon"></i>' : ''}
             ${t1Status === 'completed' ? '<i class="fas fa-check-circle lock-icon" style="color:var(--success)"></i>' : ''}
-            <div class="tahap-icon chat"><i class="fas fa-robot"></i></div>
+            <div class="tahap-icon chat"><i class="fas fa-book-open"></i></div>
             <h3>Tahap 1</h3>
-            <p>Pembelajaran dengan Chatbot AI</p>
+            <p>Pembelajaran Materi Guru</p>
             <p class="tahap-status" style="color:${t1Status === 'completed' ? 'var(--success)' : 'var(--primary-light)'}">
                 ${t1Status === 'completed' ? '✅ Selesai' : '📚 Mulai Belajar'}
             </p>
@@ -72,109 +72,33 @@ function renderStudentDashboard(main) {
 
 // ---- TAHAP 1: CHATBOT ----
 function renderTahap1(main) {
-    const histories = getChatHistories();
-    const myHistory = histories[currentUser.username] || [];
+    const materials = getMaterials();
 
     main.innerHTML = `
-    <div class="chat-container">
-        <div class="chat-header">
-            <div class="bot-avatar"><i class="fas fa-robot"></i></div>
-            <div class="chat-header-info">
-                <h3>Litra-AI</h3>
-                <p>Asisten Pak Nandar untuk Mata Pelajaran Informatika</p>
-            </div>
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Tahap 1: Materi Pembelajaran</h3>
+            <p class="text-muted">Pelajari materi yang telah diunggah oleh Pak Nandar di bawah ini sebelum melanjutkan.</p>
         </div>
-        <div class="chat-messages" id="chat-messages"></div>
-        <div class="chat-input">
-            <input type="text" id="chat-input-field" placeholder="Ketik pertanyaanmu..." onkeypress="if(event.key==='Enter')sendChatMessage()">
-            <button onclick="sendChatMessage()"><i class="fas fa-paper-plane"></i></button>
+        <div class="material-list mt-2" style="max-height: 400px; overflow-y: auto;">
+            ${materials.map((m, i) => `
+                <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                        <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle;"></i>
+                        <span style="font-weight: 500;">${m.name}</span>
+                        <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
+                    </div>
+                </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi untuk dipelajari.</p>'}
         </div>
-    </div>
-    <div class="chat-complete-btn">
-        <button class="btn btn-success" onclick="completeTahap1()">
-            <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
-        </button>
+        <div class="chat-complete-btn mt-2" style="text-align: right;">
+            <button class="btn btn-success" onclick="completeTahap1()">
+                <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
+            </button>
+        </div>
     </div>`;
-
-    const chatBox = document.getElementById('chat-messages');
-
-    // Show greeting if no history
-    if (myHistory.length === 0) {
-        appendMessage(chatBox, 'bot', ChatbotEngine.formatMessage(ChatbotEngine.greeting));
-    } else {
-        myHistory.forEach(m => appendMessage(chatBox, m.role, ChatbotEngine.formatMessage(m.text)));
-    }
 }
-
-function appendMessage(container, role, html) {
-    const div = document.createElement('div');
-    div.className = `message ${role}`;
-    div.innerHTML = `
-        <div class="message-avatar">
-            <i class="fas ${role === 'bot' ? 'fa-robot' : 'fa-user'}"></i>
-        </div>
-        <div class="message-bubble">${html}</div>`;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-}
-
-function sendChatMessage() {
-    const input = document.getElementById('chat-input-field');
-    const msg = input.value.trim();
-    if (!msg) return;
-
-    const chatBox = document.getElementById('chat-messages');
-    appendMessage(chatBox, 'user', msg);
-
-    // Save to history
-    const histories = getChatHistories();
-    if (!histories[currentUser.username]) histories[currentUser.username] = [];
-    histories[currentUser.username].push({ role: 'user', text: msg, time: new Date().toISOString() });
-
-    input.value = '';
-    input.disabled = true;
-
-    // Typing indicator
-    const typing = document.createElement('div');
-    typing.className = 'message bot';
-    typing.id = 'typing-indicator';
-    typing.innerHTML = `<div class="message-avatar"><i class="fas fa-robot"></i></div><div class="message-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
-    chatBox.appendChild(typing);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // Use Gemini API (async) with fallback to local engine
-    ChatbotEngine.getResponseFromAPI(msg, currentUser.username, histories[currentUser.username])
-        .then(response => {
-            const ti = document.getElementById('typing-indicator');
-            if (ti) ti.remove();
-            const formatted = ChatbotEngine.formatMessage(response);
-            appendMessage(chatBox, 'bot', formatted);
-            histories[currentUser.username].push({ role: 'bot', text: response, time: new Date().toISOString() });
-            saveChatHistories(histories);
-            input.disabled = false;
-            input.focus();
-        })
-        .catch(err => {
-            const ti = document.getElementById('typing-indicator');
-            if (ti) ti.remove();
-            const fallback = ChatbotEngine.getResponse(msg);
-            const formatted = ChatbotEngine.formatMessage(fallback);
-            appendMessage(chatBox, 'bot', formatted);
-            histories[currentUser.username].push({ role: 'bot', text: fallback, time: new Date().toISOString() });
-            saveChatHistories(histories);
-            input.disabled = false;
-            input.focus();
-        });
-}
-
 
 function completeTahap1() {
-    const histories = getChatHistories();
-    const myHistory = histories[currentUser.username] || [];
-    if (myHistory.length < 2) {
-        alert('Kamu harus bertanya minimal 1 pertanyaan ke Litra-AI sebelum melanjutkan!');
-        return;
-    }
     updateProgress(currentUser.username, { tahap1Complete: true });
     alert('🎉 Tahap 1 selesai! Sekarang kamu bisa mengerjakan Latihan Soal di Tahap 2.');
     navigateTo('dashboard');

@@ -1,44 +1,49 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const axios = require('axios');
 const ChatLog = require('../models/ChatLog');
 
-// Configuration - Kita bersihkan semuanya dari spasi atau karakter aneh
+// Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-const AI_MODEL = (process.env.AI_MODEL || "gemini-1.5-flash").replace(/\s/g, "");
-
-const genAI = new GoogleGenerativeAI(AI_API_KEY);
-
-const SYSTEM_PROMPT = `Kamu adalah Litra-AI, asisten chatbot yang bebas menjawab semua pertanyaan siswa dengan sopan.`;
+// Gunakan nama model lengkap untuk v1
+const AI_MODEL = "gemini-1.5-flash";
 
 /**
- * Generate AI Response
+ * Generate AI Response menggunakan v1 Stable Endpoint
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory) {
     try {
-        // Gunakan model tanpa systemInstruction dulu krn terkadang versi v1beta di bbrp region bermasalah
-        const model = genAI.getGenerativeModel({ model: AI_MODEL });
+        // Endpoint v1 Stable (Lebih dipercaya daripada v1beta)
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
 
-        // Gabungkan sistem prompt ke instruksi awal
-        const fullSystemInstruction = `${SYSTEM_PROMPT}\n\nKONTEKS MATERI:\n${materialContext}\n\nTAHAP SISWA: Tahap ${stage}`;
+        const systemInstruction = `Kamu adalah Litra-AI, asisten chatbot yang bebas menjawab semua pertanyaan siswa dengan sopan.\n\nKONTEKS MATERI:\n${materialContext}\n\nTAHAP SISWA: Tahap ${stage}`;
 
-        // Konversi history ke format Google Gemini
-        const history = chatHistory.slice(-5).map(msg => ({
+        // Format data untuk Google Gemini Native API
+        const contents = chatHistory.slice(-5).map(msg => ({
             role: msg.role === 'bot' ? 'model' : 'user',
-            parts: [{ text: msg.content }],
+            parts: [{ text: msg.content }]
         }));
 
-        // Tambahkan instruksi sistem di awal history jika kosong, atau selipkan di pesan
-        const chat = model.startChat({
-            history: [
-                { role: "user", parts: [{ text: "Halo, tolong ikuti instruksi ini: " + fullSystemInstruction }] },
-                { role: "model", parts: [{ text: "Baik, saya adalah Litra-AI. Saya siap membantu sesuai instruksi tersebut." }] },
-                ...history
-            ]
+        // Tambahkan pertanyaan terbaru
+        contents.push({
+            role: 'user',
+            parts: [{ text: question }]
         });
 
-        const result = await chat.sendMessage(question);
-        const aiReply = result.response.text();
+        const response = await axios.post(URL, {
+            contents: contents,
+            systemInstruction: {
+                parts: [{ text: systemInstruction }]
+            },
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 1024,
+            }
+        });
 
-        // Logging sederhana
+        const aiReply = response.data.candidates[0].content.parts[0].text;
+
+        // Logging
         try {
             await ChatLog.create({
                 username, role: 'bot', content: aiReply, model: AI_MODEL,
@@ -52,19 +57,18 @@ async function generateResponse(username, question, stage, materialContext, chat
         return aiReply;
 
     } catch (error) {
-        console.error('--- AI SERVICE ERROR ---');
-        console.error('Model used:', AI_MODEL);
-        console.error('Error Detail:', error.message);
-
-        // Jika 404, mungkin model gemini-1.5-flash benar-benar tidak ada di region tersebut
-        if (error.message.includes("404") && AI_MODEL !== "gemini-pro") {
-            console.warn("⚠️ Flash model not found, trying fallback to gemini-pro...");
-            process.env.AI_MODEL = "gemini-pro"; // Temporary fallback
-            return generateResponse(username, question, stage, materialContext, chatHistory);
-        }
-
-        throw new Error(`AI Error: ${error.message}`);
+        const detail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
+        console.error('--- AI SERVICE ERROR (v1) ---');
+        console.error('Detail:', detail);
+        throw new Error(`AI Error: ${detail}`);
     }
+}
+
+/**
+ * Helper untuk format JSON dari Gemini
+ */
+function cleanJson(text) {
+    return text.replace(/```json|```/g, "").trim();
 }
 
 /**
@@ -72,41 +76,48 @@ async function generateResponse(username, question, stage, materialContext, chat
  */
 async function generateReflections(username, chatHistory) {
     try {
-        const model = genAI.getGenerativeModel({ model: AI_MODEL });
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
-        const prompt = `Kamu adalah pakar pendidikan. Buatlah 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}`;
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        // Bersihkan markdown jika ada
-        const jsonStr = text.replace(/```json|```/g, "").trim();
-        return JSON.parse(jsonStr);
+        const prompt = {
+            contents: [{
+                parts: [{ text: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}` }]
+            }]
+        };
+
+        const response = await axios.post(URL, prompt);
+        const text = response.data.candidates[0].content.parts[0].text;
+        return JSON.parse(cleanJson(text));
     } catch (error) {
         return ["Apa yang kamu pelajari?", "Apa yang sulit?", "Bagaimana perasaanmu?", "Apa targetmu?", "Ada pertanyaan lain?"];
     }
 }
 
+// Fungsi lainnya menggunakan pola yang sama
 async function generateAssessment(username, reflectionAnswers) {
     try {
-        const model = genAI.getGenerativeModel({ model: AI_MODEL });
-        const reflectionText = reflectionAnswers.map(r => `Q: ${r.question}\nA: ${r.answer}`).join('\n');
-        const prompt = `Buat 5 soal pilihan ganda berdasarkan refleksi ini dalam format JSON array of objects. \n\nREFLEKSI:\n${reflectionText}`;
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const jsonStr = text.replace(/```json|```/g, "").trim();
-        return JSON.parse(jsonStr);
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        const prompt = {
+            contents: [{
+                parts: [{ text: `Buat 5 soal pilihan ganda (array of objects {question, options, correct, explanation}) berdasarkan ini: ${JSON.stringify(reflectionAnswers)}` }]
+            }]
+        };
+        const response = await axios.post(URL, prompt);
+        return JSON.parse(cleanJson(response.data.candidates[0].content.parts[0].text));
     } catch (e) { return []; }
 }
 
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
-        const model = genAI.getGenerativeModel({ model: AI_MODEL });
-        const prompt = `Analisislah apakah siswa siap asesmen (JSON format {ready:bool, analysis:string, recommendation:string}): ${JSON.stringify(reflectionAnswers)}`;
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        const jsonStr = text.replace(/```json|```/g, "").trim();
-        return JSON.parse(jsonStr);
-    } catch (e) { return { ready: true, analysis: "Analisis gagal", recommendation: "Cek manual" }; }
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        const prompt = {
+            contents: [{
+                parts: [{ text: `Analisislah kesiapan siswa (JSON {ready, analysis, recommendation}): ${JSON.stringify(reflectionAnswers)}` }]
+            }]
+        };
+        const response = await axios.post(URL, prompt);
+        return JSON.parse(cleanJson(response.data.candidates[0].content.parts[0].text));
+    } catch (e) { return { ready: true, analysis: "Gagal analisis", recommendation: "Cek manual" }; }
 }
 
 module.exports = {
