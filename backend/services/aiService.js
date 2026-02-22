@@ -4,15 +4,15 @@ const ChatLog = require('../models/ChatLog');
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
 // Gunakan nama model lengkap untuk v1
-const AI_MODEL = "gemini-1.5-flash-latest";
+const AI_MODEL = "gemini-1.5-flash";
 
 /**
  * Generate AI Response menggunakan v1 Stable Endpoint
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru') {
     try {
-        // Endpoint v1beta diperlukan untuk dukungan fitur systemInstruction yang lebih stabil di REST API
-        const URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        // Menggunakan v1 dengan penulisan payload yang benar
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
 
         const systemInstruction = `Kamu adalah Asisten Chatbot ${teacherName}. Tugasmu adalah membantu siswa membahas dan mempelajari materi yang sedang mereka buka yaitu: "${selectedMaterial}".\n\nATURAN WAJIB (SANGAT PENTING): SEBELUM kamu membahas materi lebih jauh, pastikan kamu selalu menanyakan kepada siswa apakah mereka sudah menerapkan "7 Kebiasaan Hebat Anak Indonesia" hari ini (khususnya kebiasaan Gemar Belajar, Beribadah, atau Mandiri). Tanyakan dengan sopan dan ramah.\n\nSikapmu harus suportif, jangan memberikan jawaban langsung untuk tugas, tapi pandu siswa berpikir.\n\nKONTEKS BACAAN:\n${materialContext}\n\nMATERI SAAT INI: ${selectedMaterial}\n\nTAHAP SISWA: Tahap ${stage}`;
 
@@ -30,7 +30,7 @@ async function generateResponse(username, question, stage, materialContext, chat
 
         const response = await axios.post(URL, {
             contents: contents,
-            systemInstruction: {
+            system_instruction: {
                 parts: [{ text: systemInstruction }]
             },
             generationConfig: {
@@ -76,7 +76,7 @@ function cleanJson(text) {
  */
 async function generateReflections(username, chatHistory) {
     try {
-        const URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
 
         const prompt = {
@@ -96,7 +96,7 @@ async function generateReflections(username, chatHistory) {
 // Fungsi lainnya menggunakan pola yang sama
 async function generateAssessment(username, reflectionAnswers) {
     try {
-        const URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
         const prompt = {
             contents: [{
                 parts: [{ text: `Buat 5 soal pilihan ganda (array of objects {question, options, correct, explanation}) berdasarkan ini: ${JSON.stringify(reflectionAnswers)}` }]
@@ -109,7 +109,7 @@ async function generateAssessment(username, reflectionAnswers) {
 
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
-        const URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
         const prompt = {
             contents: [{
                 parts: [{ text: `Analisislah kesiapan siswa (JSON {ready, analysis, recommendation}): ${JSON.stringify(reflectionAnswers)}` }]
