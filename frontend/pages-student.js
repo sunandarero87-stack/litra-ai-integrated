@@ -70,32 +70,233 @@ function renderStudentDashboard(main) {
     ${scoreHtml}`;
 }
 
-// ---- TAHAP 1: CHATBOT ----
+let currentMaterial = null;
+
 function renderTahap1(main) {
     const materials = getMaterials();
+    const users = getUsers();
+    const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+    const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
     main.innerHTML = `
-    <div class="card">
+    <div class="card" id="tahap1-container">
         <div class="card-header">
             <h3>📖 Tahap 1: Materi Pembelajaran</h3>
-            <p class="text-muted">Pelajari materi yang telah diunggah oleh Pak Nandar di bawah ini sebelum melanjutkan.</p>
+            <p class="text-muted">Pelajari materi yang telah diunggah oleh Guru sebelum melanjutkan.</p>
         </div>
-        <div class="material-list mt-2" style="max-height: 400px; overflow-y: auto;">
+        <div class="material-list mt-2" id="material-list-container" style="max-height: 400px; overflow-y: auto;">
             ${materials.map((m, i) => `
-                <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color);">
+                <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="viewMaterial('${m.name}', '${m.type}')">
                     <div>
                         <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle;"></i>
                         <span style="font-weight: 500;">${m.name}</span>
                         <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
                     </div>
+                    <button class="btn btn-primary btn-sm">Buka Materi</button>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi untuk dipelajari.</p>'}
         </div>
-        <div class="chat-complete-btn mt-2" style="text-align: right;">
-            <button class="btn btn-success" onclick="completeTahap1()">
-                <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
-            </button>
+
+        <div id="material-viewer-container" style="display:none; margin-top: 1rem;">
+            <button class="btn btn-outline mb-2" onclick="closeMaterialViewer()"><i class="fas fa-arrow-left"></i> Kembali ke Daftar</button>
+            <div style="border: 1px solid var(--border-color); border-radius: 8px; height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-input);">
+                <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
+                <h4 id="viewer-title">Judul</h4>
+                <p class="text-muted" id="viewer-type">Format</p>
+                <div class="mt-2 text-center" style="max-width: 60%; color: var(--text-muted)">
+                    Materi ini sedang ditampilkan dalam mode Viewer.<br>
+                    Silakan pelajari dengan seksama dan gunakan Asisten Chatbot di kanan bawah jika ada pertanyaan atau ingin berdiskusi.
+                </div>
+            </div>
+            <div class="chat-complete-btn mt-2" style="text-align: right;">
+                <button class="btn btn-success" onclick="completeTahap1()">
+                    <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
+                </button>
+            </div>
         </div>
-    </div>`;
+    </div>
+
+    <!-- Floating Chatbot -->
+    <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; align-items: flex-end; flex-direction: column;">
+        <div id="chatbot-panel" style="display: none; width: 350px; height: 500px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease;">
+            <div class="chat-header" style="background: var(--gradient-primary); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                <div class="bot-avatar" style="width:40px;height:40px;border-radius:50%;background:white;color:var(--primary);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+                    ${teacherPhoto}
+                </div>
+                <div class="chat-header-info" style="flex:1">
+                    <h3 style="font-size:0.95rem; margin:0">Asisten ${teacher.name}</h3>
+                    <p style="font-size:0.75rem; color: rgba(255,255,255,0.8); margin:0">Membahas Materi</p>
+                </div>
+                <button style="background:none;border:none;color:white;cursor:pointer;font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);"></div>
+            <div class="chat-input" style="padding:1rem;border-top:1px solid var(--border-color);display:flex;gap:0.5rem;background:var(--bg-sidebar);">
+                <input type="text" id="floating-chat-input" placeholder="Ketik pertanyaanmu..." style="flex:1;padding:0.7rem 1rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;" onkeypress="if(event.key==='Enter')sendFloatingChat()">
+                <button onclick="sendFloatingChat()" class="btn btn-primary" style="padding:0.7rem 1.2rem;"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+        <button id="chatbot-toggle-btn" onclick="toggleChatbot()" style="width: 60px; height: 60px; border-radius: 50%; background: var(--gradient-primary); color: white; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid white; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'">
+            <i class="fas fa-comment-dots"></i>
+        </button>
+    </div>
+    `;
+}
+
+function viewMaterial(name, type) {
+    document.getElementById('material-list-container').style.display = 'none';
+    document.getElementById('material-viewer-container').style.display = 'block';
+    document.getElementById('viewer-title').innerText = name;
+    document.getElementById('viewer-type').innerText = 'Format: ' + type.toUpperCase();
+    currentMaterial = name;
+
+    // Show AI Bot container
+    document.getElementById('floating-chatbot-container').style.display = 'flex';
+
+    // Initiative greeting
+    const chatBox = document.getElementById('floating-chat-messages');
+    chatBox.innerHTML = '';
+    const histories = getChatHistories();
+    if (!histories[currentUser.username]) histories[currentUser.username] = [];
+
+    const users = getUsers();
+    const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+    const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+
+    const initialGreeting = "Halo! Saya Asisten <strong>" + teacher.name + "</strong>. Sebelum kita lanjut membahas sekilas tentang materi <strong>\"" + name + "\"</strong>, bolehkah saya bertanya, apakah kamu sudah menerapkan <strong>7 Kebiasaan Hebat Anak Indonesia</strong> hari ini? (Misal: Beribadah, Gemar Belajar, atau Disiplin).";
+
+    if (histories[currentUser.username].length === 0) {
+        appendFloatingMessage('bot', initialGreeting, teacherPhoto);
+        histories[currentUser.username].push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
+        saveChatHistories(histories);
+    } else {
+        histories[currentUser.username].forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
+    }
+}
+
+function closeMaterialViewer() {
+    document.getElementById('material-list-container').style.display = 'block';
+    document.getElementById('material-viewer-container').style.display = 'none';
+    document.getElementById('floating-chatbot-container').style.display = 'none';
+    document.getElementById('chatbot-panel').style.display = 'none';
+    currentMaterial = null;
+}
+
+function toggleChatbot() {
+    const panel = document.getElementById('chatbot-panel');
+    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+    if (panel.style.display === 'flex') {
+        document.getElementById('floating-chat-input').focus();
+    }
+}
+
+function appendFloatingMessage(role, html, teacherPhoto) {
+    const container = document.getElementById('floating-chat-messages');
+    const div = document.createElement('div');
+    div.className = `message ${role}`;
+
+    // Inline styling for message structure because we are not adding new classes to root CSS
+    div.style.display = 'flex';
+    div.style.gap = '0.75rem';
+    div.style.maxWidth = '85%';
+    if (role === 'bot') {
+        div.style.alignSelf = 'flex-start';
+    } else {
+        div.style.alignSelf = 'flex-end';
+        div.style.flexDirection = 'row-reverse';
+    }
+
+    let avatarIcon = role === 'bot' ? teacherPhoto : '<i class="fas fa-user"></i>';
+    let bgColor = role === 'bot' ? 'var(--bg-input)' : 'var(--primary)';
+    let color = role === 'bot' ? 'inherit' : 'white';
+    let borderRadius = role === 'bot' ? '8px 8px 8px 4px' : '8px 8px 4px 8px';
+
+    div.innerHTML = `
+        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:${role === 'bot' ? 'white' : 'var(--bg-input)'};color:${role === 'bot' ? 'var(--primary)' : 'var(--text-secondary)'};font-size:0.8rem;">
+            ${avatarIcon}
+        </div>
+        <div style="padding:0.75rem 1rem;font-size:0.9rem;line-height:1.6;background:${bgColor};color:${color};border-radius:${borderRadius};">
+            ${html}
+        </div>`;
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendFloatingChat() {
+    const input = document.getElementById('floating-chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    const users = getUsers();
+    const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+    const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+
+    const chatBox = document.getElementById('floating-chat-messages');
+    appendFloatingMessage('user', msg, teacherPhoto);
+
+    const histories = getChatHistories();
+    if (!histories[currentUser.username]) histories[currentUser.username] = [];
+    histories[currentUser.username].push({ role: 'user', text: msg, time: new Date().toISOString() });
+
+    input.value = '';
+    input.disabled = true;
+
+    const typing = document.createElement('div');
+    typing.className = 'message bot';
+    typing.id = 'floating-typing-indicator';
+    typing.style.alignSelf = 'flex-start';
+    typing.style.display = 'flex';
+    typing.style.gap = '0.75rem';
+    typing.innerHTML = `
+        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">
+            ${teacherPhoto}
+        </div>
+        <div style="padding:0.75rem 1rem;font-size:0.9rem;line-height:1.6;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
+            <div class="typing-indicator" style="display:flex; gap:4px; padding:0.5rem 0;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
+            </div>
+        </div>`;
+    chatBox.appendChild(typing);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Send to API Route
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message: msg,
+            username: currentUser.username,
+            selectedMaterial: currentMaterial,
+            teacherName: teacher.name
+        })
+    })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('floating-typing-indicator')?.remove();
+            if (data.success) {
+                appendFloatingMessage('bot', formatMessageLocal(data.reply), teacherPhoto);
+                histories[currentUser.username].push({ role: 'bot', text: data.reply, time: new Date().toISOString() });
+                saveChatHistories(histories);
+            } else {
+                throw new Error(data.error);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('floating-typing-indicator')?.remove();
+            const fallback = "Maaf, saat ini sedang terjadi gangguan jaringan. Silakan coba lagi.";
+            appendFloatingMessage('bot', fallback, teacherPhoto);
+        })
+        .finally(() => {
+            input.disabled = false;
+            input.focus();
+        });
+}
+
+function formatMessageLocal(text) {
+    if (!text) return '';
+    return text.replace(/\\n/g, '<br>').replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');
 }
 
 function completeTahap1() {
@@ -113,18 +314,18 @@ async function renderTahap2(main) {
     const progress = getProgress(currentUser.username);
     if (progress.tahap2Complete) {
         main.innerHTML = `
-        <div class="score-display">
+        < div class="score-display" >
             <div class="score-circle pass">✅<small>SELESAI</small></div>
             <p>Kamu sudah menyelesaikan Tahap 2: Refleksi!</p>
             <p>Status: SIAP ASESMEN</p>
             <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
-        </div>`;
+        </div > `;
         return;
     }
 
     if (reflectionQuestions.length === 0 && !reflectionLoading) {
         reflectionLoading = true;
-        main.innerHTML = `<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> Membangkitkan Pertanyaan Refleksi Berdasarkan Belajarmu...</div>`;
+        main.innerHTML = `< div class="loading-state" > <i class="fas fa-spinner fa-spin"></i> Membangkitkan Pertanyaan Refleksi Berdasarkan Belajarmu...</div > `;
 
         try {
             const response = await fetch('/api/reflections', {
@@ -156,7 +357,7 @@ async function renderTahap2(main) {
     }
 
     main.innerHTML = `
-    <div class="quiz-container">
+        < div class="quiz-container" >
         <div class="quiz-header">
             <h3>📝 Tahap 2: Refleksi Belajar</h3>
             <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan Litra-AI.</p>
@@ -185,7 +386,7 @@ async function renderTahap2(main) {
                 </div>
             </form>
         </div>
-    </div>`;
+    </div > `;
 
     document.getElementById('reflection-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -252,7 +453,7 @@ function renderTahap3(main) {
         const r = results[currentUser.username];
         if (r) {
             const pct = Math.round((r.score / r.total) * 100);
-            main.innerHTML = `<div class="score-display"><div class="score-circle ${pct >= 70 ? 'pass' : 'fail'}">${pct}%<small>${pct >= 70 ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p><button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div>`;
+            main.innerHTML = `< div class="score-display" ><div class="score-circle ${pct >= 70 ? 'pass' : 'fail'}">${pct}%<small>${pct >= 70 ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p><button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div > `;
         }
         return;
     }
@@ -261,7 +462,7 @@ function renderTahap3(main) {
     const approvals = getApprovals();
     if (!approvals[currentUser.username]) {
         main.innerHTML = `
-        <div class="card">
+        < div class="card" >
             <div class="approval-waiting">
                 <div class="approval-icon"><i class="fas fa-hourglass-half"></i></div>
                 <h2>Menunggu Persetujuan Guru</h2>
@@ -269,7 +470,7 @@ function renderTahap3(main) {
                 <p class="text-muted mt-1">Hubungi Pak Nandar untuk mendapatkan persetujuan.</p>
                 <button class="btn btn-outline mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
             </div>
-        </div>`;
+        </div > `;
         return;
     }
 
@@ -277,7 +478,7 @@ function renderTahap3(main) {
     if (!assessmentActive) {
         const settings = getAssessmentSettings();
         main.innerHTML = `
-        <div class="card" style="max-width:600px;margin:0 auto;text-align:center;padding:2.5rem">
+        < div class="card" style = "max-width:600px;margin:0 auto;text-align:center;padding:2.5rem" >
             <div class="tahap-icon exam" style="margin:0 auto 1.5rem"><i class="fas fa-file-alt"></i></div>
             <h2>Asesmen Utama</h2>
             <p class="text-muted mt-1">Format ANBK (Literasi & Numerasi)</p>
@@ -290,7 +491,7 @@ function renderTahap3(main) {
             <button class="btn btn-danger btn-full" onclick="startAssessment()">
                 <i class="fas fa-play"></i> Mulai Asesmen
             </button>
-        </div>`;
+        </div > `;
         return;
     }
 
@@ -334,7 +535,7 @@ function handleTabSwitch() {
         overlay.className = 'tab-violation-overlay';
         overlay.id = 'tab-violation-overlay';
         overlay.innerHTML = `
-            <div class="tab-violation-content">
+        < div class="tab-violation-content" >
                 <i class="fas fa-exclamation-triangle"></i>
                 <h2>⚠️ Pelanggaran Terdeteksi!</h2>
                 <p>Kamu membuka tab lain! Semua jawaban direset. Timer tetap berjalan.</p>
@@ -342,7 +543,7 @@ function handleTabSwitch() {
                 <button class="btn btn-outline" onclick="dismissViolation()" style="color:white;border-color:white">
                     Kembali ke Soal
                 </button>
-            </div>`;
+            </div > `;
         document.body.appendChild(overlay);
     }
 }
@@ -358,7 +559,7 @@ function updateTimerDisplay() {
     if (!el) return;
     const mins = Math.floor(assessmentTimeLeft / 60);
     const secs = assessmentTimeLeft % 60;
-    el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    el.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} `;
     el.className = 'quiz-timer' + (assessmentTimeLeft < 300 ? ' danger' : assessmentTimeLeft < 600 ? ' warning' : '');
 }
 
@@ -374,7 +575,7 @@ function showAssessmentQuestion(main) {
     const secs = assessmentTimeLeft % 60;
 
     main.innerHTML = `
-    <div class="quiz-container">
+        < div class="quiz-container" >
         <div class="quiz-header">
             <span class="quiz-progress-text">Soal ${assessmentCurrentQ + 1}/${total}</span>
             <div class="quiz-timer" id="assessment-timer">${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</div>
@@ -400,7 +601,7 @@ function showAssessmentQuestion(main) {
             `<button class="btn btn-danger" onclick="submitAssessment()"><i class="fas fa-flag-checkered"></i> Selesai</button>`
         }
         </div>
-    </div>`;
+    </div > `;
 }
 
 function selectAssessmentAnswer(qId, optIdx) {
@@ -449,30 +650,30 @@ function submitAssessment() {
 
     const main = document.getElementById('main-content');
     main.innerHTML = `
-    <div class="quiz-container">
-        <div class="score-display">
-            <div class="score-circle ${pass ? 'pass' : 'fail'}">
-                ${pct}%
-                <small>${pass ? 'LULUS' : 'TIDAK LULUS'}</small>
+        < div class="quiz-container" >
+            <div class="score-display">
+                <div class="score-circle ${pass ? 'pass' : 'fail'}">
+                    ${pct}%
+                    <small>${pass ? 'LULUS' : 'TIDAK LULUS'}</small>
+                </div>
+                <h2>${pass ? '🎉 Selamat! Kamu Lulus!' : '😔 Belum Berhasil'}</h2>
+                <div class="analysis-grid mt-2">
+                    <div class="analysis-card">
+                        <h4>📖 Literasi</h4>
+                        <div class="analysis-value ${literasi / litTotal >= 0.7 ? 'high' : literasi / litTotal >= 0.5 ? 'medium' : 'low'}">${literasi}/${litTotal}</div>
+                    </div>
+                    <div class="analysis-card">
+                        <h4>🔢 Numerasi</h4>
+                        <div class="analysis-value ${numerasi / numTotal >= 0.7 ? 'high' : numerasi / numTotal >= 0.5 ? 'medium' : 'low'}">${numerasi}/${numTotal}</div>
+                    </div>
+                    <div class="analysis-card">
+                        <h4>📊 Keseluruhan</h4>
+                        <div class="analysis-value ${pass ? 'high' : 'low'}">${score}/${total}</div>
+                    </div>
+                </div>
+                ${!pass ? '<p style="color:var(--danger)" class="mt-2"><i class="fas fa-redo"></i> Kamu harus mengulang dari Tahap 1.</p>' : ''}
+                ${tabViolationCount > 0 ? `<p class="mt-1 text-muted">⚠️ Pelanggaran tab: ${tabViolationCount}x</p>` : ''}
+                <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
             </div>
-            <h2>${pass ? '🎉 Selamat! Kamu Lulus!' : '😔 Belum Berhasil'}</h2>
-            <div class="analysis-grid mt-2">
-                <div class="analysis-card">
-                    <h4>📖 Literasi</h4>
-                    <div class="analysis-value ${literasi / litTotal >= 0.7 ? 'high' : literasi / litTotal >= 0.5 ? 'medium' : 'low'}">${literasi}/${litTotal}</div>
-                </div>
-                <div class="analysis-card">
-                    <h4>🔢 Numerasi</h4>
-                    <div class="analysis-value ${numerasi / numTotal >= 0.7 ? 'high' : numerasi / numTotal >= 0.5 ? 'medium' : 'low'}">${numerasi}/${numTotal}</div>
-                </div>
-                <div class="analysis-card">
-                    <h4>📊 Keseluruhan</h4>
-                    <div class="analysis-value ${pass ? 'high' : 'low'}">${score}/${total}</div>
-                </div>
-            </div>
-            ${!pass ? '<p style="color:var(--danger)" class="mt-2"><i class="fas fa-redo"></i> Kamu harus mengulang dari Tahap 1.</p>' : ''}
-            ${tabViolationCount > 0 ? `<p class="mt-1 text-muted">⚠️ Pelanggaran tab: ${tabViolationCount}x</p>` : ''}
-            <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
-        </div>
-    </div>`;
+    </div > `;
 }

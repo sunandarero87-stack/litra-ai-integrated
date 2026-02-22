@@ -9,12 +9,12 @@ const AI_MODEL = "gemini-1.5-flash";
 /**
  * Generate AI Response menggunakan v1 Stable Endpoint
  */
-async function generateResponse(username, question, stage, materialContext, chatHistory) {
+async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru') {
     try {
         // Endpoint v1 Stable (Lebih dipercaya daripada v1beta)
         const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
 
-        const systemInstruction = `Kamu adalah Litra-AI, asisten chatbot yang bebas menjawab semua pertanyaan siswa dengan sopan.\n\nKONTEKS MATERI:\n${materialContext}\n\nTAHAP SISWA: Tahap ${stage}`;
+        const systemInstruction = `Kamu adalah Asisten Chatbot ${teacherName}. Tugasmu adalah membantu siswa membahas dan mempelajari materi yang sedang mereka buka yaitu: "${selectedMaterial}".\n\nATURAN WAJIB (SANGAT PENTING): SEBELUM kamu membahas materi lebih jauh, pastikan kamu selalu menanyakan kepada siswa apakah mereka sudah menerapkan "7 Kebiasaan Hebat Anak Indonesia" hari ini (khususnya kebiasaan Gemar Belajar, Beribadah, atau Mandiri). Tanyakan dengan sopan dan ramah.\n\nSikapmu harus suportif, jangan memberikan jawaban langsung untuk tugas, tapi pandu siswa berpikir.\n\nKONTEKS BACAAN:\n${materialContext}\n\nMATERI SAAT INI: ${selectedMaterial}\n\nTAHAP SISWA: Tahap ${stage}`;
 
         // Format data untuk Google Gemini Native API
         const contents = chatHistory.slice(-5).map(msg => ({

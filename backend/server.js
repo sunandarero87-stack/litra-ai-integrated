@@ -48,6 +48,9 @@ mongoose.connect(MONGODB_URI, mongooseOptions)
 
 // ---- API Routes ----
 
+// POST /api/chat - Send message to Litra-AI
+app.post('/api/chat', chatController.handleChat);
+
 // New Routes for Stage 2 & 3
 app.post('/api/reflections', chatController.handleReflections);
 app.post('/api/assessment/generate', chatController.handleAssessmentGeneration);

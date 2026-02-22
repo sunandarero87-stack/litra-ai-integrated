@@ -5,7 +5,7 @@ const ChatLog = require('../models/ChatLog');
 
 exports.handleChat = async (req, res) => {
     try {
-        const { message, username } = req.body;
+        const { message, username, selectedMaterial, teacherName } = req.body;
 
         if (!message || !username) {
             return res.status(400).json({ error: 'Message dan username wajib diisi' });
@@ -33,7 +33,9 @@ exports.handleChat = async (req, res) => {
             message,
             student.stage,
             materialContext,
-            history
+            history,
+            selectedMaterial,
+            teacherName || 'Guru'
         );
 
         res.json({
