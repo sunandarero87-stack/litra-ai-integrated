@@ -4,7 +4,7 @@ const ChatLog = require('../models/ChatLog');
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
 // Gunakan nama model lengkap untuk v1
-const AI_MODEL = "gemini-1.5-flash";
+const AI_MODEL = "gemini-1.5-flash-latest";
 
 /**
  * Generate AI Response menggunakan v1 Stable Endpoint
