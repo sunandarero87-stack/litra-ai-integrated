@@ -11,54 +11,60 @@ const AI_MODEL = "gemini-1.5-flash";
  */
 async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru') {
     try {
-        // Menggunakan v1 dengan penulisan payload yang benar
-        const URL = `https://generativelanguage.googleapis.com/v1/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
+        // PERBAIKAN: Gunakan v1beta untuk mendukung systemInstruction secara penuh
+        const URL = `https://generativelanguage.googleapis.com/v1beta/models/${AI_MODEL}:generateContent?key=${AI_API_KEY}`;
 
-        const systemInstruction = `Kamu adalah Asisten Chatbot ${teacherName}. Tugasmu adalah membantu siswa membahas dan mempelajari materi yang sedang mereka buka yaitu: "${selectedMaterial}".\n\nATURAN WAJIB (SANGAT PENTING): SEBELUM kamu membahas materi lebih jauh, pastikan kamu selalu menanyakan kepada siswa apakah mereka sudah menerapkan "7 Kebiasaan Hebat Anak Indonesia" hari ini (khususnya kebiasaan Gemar Belajar, Beribadah, atau Mandiri). Tanyakan dengan sopan dan ramah.\n\nSikapmu harus suportif, jangan memberikan jawaban langsung untuk tugas, tapi pandu siswa berpikir.\n\nATURAN MATERI: Jika Siswa bertanya tentang file yang diupload guru, chatbot harus menjawab dengan detail dengan jawaban yang memberikan pemahaman. Jika siswa belum paham, chatbot wajib menanyakan ulang bagian mana yang belum dipahami.\n\nKONTEKS BACAAN:\n${materialContext}\n\nMATERI SAAT INI: ${selectedMaterial}\n\nTAHAP SISWA: Tahap ${stage}`;
+        const systemInstructionText = `Kamu adalah Asisten Chatbot ${teacherName}. Tugasmu adalah membantu siswa membahas materi: "${selectedMaterial}".
+        
+ATURAN WAJIB: Tanyakan apakah mereka sudah menerapkan "7 Kebiasaan Hebat Anak Indonesia" (Gemar Belajar, Beribadah, atau Mandiri).
+SIKAP: Suportif, jangan beri jawaban langsung, pandu siswa berpikir.
+KONTEKS: ${materialContext}
+TAHAP: ${stage}`;
 
-        // Format data untuk Google Gemini Native API
-        const contents = chatHistory.slice(-5).map(msg => ({
-            role: msg.role === 'bot' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
+        // Format history dengan benar
+        let contents = chatHistory.slice(-6).map(msg => ({
+            role: (msg.role === 'bot' || msg.role === 'model') ? 'model' : 'user',
+            parts: [{ text: msg.content || "" }]
         }));
 
-        // Tambahkan pertanyaan terbaru
+        // Tambahkan pesan user terbaru
         contents.push({
             role: 'user',
             parts: [{ text: question }]
         });
 
-        const response = await axios.post(URL, {
+        const payload = {
             contents: contents,
             systemInstruction: {
-                parts: [{ text: systemInstruction }]
+                role: "system", // Opsional tapi disarankan di beberapa versi SDK
+                parts: [{ text: systemInstructionText }]
             },
             generationConfig: {
                 temperature: 0.7,
-                topK: 40,
-                topP: 0.95,
                 maxOutputTokens: 1024,
             }
-        });
+        };
+
+        const response = await axios.post(URL, payload);
+
+        // Validasi response path
+        if (!response.data.candidates || !response.data.candidates[0]) {
+            throw new Error("AI tidak memberikan jawaban.");
+        }
 
         const aiReply = response.data.candidates[0].content.parts[0].text;
 
-        // Logging
+        // Logging (Tetap sama)
         try {
-            await ChatLog.create({
-                username, role: 'bot', content: aiReply, model: AI_MODEL,
-                metadata: { stage }
-            });
+            await ChatLog.create({ username, role: 'bot', content: aiReply, model: AI_MODEL, metadata: { stage } });
             await ChatLog.create({ username, role: 'user', content: question, metadata: { stage } });
-        } catch (e) {
-            console.warn('Logging failed');
-        }
+        } catch (e) { console.warn('Logging failed'); }
 
         return aiReply;
 
     } catch (error) {
         const detail = error.response?.data ? JSON.stringify(error.response.data) : error.message;
-        console.error('--- AI SERVICE ERROR (v1) ---');
+        console.error('--- AI SERVICE ERROR ---');
         console.error('Detail:', detail);
         throw new Error(`AI Error: ${detail}`);
     }
