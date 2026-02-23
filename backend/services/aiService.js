@@ -30,7 +30,7 @@ async function generateResponse(username, question, stage, materialContext, chat
 
         const response = await axios.post(URL, {
             contents: contents,
-            system_instruction: {
+            systemInstruction: {
                 parts: [{ text: systemInstruction }]
             },
             generationConfig: {
