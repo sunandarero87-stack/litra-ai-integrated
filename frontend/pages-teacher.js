@@ -129,11 +129,16 @@ function handleMaterialUpload(event) {
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['pdf', 'doc', 'docx'].includes(ext)) { alert('Format file tidak didukung. Gunakan PDF, DOC, atau DOCX.'); return; }
-    const materials = getMaterials();
-    materials.push({ name: file.name, type: ext, date: new Date().toISOString(), size: file.size });
-    saveMaterials(materials);
-    alert('✅ Materi berhasil diupload!');
-    renderMaterials(document.getElementById('main-content'));
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const materials = getMaterials();
+        materials.push({ name: file.name, type: ext, date: new Date().toISOString(), size: file.size, contentDataUrl: e.target.result });
+        saveMaterials(materials);
+        alert('✅ Materi berhasil diupload!');
+        renderMaterials(document.getElementById('main-content'));
+    };
+    reader.readAsDataURL(file);
 }
 
 function deleteMaterial(idx) {

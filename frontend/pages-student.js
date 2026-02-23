@@ -97,8 +97,14 @@ function renderTahap1(main) {
         </div>
 
         <div id="material-viewer-container" style="display:none; margin-top: 1rem;">
-            <button class="btn btn-outline mb-2" onclick="closeMaterialViewer()"><i class="fas fa-arrow-left"></i> Kembali ke Daftar</button>
-            <div style="border: 1px solid var(--border-color); border-radius: 8px; height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-input);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
+                <button class="btn btn-outline" onclick="closeMaterialViewer()"><i class="fas fa-arrow-left"></i> Kembali ke Daftar</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <label style="font-weight: 500;">Bahas Materi:</label>
+                    <select id="material-selector" class="form-input" style="padding: 0.4rem; min-width: 250px;" onchange="switchMaterial(this.value)"></select>
+                </div>
+            </div>
+            <div id="viewer-content-wrapper" style="border: 1px solid var(--border-color); border-radius: 8px; height: 75vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-input); overflow: hidden;">
                 <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
                 <h4 id="viewer-title">Judul</h4>
                 <p class="text-muted" id="viewer-type">Format</p>
@@ -144,32 +150,73 @@ function renderTahap1(main) {
 function viewMaterial(name, type) {
     document.getElementById('material-list-container').style.display = 'none';
     document.getElementById('material-viewer-container').style.display = 'block';
-    document.getElementById('viewer-title').innerText = name;
-    document.getElementById('viewer-type').innerText = 'Format: ' + type.toUpperCase();
-    currentMaterial = name;
 
-    // Show AI Bot container
-    document.getElementById('floating-chatbot-container').style.display = 'flex';
+    const materials = getMaterials();
 
-    // Initiative greeting
-    const chatBox = document.getElementById('floating-chat-messages');
-    chatBox.innerHTML = '';
-    const histories = getChatHistories();
-    if (!histories[currentUser.username]) histories[currentUser.username] = [];
+    // Populate the dropdown selector
+    const sel = document.getElementById('material-selector');
+    if (sel) {
+        sel.innerHTML = materials.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+        sel.value = name;
+    }
 
-    const users = getUsers();
-    const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
-    const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+    // Find material in database to check if we have the content
+    const material = materials.find(m => m.name === name);
 
-    const initialGreeting = "Halo! Saya Asisten <strong>" + teacher.name + "</strong>. Sebelum kita lanjut membahas sekilas tentang materi <strong>\"" + name + "\"</strong>, bolehkah saya bertanya, apakah kamu sudah menerapkan <strong>7 Kebiasaan Hebat Anak Indonesia</strong> hari ini? (Misal: Beribadah, Gemar Belajar, atau Disiplin).";
+    if (material && material.contentDataUrl && type === 'pdf') {
+        // Removed #toolbar=0 so students can scroll and use native PDF pagination tools
+        document.getElementById('viewer-content-wrapper').innerHTML = `<iframe src="${material.contentDataUrl}" style="width:100%; height:100%; border:none;"></iframe>`;
+    } else {
+        document.getElementById('viewer-content-wrapper').innerHTML = `
+            <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
+            <h4 id="viewer-title">${name}</h4>
+            <p class="text-muted" id="viewer-type">Format: ${type.toUpperCase()}</p>
+            <div class="mt-2 text-center" style="max-width: 60%; color: var(--text-muted)">
+                Materi ini sedang ditampilkan dalam mode Viewer.<br>
+                Silakan pelajari dengan seksama dan gunakan Asisten Chatbot di kanan bawah jika ada pertanyaan atau ingin berdiskusi.<br>
+                <span style="font-size: 0.8rem; color: var(--primary-light)">(Tampilan halaman spesifik membutuhkan file PDF Baru yang diupload ulang oleh guru)</span>
+            </div>
+        `;
+    }
 
-    if (histories[currentUser.username].length === 0) {
+    // Avoid duplicate initialization if switching material inside the viewer
+    if (currentMaterial !== name) {
+        currentMaterial = name;
+
+        // Reset chat container visibility if needed
+        document.getElementById('floating-chatbot-container').style.display = 'flex';
+
+        // Initiative greeting for the currently selected material
+        const chatBox = document.getElementById('floating-chat-messages');
+        chatBox.innerHTML = '';
+        const histories = getChatHistories();
+        if (!histories[currentUser.username]) histories[currentUser.username] = [];
+
+        const users = getUsers();
+        const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+        const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+
+        // Custom greeting updating the topic to the newly selected material
+        const initialGreeting = "Halo! Saya Asisten <strong>" + teacher.name + "</strong>. Kita sedang membahas materi <strong>\"" + name + "\"</strong>. Jika ada halaman yang kurang jelas di materi tersebut, silakan tanyakan saja pada saya!";
+
+        // Push new greeting logically (don't strictly clear history to save context overall, but for UI we might render from scratch)
         appendFloatingMessage('bot', initialGreeting, teacherPhoto);
         histories[currentUser.username].push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
         saveChatHistories(histories);
-    } else {
+
+        // Re-render past history so student still sees context
+        chatBox.innerHTML = '';
         histories[currentUser.username].forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
     }
+}
+
+function switchMaterial(name) {
+    const materials = getMaterials();
+    const material = materials.find(m => m.name === name);
+    if (!material) return;
+
+    // Toggle smoothly to new viewed material
+    viewMaterial(material.name, material.type);
 }
 
 function closeMaterialViewer() {
