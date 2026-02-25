@@ -62,6 +62,7 @@ app.post('/api/chat', chatController.handleChat);
 app.post('/api/reflections', chatController.handleReflections);
 app.post('/api/assessment/generate', chatController.handleAssessmentGeneration);
 app.post('/api/assessment/analyze', chatController.handleAnalysis);
+app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
 
 // Auth & Users
 app.post('/api/auth/login', authController.login);
@@ -80,6 +81,7 @@ app.post('/api/progress/settings', progressController.saveSettings);
 
 // Materials
 app.get('/api/materials', materialController.getMaterials);
+app.get('/api/materials/content/:id', materialController.getMaterialContent);
 app.get('/api/materials/:id', materialController.getMaterialById);
 app.post('/api/materials', materialController.addMaterial);
 app.delete('/api/materials/:id', materialController.deleteMaterial);

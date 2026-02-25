@@ -17,7 +17,11 @@ exports.syncAll = async (req, res) => {
                 tahap1Complete: p.tahap1Complete,
                 tahap2Complete: p.tahap2Complete,
                 tahap3Complete: p.tahap3Complete,
+                tahap4Complete: p.tahap4Complete,
                 tahap2Score: p.tahap2Score,
+                tahap4Score: p.tahap4Score,
+                tahap4Analysis: p.tahap4Analysis,
+                tahap4Details: p.tahap4Details,
                 aiReadiness: p.aiReadiness,
                 isReady: p.isReady,
                 generatedAssessment: p.generatedAssessment

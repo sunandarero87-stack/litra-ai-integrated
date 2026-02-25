@@ -29,6 +29,7 @@ function renderStudentDashboard(main) {
     const t1Status = progress.tahap1Complete ? 'completed' : 'unlocked';
     const t2Status = progress.tahap1Complete ? (progress.tahap2Complete ? 'completed' : 'unlocked') : 'locked';
     const t3Status = progress.tahap2Complete ? (progress.tahap3Complete ? 'completed' : 'unlocked') : 'locked';
+    const t4Status = progress.tahap3Complete ? (progress.tahap4Complete ? 'completed' : 'unlocked') : 'locked';
 
     main.innerHTML = `
     <div style="margin-bottom:1.5rem">
@@ -64,6 +65,16 @@ function renderStudentDashboard(main) {
             <p>Asesmen Utama (50 soal ANBK)</p>
             <p class="tahap-status" style="color:${t3Status === 'completed' ? 'var(--success)' : t3Status === 'locked' ? 'var(--text-muted)' : 'var(--danger)'}">
                 ${t3Status === 'completed' ? '✅ Selesai' : t3Status === 'locked' ? '🔒 Terkunci' : '🎯 Mulai Asesmen'}
+            </p>
+        </div>
+        <div class="tahap-card ${t4Status}" onclick="${t4Status !== 'locked' ? "navigateTo('tahap4')" : ''}">
+            ${t4Status === 'locked' ? '<i class="fas fa-lock lock-icon"></i>' : ''}
+            ${t4Status === 'completed' ? '<i class="fas fa-check-circle lock-icon" style="color:var(--success)"></i>' : ''}
+            <div class="tahap-icon" style="background:var(--success-light);color:var(--success)"><i class="fas fa-heart"></i></div>
+            <h3>Tahap 4</h3>
+            <p>Refleksi 7 Kebiasaan Hebat</p>
+            <p class="tahap-status" style="color:${t4Status === 'completed' ? 'var(--success)' : t4Status === 'locked' ? 'var(--text-muted)' : 'var(--primary)'}">
+                ${t4Status === 'completed' ? '✅ Selesai' : t4Status === 'locked' ? '🔒 Terkunci' : '📝 Mulai Refleksi'}
             </p>
         </div>
     </div>
@@ -165,27 +176,9 @@ async function viewMaterial(id, type) {
 
     if (!material) return;
 
-    let targetDataUrl = material.contentDataUrl;
-
-    // Fetch from backend if data URL is not cached locally
-    if (!targetDataUrl && material._id) {
-        document.getElementById('viewer-content-wrapper').innerHTML = `<div align="center"><i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary);"></i><p class="mt-1">Memuat materi...</p></div>`;
-        try {
-            const res = await fetch(`/api/materials/${material._id}`);
-            const data = await res.json();
-            if (data.success && data.material) {
-                targetDataUrl = data.material.contentDataUrl;
-                // Cache it so we don't fetch it again while navigating
-                material.contentDataUrl = targetDataUrl;
-            }
-        } catch (e) {
-            console.error('Failed to load material content', e);
-        }
-    }
-
-    if (material && targetDataUrl && type === 'pdf') {
-        // Removed #toolbar=0 so students can scroll and use native PDF pagination tools
-        document.getElementById('viewer-content-wrapper').innerHTML = `<iframe src="${targetDataUrl}" style="width:100%; height:100%; border:none;"></iframe>`;
+    if (material && type === 'pdf') {
+        const urlObj = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
+        document.getElementById('viewer-content-wrapper').innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none;"></iframe>`;
     } else {
         document.getElementById('viewer-content-wrapper').innerHTML = `
             <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
@@ -712,7 +705,7 @@ function submitAssessment() {
 
     // If fail, reset to tahap 1
     if (!pass) {
-        updateProgress(currentUser.username, { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false });
+        updateProgress(currentUser.username, { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false, tahap4Complete: false, tahap4Score: 0 });
         // Clear approval
         saveApprovalForUser(currentUser.username, null);
     }
@@ -744,5 +737,104 @@ function submitAssessment() {
                 ${tabViolationCount > 0 ? `<p class="mt-1 text-muted">⚠️ Pelanggaran tab: ${tabViolationCount}x</p>` : ''}
                 <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
             </div>
-    </div > `;
+    </div>`;
 }
+
+// ---- TAHAP 4: REFLEKSI 7 KEBIASAAN HEBAT ----
+function renderTahap4(main) {
+    const progress = getProgress(currentUser.username);
+    if (!progress.tahap3Complete) {
+        main.innerHTML = `<div class="card"><p class="text-center text-muted">Selesaikan Tahap 3 terlebih dahulu.</p></div>`;
+        return;
+    }
+
+    if (progress.tahap4Complete) {
+        const details = (progress.tahap4Details || []).map(d => `<li>${d}</li>`).join('');
+        main.innerHTML = `
+        <div class="card fade-in">
+            <h3 class="card-title text-center mb-2">🎉 Selamat! Anda telah menyelesaikan Tahap 4</h3>
+            <div class="score-display text-center my-2">
+                <div class="score-circle pass mx-auto" style="width:120px;height:120px;font-size:2rem">
+                    ${progress.tahap4Score}
+                </div>
+            </div>
+            <p class="text-center"><strong>Analisis AI:</strong> ${progress.tahap4Analysis}</p>
+            ${details ? `<ul class="mt-2" style="max-width:600px;margin:0 auto;text-align:left;">${details}</ul>` : ''}
+            <div class="text-center mt-3">
+                <button class="btn btn-primary" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
+            </div>
+        </div>`;
+        return;
+    }
+
+    const questions = [
+        "1. Bangun Pagi: Jam berapa kamu bangun pagi hari ini dan kegiatan apa yang langsung kamu lakukan?",
+        "2. Beribadah: Bagaimana kamu memastikan untuk selalu melaksanakan ibadah sesuai ajaran agamamu sebelum ke sekolah?",
+        "3. Berolahraga: Olahraga atau aktivitas fisik apa yang rutin kamu lakukan minggu ini untuk menjaga kebugaran tubuh?",
+        "4. Makan Sehat dan Bergizi: Jelaskan menu makanan sarapan sehatmu hari ini yang memberikan energi untuk belajar.",
+        "5. Gemar Belajar: Bagaimana cara belajarmu di rumah untuk mempersiapkan materi besok setiap malam hari?",
+        "6. Bermasyarakat: Ceritakan satu pengalamanmu di mana kamu saling membantu teman atau tetangga di lingkunganmu.",
+        "7. Tidur Cepat: Jam berapa kamu biasanya tidur malam dan persiapan apa yang kamu lakukan sebelumnya agar tenang?"
+    ];
+
+    main.innerHTML = `
+    <div class="card fade-in">
+        <h3 class="card-title text-center mb-2">🌱 Refleksi 7 Kebiasaan Hebat Anak Indonesia</h3>
+        <p class="text-center text-muted mb-3">Silakan jawab dengan jujur secara mandiri. Jawaban akan dianalisis oleh AI. Copy & Paste dinonaktifkan.</p>
+        
+        <form id="tahap4-form" onsubmit="return submitHabitReflections(event)">
+            ${questions.map((q, i) => `
+                <div class="form-group mb-3">
+                    <label style="font-weight:600; font-size:1.05rem;">${q}</label>
+                    <textarea id="habit-q${i}" class="input-modern mt-1" rows="3" placeholder="Ketik refleksimu di sini..." onpaste="return false;" oncopy="return false;" oncontextmenu="return false;" autocomplete="off" required minlength="15"></textarea>
+                </div>
+            `).join('')}
+            <div class="text-center mt-3">
+                <button type="submit" id="submit-t4-btn" class="btn btn-primary" style="padding:1rem 3rem;font-size:1.1rem">Kirim Refleksi ke AI</button>
+            </div>
+            <div id="t4-error" class="error-msg hidden mt-2"></div>
+        </form>
+    </div>`;
+}
+
+async function submitHabitReflections(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submit-t4-btn');
+    const err = document.getElementById('t4-error');
+    err.classList.add('hidden');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> AI sedang menganalisis (estimasi 10-30 detik)...';
+
+    try {
+        const answers = [];
+        for (let i = 0; i < 7; i++) {
+            answers.push(document.getElementById(`habit-q${i}`).value);
+        }
+
+        const res = await fetch('/api/assessment/analyze-habits', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username, habitAnswers: answers })
+        });
+        const data = await res.json();
+
+        if (data.success && data.analysis) {
+            updateProgress(currentUser.username, {
+                tahap4Complete: true,
+                tahap4Score: data.analysis.score || 0,
+                tahap4Analysis: data.analysis.analysis || "Analisis berhasil diselesaikan.",
+                tahap4Details: data.analysis.details || []
+            });
+            renderTahap4(document.getElementById('main-content'));
+        } else {
+            throw new Error("Gagal memperoleh respon dari AI");
+        }
+    } catch (e) {
+        console.error(e);
+        err.textContent = "Terjadi kesalahan saat menghubungi API! Coba lagi.";
+        err.classList.remove('hidden');
+        btn.disabled = false;
+        btn.innerHTML = 'Kirim Refleksi ke AI';
+    }
+}
+

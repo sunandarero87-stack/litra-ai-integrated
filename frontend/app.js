@@ -144,7 +144,7 @@ function saveAssessmentSettings(s) {
 function getProgress(username) {
     const all = getStudentProgress();
     if (!all[username]) {
-        all[username] = { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false };
+        all[username] = { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false, tahap4Complete: false, tahap4Score: 0, tahap4Analysis: null, tahap4Details: [] };
         saveStudentProgress(all);
     }
     return all[username];
@@ -346,6 +346,7 @@ function navigateTo(page) {
         'tahap1': 'Tahap 1 - Materi Pembelajaran',
         'tahap2': 'Tahap 2 - Latihan Soal',
         'tahap3': 'Tahap 3 - Asesmen Utama',
+        'tahap4': 'Tahap 4 - 7 Kebiasaan Hebat',
         'student-results': 'Hasil Penilaian Siswa',
         'materials': 'Manajemen Materi',
         'assessment-mgmt': 'Manajemen Asesmen',
@@ -388,6 +389,9 @@ function renderPage(page) {
             break;
         case 'tahap3':
             renderTahap3(main);
+            break;
+        case 'tahap4':
+            renderTahap4(main);
             break;
         case 'student-results':
             renderStudentResults(main);

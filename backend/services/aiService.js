@@ -23,8 +23,7 @@ function getHeaders() {
 async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru') {
     try {
         const systemInstructionText = `Kamu adalah Asisten Chatbot ${teacherName}. Tugasmu adalah membantu siswa membahas materi: "${selectedMaterial}".
-        
-ATURAN WAJIB: Tanyakan apakah mereka sudah menerapkan "7 Kebiasaan Hebat Anak Indonesia" (Gemar Belajar, Beribadah, atau Mandiri).
+
 SIKAP: Suportif, jangan beri jawaban langsung, pandu siswa berpikir.
 KONTEKS: ${materialContext}
 TAHAP: ${stage}`;
@@ -147,9 +146,27 @@ async function analyzeReadiness(username, reflectionAnswers) {
     }
 }
 
+async function analyzeHabits(username, habitAnswers) {
+    try {
+        const payload = {
+            model: AI_MODEL,
+            messages: [
+                { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat." },
+                { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
+            ]
+        };
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        return JSON.parse(cleanJson(response.data.choices[0].message.content));
+    } catch (e) {
+        console.error("Habit Analysis Error:", e.message);
+        return { score: 0, analysis: "Gagal memproses analisis", details: [] };
+    }
+}
+
 module.exports = {
     generateResponse,
     generateReflections,
     generateAssessment,
-    analyzeReadiness
+    analyzeReadiness,
+    analyzeHabits
 };

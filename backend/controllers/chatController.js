@@ -87,3 +87,13 @@ exports.handleAnalysis = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.handleHabitAnalysis = async (req, res) => {
+    try {
+        const { username, habitAnswers } = req.body;
+        const analysis = await aiService.analyzeHabits(username, habitAnswers);
+        res.json({ success: true, analysis });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
