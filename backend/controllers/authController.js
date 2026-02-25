@@ -47,7 +47,7 @@ const changePassword = async (req, res) => {
         const user = await User.findOneAndUpdate(
             { username },
             { password: newPassword, mustChangePassword: false },
-            { new: true }
+            { returnDocument: 'after' }
         );
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ message: 'Password updated', user });
@@ -62,7 +62,7 @@ const updateProfile = async (req, res) => {
         const user = await User.findOneAndUpdate(
             { username },
             { name, photo },
-            { new: true }
+            { returnDocument: 'after' }
         );
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ message: 'Profile updated', user });
