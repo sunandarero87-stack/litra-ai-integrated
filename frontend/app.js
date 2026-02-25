@@ -25,9 +25,9 @@ async function syncUsers() {
 async function syncData() {
     try {
         const [usersRes, syncRes, materialsRes] = await Promise.all([
-            fetch('/api/users'),
-            fetch('/api/sync'),
-            fetch('/api/materials')
+            fetch('/api/users', { cache: 'no-store' }),
+            fetch('/api/sync', { cache: 'no-store' }),
+            fetch('/api/materials', { cache: 'no-store' })
         ]);
 
         if (usersRes.ok) {
