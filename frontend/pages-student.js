@@ -86,7 +86,7 @@ function renderTahap1(main) {
         </div>
         <div class="material-list mt-2" id="material-list-container" style="max-height: 400px; overflow-y: auto;">
             ${materials.map((m, i) => `
-                <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="viewMaterial('${m.name}', '${m.type}')">
+                <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="viewMaterial('${m._id}', '${m.type}')">
                     <div>
                         <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle;"></i>
                         <span style="font-weight: 500;">${m.name}</span>
@@ -147,7 +147,7 @@ function renderTahap1(main) {
     `;
 }
 
-function viewMaterial(name, type) {
+async function viewMaterial(id, type) {
     document.getElementById('material-list-container').style.display = 'none';
     document.getElementById('material-viewer-container').style.display = 'block';
 
@@ -156,20 +156,40 @@ function viewMaterial(name, type) {
     // Populate the dropdown selector
     const sel = document.getElementById('material-selector');
     if (sel) {
-        sel.innerHTML = materials.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-        sel.value = name;
+        sel.innerHTML = materials.map(m => `<option value="${m._id}">${m.name}</option>`).join('');
+        sel.value = id;
     }
 
     // Find material in database to check if we have the content
-    const material = materials.find(m => m.name === name);
+    const material = materials.find(m => m._id === id || m.name === id); // fallback just in case
 
-    if (material && material.contentDataUrl && type === 'pdf') {
+    if (!material) return;
+
+    let targetDataUrl = material.contentDataUrl;
+
+    // Fetch from backend if data URL is not cached locally
+    if (!targetDataUrl && material._id) {
+        document.getElementById('viewer-content-wrapper').innerHTML = `<div align="center"><i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary);"></i><p class="mt-1">Memuat materi...</p></div>`;
+        try {
+            const res = await fetch(`/api/materials/${material._id}`);
+            const data = await res.json();
+            if (data.success && data.material) {
+                targetDataUrl = data.material.contentDataUrl;
+                // Cache it so we don't fetch it again while navigating
+                material.contentDataUrl = targetDataUrl;
+            }
+        } catch (e) {
+            console.error('Failed to load material content', e);
+        }
+    }
+
+    if (material && targetDataUrl && type === 'pdf') {
         // Removed #toolbar=0 so students can scroll and use native PDF pagination tools
-        document.getElementById('viewer-content-wrapper').innerHTML = `<iframe src="${material.contentDataUrl}" style="width:100%; height:100%; border:none;"></iframe>`;
+        document.getElementById('viewer-content-wrapper').innerHTML = `<iframe src="${targetDataUrl}" style="width:100%; height:100%; border:none;"></iframe>`;
     } else {
         document.getElementById('viewer-content-wrapper').innerHTML = `
             <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
-            <h4 id="viewer-title">${name}</h4>
+            <h4 id="viewer-title">${material.name}</h4>
             <p class="text-muted" id="viewer-type">Format: ${type.toUpperCase()}</p>
             <div class="mt-2 text-center" style="max-width: 60%; color: var(--text-muted)">
                 Materi ini sedang ditampilkan dalam mode Viewer.<br>
@@ -180,8 +200,8 @@ function viewMaterial(name, type) {
     }
 
     // Avoid duplicate initialization if switching material inside the viewer
-    if (currentMaterial !== name) {
-        currentMaterial = name;
+    if (currentMaterial !== id) {
+        currentMaterial = id;
 
         // Reset chat container visibility if needed
         document.getElementById('floating-chatbot-container').style.display = 'flex';
@@ -197,7 +217,7 @@ function viewMaterial(name, type) {
         const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
         // Custom greeting updating the topic to the newly selected material
-        const initialGreeting = "Halo! Saya Asisten **" + teacher.name + "**. Kita sedang membahas materi **\"" + name + "\"**. Jika ada halaman yang kurang jelas di materi tersebut, silakan tanyakan saja pada saya!";
+        const initialGreeting = "Halo! Saya Asisten **" + teacher.name + "**. Kita sedang membahas materi **\"" + material.name + "\"**. Jika ada halaman yang kurang jelas di materi tersebut, silakan tanyakan saja pada saya!";
 
         // Push new greeting logically (don't strictly clear history to save context overall, but for UI we might render from scratch)
         appendFloatingMessage('bot', initialGreeting, teacherPhoto);
@@ -210,13 +230,13 @@ function viewMaterial(name, type) {
     }
 }
 
-function switchMaterial(name) {
+function switchMaterial(id) {
     const materials = getMaterials();
-    const material = materials.find(m => m.name === name);
+    const material = materials.find(m => m._id === id || m.name === id);
     if (!material) return;
 
     // Toggle smoothly to new viewed material
-    viewMaterial(material.name, material.type);
+    viewMaterial(material._id || material.name, material.type);
 }
 
 function closeMaterialViewer() {
@@ -307,6 +327,10 @@ function sendFloatingChat() {
     chatBox.appendChild(typing);
     chatBox.scrollTop = chatBox.scrollHeight;
 
+    const materials = getMaterials();
+    const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+    const materialName = currMat ? currMat.name : currentMaterial;
+
     // Send to API Route
     fetch('/api/chat', {
         method: 'POST',
@@ -314,7 +338,7 @@ function sendFloatingChat() {
         body: JSON.stringify({
             message: msg,
             username: currentUser.username,
-            selectedMaterial: currentMaterial,
+            selectedMaterial: materialName,
             teacherName: teacher.name
         })
     })

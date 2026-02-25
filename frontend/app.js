@@ -24,9 +24,10 @@ async function syncUsers() {
 
 async function syncData() {
     try {
-        const [usersRes, syncRes] = await Promise.all([
+        const [usersRes, syncRes, materialsRes] = await Promise.all([
             fetch('/api/users'),
-            fetch('/api/sync')
+            fetch('/api/sync'),
+            fetch('/api/materials')
         ]);
 
         if (usersRes.ok) {
@@ -40,6 +41,11 @@ async function syncData() {
             localStorage.setItem('assessmentResults', JSON.stringify(data.assessmentResults || {}));
             localStorage.setItem('assessmentApprovals', JSON.stringify(data.assessmentApprovals || {}));
             localStorage.setItem('assessmentSettings', JSON.stringify(data.assessmentSettings || { duration: 90 }));
+        }
+
+        if (materialsRes.ok) {
+            const data = await materialsRes.json();
+            localStorage.setItem('materials', JSON.stringify(data.materials || []));
         }
     } catch (err) {
         console.error('Gagal sinkronisasi data dari server:', err);

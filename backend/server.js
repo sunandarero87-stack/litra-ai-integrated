@@ -11,6 +11,7 @@ const path = require('path');
 const chatController = require('./controllers/chatController');
 const authController = require('./controllers/authController');
 const progressController = require('./controllers/progressController');
+const materialController = require('./controllers/materialController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +76,12 @@ app.post('/api/progress/update', progressController.updateProgress);
 app.post('/api/progress/result', progressController.saveResult);
 app.post('/api/progress/approval', progressController.saveApproval);
 app.post('/api/progress/settings', progressController.saveSettings);
+
+// Materials
+app.get('/api/materials', materialController.getMaterials);
+app.get('/api/materials/:id', materialController.getMaterialById);
+app.post('/api/materials', materialController.addMaterial);
+app.delete('/api/materials/:id', materialController.deleteMaterial);
 
 // GET /api/health - Health check
 app.get('/api/health', (req, res) => {

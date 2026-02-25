@@ -113,12 +113,12 @@ function renderMaterials(main) {
             <input type="file" id="material-upload" accept=".pdf,.doc,.docx" style="display:none" onchange="handleMaterialUpload(event)">
         </div>
         <div class="material-list" id="material-list">
-            ${materials.map((m, i) => `
+            ${materials.map((m) => `
                 <div class="material-item">
                     <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}"></i>
                     <span>${m.name}</span>
                     <small class="text-muted">${new Date(m.date).toLocaleDateString('id-ID')}</small>
-                    <button class="btn btn-sm btn-danger" onclick="deleteMaterial(${i})"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m._id}')"><i class="fas fa-trash"></i></button>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi diupload</p>'}
         </div>
     </div>`;
@@ -131,22 +131,49 @@ function handleMaterialUpload(event) {
     if (!['pdf', 'doc', 'docx'].includes(ext)) { alert('Format file tidak didukung. Gunakan PDF, DOC, atau DOCX.'); return; }
 
     const reader = new FileReader();
-    reader.onload = function (e) {
-        const materials = getMaterials();
-        materials.push({ name: file.name, type: ext, date: new Date().toISOString(), size: file.size, contentDataUrl: e.target.result });
-        saveMaterials(materials);
-        alert('✅ Materi berhasil diupload!');
-        renderMaterials(document.getElementById('main-content'));
+    reader.onload = async function (e) {
+        try {
+            const payload = {
+                name: file.name,
+                type: ext,
+                date: new Date().toISOString(),
+                size: file.size,
+                contentDataUrl: e.target.result
+            };
+            const res = await fetch('/api/materials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                await syncData();
+                alert('✅ Materi berhasil diupload!');
+                renderMaterials(document.getElementById('main-content'));
+            } else {
+                alert('Gagal upload materi ke server.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Server error.');
+        }
     };
     reader.readAsDataURL(file);
 }
 
-function deleteMaterial(idx) {
+async function deleteMaterial(id) {
     if (!confirm('Hapus materi ini?')) return;
-    const materials = getMaterials();
-    materials.splice(idx, 1);
-    saveMaterials(materials);
-    renderMaterials(document.getElementById('main-content'));
+    try {
+        const res = await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            await syncData();
+            renderMaterials(document.getElementById('main-content'));
+        } else {
+            alert('Gagal menghapus materi.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Server error.');
+    }
 }
 
 // ---- ASSESSMENT MANAGEMENT ----
