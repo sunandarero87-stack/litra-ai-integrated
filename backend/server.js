@@ -9,6 +9,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const chatController = require('./controllers/chatController');
+const authController = require('./controllers/authController');
+const progressController = require('./controllers/progressController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,7 +42,10 @@ const mongooseOptions = {
 };
 
 mongoose.connect(MONGODB_URI, mongooseOptions)
-    .then(() => console.log('✅ Terhubung ke MongoDB'))
+    .then(() => {
+        console.log('✅ Terhubung ke MongoDB');
+        authController.initDefaultUsers();
+    })
     .catch(err => {
         console.error('❌ Gagal terhubung ke MongoDB:', err.message);
         console.log('💡 Tips: Pastikan MONGODB_URI di Railway Variables sudah benar.');
@@ -55,6 +60,21 @@ app.post('/api/chat', chatController.handleChat);
 app.post('/api/reflections', chatController.handleReflections);
 app.post('/api/assessment/generate', chatController.handleAssessmentGeneration);
 app.post('/api/assessment/analyze', chatController.handleAnalysis);
+
+// Auth & Users
+app.post('/api/auth/login', authController.login);
+app.post('/api/auth/change-password', authController.changePassword);
+app.get('/api/users', authController.getUsers);
+app.post('/api/users', authController.createUsers);
+app.delete('/api/users/:username', authController.deleteUser);
+app.put('/api/users/profile', authController.updateProfile);
+
+// Progress, Results, and Settings
+app.get('/api/sync', progressController.syncAll);
+app.post('/api/progress/update', progressController.updateProgress);
+app.post('/api/progress/result', progressController.saveResult);
+app.post('/api/progress/approval', progressController.saveApproval);
+app.post('/api/progress/settings', progressController.saveSettings);
 
 // GET /api/health - Health check
 app.get('/api/health', (req, res) => {

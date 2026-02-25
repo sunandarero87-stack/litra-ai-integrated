@@ -217,10 +217,8 @@ function saveAssessmentDuration() {
     alert('✅ Durasi asesmen berhasil disimpan!');
 }
 
-function approveStudent(username) {
-    const approvals = getApprovals();
-    approvals[username] = { date: new Date().toISOString(), approvedBy: currentUser.username };
-    saveApprovals(approvals);
+async function approveStudent(username) {
+    await saveApprovalForUser(username, { date: new Date().toISOString(), approvedBy: currentUser.username });
     renderAssessmentMgmt(document.getElementById('main-content'));
 }
 
@@ -275,28 +273,49 @@ function showAddStudentModal() {
     </div>`;
 }
 
-function addStudentAccount() {
+async function addStudentAccount() {
     const username = document.getElementById('new-student-username').value.trim();
     const name = document.getElementById('new-student-name').value.trim();
     const kelas = document.getElementById('new-student-kelas').value;
     const password = document.getElementById('new-student-password').value;
 
     if (!username || !name) { alert('Username dan nama wajib diisi!'); return; }
-    const users = getUsers();
-    if (users.find(u => u.username === username)) { alert('Username sudah digunakan!'); return; }
 
-    users.push({ username, password: password || 'siswa123', name, role: 'siswa', kelas, mustChangePassword: true, photo: null, createdAt: new Date().toISOString() });
-    saveUsers(users);
-    document.querySelector('.modal-overlay').remove();
-    renderStudentAccounts(document.getElementById('main-content'));
+    try {
+        const payload = { username, password: password || 'siswa123', name, role: 'siswa', kelas, mustChangePassword: true };
+        const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            alert('Gagal menambah siswa. Username mungkin sudah ada.');
+            return;
+        }
+
+        await syncUsers();
+        document.querySelector('.modal-overlay').remove();
+        renderStudentAccounts(document.getElementById('main-content'));
+        alert('✅ Akun siswa berhasil ditambahkan!');
+    } catch (err) {
+        alert('Terjadi kesalahan server.');
+    }
 }
 
-function deleteUser(username) {
+async function deleteUser(username) {
     if (currentUser.role !== 'admin') { alert('Hanya admin yang dapat menghapus akun!'); return; }
     if (!confirm(`Hapus akun ${username}?`)) return;
-    const users = getUsers().filter(u => u.username !== username);
-    saveUsers(users);
-    renderStudentAccounts(document.getElementById('main-content'));
+
+    try {
+        const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error();
+
+        await syncUsers();
+        renderStudentAccounts(document.getElementById('main-content'));
+    } catch (err) {
+        alert('Gagal menghapus akun.');
+    }
 }
 
 function downloadExcelTemplate() {
@@ -313,25 +332,38 @@ function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
         const text = e.target.result;
         const lines = text.split('\n').filter(l => l.trim());
         if (lines.length < 2) { alert('File kosong atau format salah!'); return; }
-        const users = getUsers();
-        let added = 0;
+
+        const newUsers = [];
         for (let i = 1; i < lines.length; i++) {
             const parts = lines[i].split(',').map(p => p.trim());
             if (parts.length >= 3) {
                 const [username, name, kelas, password] = parts;
-                if (username && name && !users.find(u => u.username === username)) {
-                    users.push({ username, password: password || 'siswa123', name, role: 'siswa', kelas: kelas || '7A', mustChangePassword: true, photo: null, createdAt: new Date().toISOString() });
-                    added++;
+                if (username && name) {
+                    newUsers.push({ username, password: password || 'siswa123', name, role: 'siswa', kelas: kelas || '7A', mustChangePassword: true });
                 }
             }
         }
-        saveUsers(users);
-        alert(`✅ ${added} akun siswa berhasil ditambahkan!`);
-        renderStudentAccounts(document.getElementById('main-content'));
+
+        try {
+            const res = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newUsers)
+            });
+            if (res.ok) {
+                await syncUsers();
+                alert(`✅ Sinkronisasi akun Excel selesai!`);
+                renderStudentAccounts(document.getElementById('main-content'));
+            } else {
+                alert('Gagal upload siswa dari Excel.');
+            }
+        } catch (err) {
+            alert('Server error sat upload excel.');
+        }
     };
     reader.readAsText(file);
     event.target.value = '';
@@ -374,45 +406,89 @@ function renderProfile(main) {
 function handlePhotoUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    // Check file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        alert('Ukuran foto terlalu besar. Maksimal 2MB.');
+        return;
+    }
+
     const reader = new FileReader();
-    reader.onload = function (e) {
-        const users = getUsers();
-        const idx = users.findIndex(u => u.username === currentUser.username);
-        users[idx].photo = e.target.result;
-        saveUsers(users);
-        currentUser = users[idx];
-        localStorage.setItem('currentSession', JSON.stringify({ username: currentUser.username }));
-        updateSidebar();
-        updateTopbar();
-        renderProfile(document.getElementById('main-content'));
+    reader.onload = async function (e) {
+        const photoData = e.target.result;
+        try {
+            const res = await fetch('/api/users/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username, name: currentUser.name, photo: photoData })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                currentUser = data.user;
+                await syncUsers();
+                updateSidebar();
+                updateTopbar();
+                renderProfile(document.getElementById('main-content'));
+            } else {
+                alert('Gagal menyimpan foto ke server.');
+            }
+        } catch (err) {
+            alert('Server Error menyimpan foto.');
+        }
     };
     reader.readAsDataURL(file);
 }
 
-function saveProfile() {
+async function saveProfile() {
     const name = document.getElementById('profile-name').value.trim();
     if (!name) { alert('Nama tidak boleh kosong!'); return; }
-    const users = getUsers();
-    const idx = users.findIndex(u => u.username === currentUser.username);
-    users[idx].name = name;
-    saveUsers(users);
-    currentUser = users[idx];
-    updateSidebar();
-    document.getElementById('profile-msg').innerHTML = '<div class="success-msg">✅ Profil berhasil disimpan!</div>';
+
+    try {
+        const res = await fetch('/api/users/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username, name: name, photo: currentUser.photo })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            await syncUsers();
+            updateSidebar();
+            document.getElementById('profile-msg').innerHTML = '<div class="success-msg">✅ Profil berhasil disimpan!</div>';
+        } else {
+            alert('Gagal menyimpan profil.');
+        }
+    } catch (err) {
+        alert('Server Error menyimpan profil.');
+    }
 }
 
-function changeProfilePassword() {
+async function changeProfilePassword() {
     const oldPwd = document.getElementById('profile-old-pwd').value;
     const newPwd = document.getElementById('profile-new-pwd').value;
     if (!oldPwd || !newPwd) { alert('Isi password lama dan baru!'); return; }
     if (oldPwd !== currentUser.password) { alert('Password lama salah!'); return; }
     if (newPwd.length < 6) { alert('Password baru minimal 6 karakter!'); return; }
-    const users = getUsers();
-    const idx = users.findIndex(u => u.username === currentUser.username);
-    users[idx].password = newPwd;
-    saveUsers(users);
-    currentUser = users[idx];
-    document.getElementById('profile-msg').innerHTML = '<div class="success-msg">✅ Password berhasil diganti!</div>';
-    document.getElementById('profile-old-pwd').value = '';
-    document.getElementById('profile-new-pwd').value = '';
+
+    try {
+        const res = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username, newPassword: newPwd })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            currentUser = data.user;
+            await syncUsers();
+            document.getElementById('profile-msg').innerHTML = '<div class="success-msg">✅ Password berhasil diganti!</div>';
+            document.getElementById('profile-old-pwd').value = '';
+            document.getElementById('profile-new-pwd').value = '';
+        } else {
+            alert('Gagal ganti password di server.');
+        }
+    } catch (err) {
+        alert('Server error ganti password.');
+    }
 }

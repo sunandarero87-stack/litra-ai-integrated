@@ -690,9 +690,7 @@ function submitAssessment() {
     if (!pass) {
         updateProgress(currentUser.username, { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false });
         // Clear approval
-        const approvals = getApprovals();
-        delete approvals[currentUser.username];
-        saveApprovals(approvals);
+        saveApprovalForUser(currentUser.username, null);
     }
 
     const main = document.getElementById('main-content');
