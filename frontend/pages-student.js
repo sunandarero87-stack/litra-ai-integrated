@@ -121,7 +121,7 @@ function renderTahap1(main) {
                 <p class="text-muted" id="viewer-type">Format</p>
                 <div class="mt-2 text-center" style="max-width: 60%; color: var(--text-muted)">
                     Materi ini sedang ditampilkan dalam mode Viewer.<br>
-                    Silakan pelajari dengan seksama dan gunakan Asisten Chatbot di kanan bawah jika ada pertanyaan atau ingin berdiskusi.
+                    Silakan pelajari dengan seksama dan gunakan Asisten NARA-AI di kanan bawah jika ada pertanyaan atau ingin berdiskusi.
                 </div>
             </div>
             <div class="chat-complete-btn mt-2" style="text-align: right;">
@@ -140,7 +140,7 @@ function renderTahap1(main) {
                     ${teacherPhoto}
                 </div>
                 <div class="chat-header-info" style="flex:1">
-                    <h3 style="font-size:0.95rem; margin:0">Asisten ${teacher.name}</h3>
+                    <h3 style="font-size:0.95rem; margin:0">NARA-AI Asisten ${teacher.name}</h3>
                     <p style="font-size:0.75rem; color: rgba(255,255,255,0.8); margin:0">Membahas Materi</p>
                 </div>
                 <button style="background:none;border:none;color:white;cursor:pointer;font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
@@ -186,7 +186,7 @@ async function viewMaterial(id, type) {
             <p class="text-muted" id="viewer-type">Format: ${type.toUpperCase()}</p>
             <div class="mt-2 text-center" style="max-width: 60%; color: var(--text-muted)">
                 Materi ini sedang ditampilkan dalam mode Viewer.<br>
-                Silakan pelajari dengan seksama dan gunakan Asisten Chatbot di kanan bawah jika ada pertanyaan atau ingin berdiskusi.<br>
+                Silakan pelajari dengan seksama dan gunakan Asisten NARA-AI di kanan bawah jika ada pertanyaan atau ingin berdiskusi.<br>
                 <span style="font-size: 0.8rem; color: var(--primary-light)">(Tampilan halaman spesifik membutuhkan file PDF Baru yang diupload ulang oleh guru)</span>
             </div>
         `;
@@ -210,7 +210,7 @@ async function viewMaterial(id, type) {
         const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
         // Custom greeting updating the topic to the newly selected material
-        const initialGreeting = "Halo! Saya Asisten **" + teacher.name + "**. Kita sedang membahas materi **\"" + material.name + "\"**. Jika ada halaman yang kurang jelas di materi tersebut, silakan tanyakan saja pada saya!";
+        const initialGreeting = "Halo! Saya **NARA-AI**, Asisten " + teacher.name + ". Saya telah mempelajari secara menyeluruh halaman dan isi dari dokumen **\"" + material.name + "\"** ini. Saya sudah siap membahas materi ini bersamamu dengan menggunakan analogi-analogi yang mudah dipahami. Ayo, bagian mana yang ingin kita diskusikan terlebih dahulu?";
 
         // Push new greeting logically (don't strictly clear history to save context overall, but for UI we might render from scratch)
         appendFloatingMessage('bot', initialGreeting, teacherPhoto);
