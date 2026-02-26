@@ -210,7 +210,7 @@ async function viewMaterial(id, type) {
         const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
         // Custom greeting updating the topic to the newly selected material
-        const initialGreeting = "Halo! Saya **NARA-AI**, Asisten " + teacher.name + ". Saya telah mempelajari secara menyeluruh halaman dan isi dari dokumen **\"" + material.name + "\"** ini. Saya sudah siap membahas materi ini bersamamu dengan menggunakan analogi-analogi yang mudah dipahami. Ayo, bagian mana yang ingin kita diskusikan terlebih dahulu?";
+        const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
 
         // Push new greeting logically (don't strictly clear history to save context overall, but for UI we might render from scratch)
         appendFloatingMessage('bot', initialGreeting, teacherPhoto);
