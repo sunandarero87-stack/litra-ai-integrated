@@ -81,7 +81,25 @@ function renderStudentResults(main) {
             <p class="text-muted" style="font-size:0.8rem">AI Analysis</p>
         </div>
     </div>
-    <div class="card">
+    <div class="card mt-2">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title">⚠️ Laporan Siswa Melakukan Pelanggaran</h3>
+            <button class="btn btn-success btn-sm" onclick="downloadViolationsExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Nama</th><th>Kelas</th><th>Jumlah Pelanggaran</th><th>Nilai Siswa</th></tr></thead>
+                <tbody>
+                    ${students.filter(s => results[s.username] && results[s.username].violations > 0).map(s => {
+        const r = results[s.username];
+        const exactScore = ((r.score / r.total) * 100).toFixed(1);
+        return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td style="color:var(--danger);font-weight:bold">${r.violations}</td><td>${exactScore}</td></tr>`;
+    }).join('') || '<tr><td colspan="4" class="text-center text-muted">Belum ada siswa yang melakukan pelanggaran</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card mt-2">
         <div class="card-header"><h3 class="card-title">Hasil Penilaian Per Siswa</h3></div>
         <div class="table-container">
             <table>
@@ -96,6 +114,33 @@ function renderStudentResults(main) {
             </table>
         </div>
     </div>`;
+}
+
+function downloadViolationsExcel() {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const results = getAssessmentResults();
+    const violators = students.filter(s => results[s.username] && results[s.username].violations > 0);
+
+    if (violators.length === 0) {
+        alert('Tidak ada data pelanggaran untuk di-download.');
+        return;
+    }
+
+    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Jumlah Pelanggaran</th><th>Nilai Siswa</th></tr></thead><tbody>';
+    violators.forEach(s => {
+        const r = results[s.username];
+        const exactScore = ((r.score / r.total) * 100).toFixed(1);
+        // Using comma for decimal to match typical local excel parsing expectations if possible, or keeping original string.
+        tableHTML += `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td>${r.violations}</td><td>${exactScore.replace('.', ',')}</td></tr>`;
+    });
+    tableHTML += '</tbody></table>';
+
+    const blob = new Blob(['\ufeff' + tableHTML], { type: 'application/vnd.ms-excel;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Laporan_Pelanggaran_Asesmen_${new Date().getTime()}.xls`;
+    link.click();
 }
 
 // ---- MATERIALS MANAGEMENT ----

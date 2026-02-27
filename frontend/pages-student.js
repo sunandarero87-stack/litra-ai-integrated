@@ -594,6 +594,12 @@ function handleTabSwitch() {
         assessmentAnswers = {};
         assessmentCurrentQ = 0;
 
+        if (tabViolationCount >= 3) {
+            alert('⚠️ Asesmen Dibatalkan! Kamu telah melakukan pelanggaran lebih dari 3 kali. Asesmen dihentikan dan jawabanmu tidak sah.');
+            submitAssessment();
+            return;
+        }
+
         // Show violation overlay
         const overlay = document.createElement('div');
         overlay.className = 'tab-violation-overlay';
