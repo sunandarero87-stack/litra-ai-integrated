@@ -56,6 +56,16 @@ exports.updateProgress = async (req, res) => {
         if (!p) {
             p = new Progress({ username });
         }
+
+        // Ensure aiReadiness is a string to prevent Mongoose CastError if frontend sends an object
+        if (progressData.aiReadiness && typeof progressData.aiReadiness === 'object') {
+            const originalObj = progressData.aiReadiness;
+            progressData.aiReadiness = originalObj.analysis || JSON.stringify(originalObj);
+            if (progressData.isReady === undefined) {
+                progressData.isReady = originalObj.ready || false;
+            }
+        }
+
         Object.assign(p, progressData);
         await p.save();
         res.json({ success: true, progress: p });

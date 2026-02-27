@@ -484,8 +484,8 @@ async function renderTahap2(main) {
             // Update local progress with generated questions and analysis
             const progress = getProgress(currentUser.username);
             progress.tahap2Complete = true;
-            progress.aiReadiness = analysisData.analysis;
-            progress.isReady = analysisData.ready;
+            progress.aiReadiness = analysisData.analysis.analysis;
+            progress.isReady = analysisData.analysis.ready;
             progress.generatedAssessment = genData.questions;
             updateProgress(currentUser.username, progress);
 
