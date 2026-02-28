@@ -34,7 +34,7 @@ function renderStudentDashboard(main) {
     main.innerHTML = `
     <div style="margin-bottom:1.5rem">
         <h2 style="font-size:1.3rem;font-weight:800">Selamat Datang, ${currentUser.name}! 👋</h2>
-        <p class="text-muted">Lanjutkan perjalanan belajarmu tentang Analisis Data</p>
+        <p class="text-muted">Selamat Belajar Anak Hebat</p>
     </div>
     <div class="tahap-grid">
         <div class="tahap-card ${t1Status}" onclick="${t1Status !== 'locked' ? "navigateTo('tahap1')" : ''}">
