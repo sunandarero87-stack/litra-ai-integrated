@@ -378,18 +378,18 @@ async function renderTahap2(main) {
     const progress = getProgress(currentUser.username);
     if (progress.tahap2Complete) {
         main.innerHTML = `
-        < div class="score-display" >
+        <div class="score-display">
             <div class="score-circle pass">✅<small>SELESAI</small></div>
             <p>Kamu sudah menyelesaikan Tahap 2: Refleksi!</p>
             <p>Status: SIAP ASESMEN</p>
             <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
-        </div > `;
+        </div>`;
         return;
     }
 
     if (reflectionQuestions.length === 0 && !reflectionLoading) {
         reflectionLoading = true;
-        main.innerHTML = `< div class="loading-state" > <i class="fas fa-spinner fa-spin"></i> Membangkitkan Pertanyaan Refleksi Berdasarkan Belajarmu...</div > `;
+        main.innerHTML = `<div class="loading-state"> <i class="fas fa-spinner fa-spin"></i> Membangkitkan Pertanyaan Refleksi Berdasarkan Belajarmu...</div>`;
 
         try {
             const response = await fetch('/api/reflections', {
@@ -421,7 +421,7 @@ async function renderTahap2(main) {
     }
 
     main.innerHTML = `
-        < div class="quiz-container" >
+        <div class="quiz-container">
         <div class="quiz-header">
             <h3>📝 Tahap 2: Refleksi Belajar</h3>
             <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan Litra-AI.</p>
@@ -450,7 +450,7 @@ async function renderTahap2(main) {
                 </div>
             </form>
         </div>
-    </div > `;
+    </div>`;
 
     document.getElementById('reflection-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -517,7 +517,7 @@ function renderTahap3(main) {
         const r = results[currentUser.username];
         if (r) {
             const pct = Math.round((r.score / r.total) * 100);
-            main.innerHTML = `< div class="score-display" ><div class="score-circle ${pct >= 70 ? 'pass' : 'fail'}">${pct}%<small>${pct >= 70 ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p><button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div > `;
+            main.innerHTML = `<div class="score-display"><div class="score-circle ${pct >= 70 ? 'pass' : 'fail'}">${pct}%<small>${pct >= 70 ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p><button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div>`;
         }
         return;
     }
@@ -526,7 +526,7 @@ function renderTahap3(main) {
     const approvals = getApprovals();
     if (!approvals[currentUser.username]) {
         main.innerHTML = `
-        < div class="card" >
+        <div class="card">
             <div class="approval-waiting">
                 <div class="approval-icon"><i class="fas fa-hourglass-half"></i></div>
                 <h2>Menunggu Persetujuan Guru</h2>
@@ -534,7 +534,7 @@ function renderTahap3(main) {
                 <p class="text-muted mt-1">Hubungi Pak Nandar untuk mendapatkan persetujuan.</p>
                 <button class="btn btn-outline mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
             </div>
-        </div > `;
+        </div>`;
         return;
     }
 
@@ -542,7 +542,7 @@ function renderTahap3(main) {
     if (!assessmentActive) {
         const settings = getAssessmentSettings();
         main.innerHTML = `
-        < div class="card" style = "max-width:600px;margin:0 auto;text-align:center;padding:2.5rem" >
+        <div class="card" style="max-width:600px;margin:0 auto;text-align:center;padding:2.5rem">
             <div class="tahap-icon exam" style="margin:0 auto 1.5rem"><i class="fas fa-file-alt"></i></div>
             <h2>Asesmen Utama</h2>
             <p class="text-muted mt-1">Format ANBK (Literasi & Numerasi)</p>
@@ -555,7 +555,7 @@ function renderTahap3(main) {
             <button class="btn btn-danger btn-full" onclick="startAssessment()">
                 <i class="fas fa-play"></i> Mulai Asesmen
             </button>
-        </div > `;
+        </div>`;
         return;
     }
 
@@ -605,7 +605,7 @@ function handleTabSwitch() {
         overlay.className = 'tab-violation-overlay';
         overlay.id = 'tab-violation-overlay';
         overlay.innerHTML = `
-        < div class="tab-violation-content" >
+        <div class="tab-violation-content">
                 <i class="fas fa-exclamation-triangle"></i>
                 <h2>⚠️ Pelanggaran Terdeteksi!</h2>
                 <p>Kamu membuka tab lain! Semua jawaban direset. Timer tetap berjalan.</p>
@@ -613,7 +613,7 @@ function handleTabSwitch() {
                 <button class="btn btn-outline" onclick="dismissViolation()" style="color:white;border-color:white">
                     Kembali ke Soal
                 </button>
-            </div > `;
+            </div>`;
         document.body.appendChild(overlay);
     }
 }
@@ -645,7 +645,7 @@ function showAssessmentQuestion(main) {
     const secs = assessmentTimeLeft % 60;
 
     main.innerHTML = `
-        < div class="quiz-container" >
+        <div class="quiz-container">
         <div class="quiz-header">
             <span class="quiz-progress-text">Soal ${assessmentCurrentQ + 1}/${total}</span>
             <div class="quiz-timer" id="assessment-timer">${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}</div>
@@ -671,7 +671,7 @@ function showAssessmentQuestion(main) {
             `<button class="btn btn-danger" onclick="submitAssessment()"><i class="fas fa-flag-checkered"></i> Selesai</button>`
         }
         </div>
-    </div > `;
+    </div>`;
 }
 
 function selectAssessmentAnswer(qId, optIdx) {
@@ -718,7 +718,7 @@ function submitAssessment() {
 
     const main = document.getElementById('main-content');
     main.innerHTML = `
-        < div class="quiz-container" >
+        <div class="quiz-container">
             <div class="score-display">
                 <div class="score-circle ${pass ? 'pass' : 'fail'}">
                     ${pct}%
