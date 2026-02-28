@@ -3,8 +3,9 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan model Step 3.5 Flash (free) di OpenRouter
-const AI_MODEL = "stepfun/step-3.5-flash:free";
+// Menggunakan model Step 3.5 Flash (free) di OpenRouter dengan fallback manual
+const PRIMARY_MODEL = "stepfun/step-3.5-flash:free";
+const FALLBACK_MODEL = "deepseek/deepseek-r1:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -15,6 +16,24 @@ function getHeaders() {
         "HTTP-Referer": "https://litra-ai.railway.app", // Opsional, diperlukan OpenRouter
         "X-Title": "Litra-AI" // Opsional, diperlukan OpenRouter
     };
+}
+
+/**
+ * Helper request ke OpenRouter dengan manual fallback jika model utama terkena Limit 429
+ */
+async function fetchFromOpenRouterWithFallback(payload, isRetry = false) {
+    try {
+        if (!payload.model) payload.model = PRIMARY_MODEL;
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        return response;
+    } catch (error) {
+        if (!isRetry && error.response && (error.response.status === 429 || error.response.status === 402)) {
+            console.warn(`\n[aiService] ${payload.model} terkena limit/error ${error.response.status}. Switching to FALLBACK_MODEL: ${FALLBACK_MODEL}`);
+            payload.model = FALLBACK_MODEL;
+            return await fetchFromOpenRouterWithFallback(payload, true);
+        }
+        throw error;
+    }
 }
 
 /**
@@ -49,13 +68,13 @@ TAHAP: ${stage}`;
         });
 
         const payload = {
-            model: AI_MODEL,
+            model: PRIMARY_MODEL,
             messages: messages,
             temperature: 0.7,
             max_tokens: 1024,
         };
 
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await fetchFromOpenRouterWithFallback(payload);
 
         // Validasi response path
         if (!response.data.choices || !response.data.choices[0]) {
@@ -66,7 +85,7 @@ TAHAP: ${stage}`;
 
         // Logging (Tetap sama)
         try {
-            await ChatLog.create({ username, role: 'bot', content: aiReply, model: AI_MODEL, metadata: { stage, selectedMaterial } });
+            await ChatLog.create({ username, role: 'bot', content: aiReply, model: payload.model, metadata: { stage, selectedMaterial } });
             await ChatLog.create({ username, role: 'user', content: question, metadata: { stage, selectedMaterial } });
         } catch (e) { console.warn('Logging failed'); }
 
@@ -115,14 +134,14 @@ async function generateReflections(username, chatHistory) {
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
 
         const payload = {
-            model: AI_MODEL,
+            model: PRIMARY_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa." },
                 { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}` }
             ]
         };
 
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await fetchFromOpenRouterWithFallback(payload);
         const text = response.data.choices[0].message.content;
         return JSON.parse(cleanJson(text));
     } catch (error) {
@@ -135,13 +154,13 @@ async function generateReflections(username, chatHistory) {
 async function generateAssessment(username, reflectionAnswers, materialContext) {
     try {
         const payload = {
-            model: AI_MODEL,
+            model: PRIMARY_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
                 { role: "user", content: `Buat 20 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 20 soal dan sesuai dengan materi yang dibahas.` }
             ]
         };
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Assessment Gen Error:", e.message);
@@ -152,13 +171,13 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
         const payload = {
-            model: AI_MODEL,
+            model: PRIMARY_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis evaluasi siswa." },
                 { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
             ]
         };
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Readiness Gen Error:", e.message);
@@ -169,13 +188,13 @@ async function analyzeReadiness(username, reflectionAnswers) {
 async function analyzeHabits(username, habitAnswers) {
     try {
         const payload = {
-            model: AI_MODEL,
+            model: PRIMARY_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat." },
                 { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
             ]
         };
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Habit Analysis Error:", e.message);
