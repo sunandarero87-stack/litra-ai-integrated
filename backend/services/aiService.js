@@ -55,6 +55,7 @@ TAHAP: ${stage}`;
 
         const payload = {
             models: AI_MODELS,
+            route: "fallback",
             messages: messages,
             temperature: 0.7,
             max_tokens: 1024,
@@ -102,6 +103,7 @@ async function generateReflections(username, chatHistory) {
 
         const payload = {
             models: AI_MODELS,
+            route: "fallback",
             messages: [
                 { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa." },
                 { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}` }
@@ -122,6 +124,7 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
     try {
         const payload = {
             models: AI_MODELS,
+            route: "fallback",
             messages: [
                 { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
                 { role: "user", content: `Buat 20 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 20 soal dan sesuai dengan materi yang dibahas.` }
@@ -139,6 +142,7 @@ async function analyzeReadiness(username, reflectionAnswers) {
     try {
         const payload = {
             models: AI_MODELS,
+            route: "fallback",
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis evaluasi siswa." },
                 { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
@@ -156,6 +160,7 @@ async function analyzeHabits(username, habitAnswers) {
     try {
         const payload = {
             models: AI_MODELS,
+            route: "fallback",
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat." },
                 { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
