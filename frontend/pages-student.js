@@ -278,7 +278,11 @@ function appendFloatingMessage(role, html, teacherPhoto) {
         </div>`;
 
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    if (role === 'bot') {
+        div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        container.scrollTop = container.scrollHeight;
+    }
 }
 
 function sendFloatingChat() {
