@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan DeepSeek R1 (Membutuhkan Kredit OpenRouter aktif / Berbayar)
-const AI_MODEL = "deepseek/deepseek-r1";
+// Menggunakan DeepSeek R1 Free Version (Bebas Kredit)
+const AI_MODEL = "deepseek/deepseek-r1:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -23,7 +23,7 @@ function getHeaders() {
 async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru') {
     try {
         const systemInstructionText = `Kamu adalah NARA-AI, Asisten ${teacherName}. Tugasmu adalah membantu siswa membahas materi: "${selectedMaterial}".
-Jika ada siswa yang menanyakan kenapa namamu NARA-AI, kamu harus menjawab bahwa Pak Nandar terinspirasi dengan NARA GEMILANG Siswa SMP Negeri 1 Balikpapan Kelas 9.8.
+Jika ada siswa yang menanyakan kenapa namamu NARA-AI, kamu harus menjawab bahwa Pak Nandar terinspirasi dengan NARA GEMILANG Siswa SMP Negeri 1 Balikpapan
 
 SIKAP: Suportif, jangan beri jawaban langsung, pandu siswa berpikir. Gunakan analogi-analogi yang mudah dipahami oleh siswa.
 KONTEKS: ${materialContext}
@@ -85,7 +85,7 @@ TAHAP: ${stage}`;
  */
 function cleanJson(text) {
     if (!text) return "";
-    return text.replace(/```json/g, "").replace(/```/g, "").trim();
+    return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
 /**
