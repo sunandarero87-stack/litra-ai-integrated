@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Gunakan varian ":free" agar tidak terkena limit / error 402 (Payment Required)
-const AI_MODEL = "google/gemini-2.5-flash:free"; // Jauh lebih cepat dari deepseek
+// Menggunakan DeepSeek R1
+const AI_MODEL = "deepseek/deepseek-r1:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
