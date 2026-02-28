@@ -71,7 +71,25 @@ exports.handleReflections = async (req, res) => {
 exports.handleAssessmentGeneration = async (req, res) => {
     try {
         const { username, reflectionAnswers } = req.body;
-        const questions = await aiService.generateAssessment(username, reflectionAnswers);
+
+        // Find the last selected material from chat logs
+        let materialContext = "";
+        const lastChat = await ChatLog.findOne({ username, 'metadata.selectedMaterial': { $exists: true, $ne: null } }).sort({ timestamp: -1 });
+
+        if (lastChat && lastChat.metadata && lastChat.metadata.selectedMaterial) {
+            const material = await Material.findOne({ name: lastChat.metadata.selectedMaterial });
+            if (material) {
+                materialContext = `Materi: ${material.name}\n${material.content || material.description || ""}`;
+            }
+        }
+
+        // Fallback if no specific material context is found
+        if (!materialContext) {
+            const materials = await Material.find({ active: true });
+            materialContext = materials.map(m => `Materi ${m.name}:\n${m.content || m.description || ""}`).join('\n\n');
+        }
+
+        const questions = await aiService.generateAssessment(username, reflectionAnswers, materialContext);
         res.json({ success: true, questions });
     } catch (error) {
         res.status(500).json({ error: error.message });

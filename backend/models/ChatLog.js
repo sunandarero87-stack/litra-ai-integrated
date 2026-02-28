@@ -12,6 +12,7 @@ const chatLogSchema = new mongoose.Schema({
     },
     metadata: {
         stage: { type: Number },
+        selectedMaterial: { type: String },
         violations: { type: Boolean, default: false }
     },
     timestamp: { type: Date, default: Date.now }

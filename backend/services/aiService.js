@@ -66,8 +66,8 @@ TAHAP: ${stage}`;
 
         // Logging (Tetap sama)
         try {
-            await ChatLog.create({ username, role: 'bot', content: aiReply, model: AI_MODEL, metadata: { stage } });
-            await ChatLog.create({ username, role: 'user', content: question, metadata: { stage } });
+            await ChatLog.create({ username, role: 'bot', content: aiReply, model: AI_MODEL, metadata: { stage, selectedMaterial } });
+            await ChatLog.create({ username, role: 'user', content: question, metadata: { stage, selectedMaterial } });
         } catch (e) { console.warn('Logging failed'); }
 
         return aiReply;
@@ -113,13 +113,13 @@ async function generateReflections(username, chatHistory) {
 }
 
 // Fungsi lainnya menggunakan pola yang sama
-async function generateAssessment(username, reflectionAnswers) {
+async function generateAssessment(username, reflectionAnswers, materialContext) {
     try {
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen." },
-                { role: "user", content: `Buat 5 soal pilihan ganda (array of objects murni berformat {question, options:[], correct: 0, explanation}) berdasarkan refleksi ini: ${JSON.stringify(reflectionAnswers)}` }
+                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
+                { role: "user", content: `Buat 20 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 20 soal dan sesuai dengan materi yang dibahas.` }
             ]
         };
         const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
