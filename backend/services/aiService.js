@@ -85,7 +85,26 @@ TAHAP: ${stage}`;
  */
 function cleanJson(text) {
     if (!text) return "";
-    return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/```json/gi, "").replace(/```/g, "").trim();
+    let str = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+    // Attempt to extract from markdown first
+    const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (match) return match[1].trim();
+
+    // Fallback: finding first bracket or brace
+    const startObj = str.indexOf('{');
+    const startArr = str.indexOf('[');
+
+    if (startObj !== -1 && (startArr === -1 || startObj < startArr)) {
+        const endObj = str.lastIndexOf('}');
+        if (endObj !== -1) return str.substring(startObj, endObj + 1);
+    } else if (startArr !== -1) {
+        const endArr = str.lastIndexOf(']');
+        if (endArr !== -1) return str.substring(startArr, endArr + 1);
+    }
+
+    // Safest ultimate fallback: clean manually
+    return str.replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
 /**
