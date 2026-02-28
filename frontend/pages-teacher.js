@@ -240,10 +240,10 @@ function renderAssessmentMgmt(main) {
         </div>
         <div class="card">
             <div class="card-header"><h3 class="card-title">📋 Info Asesmen</h3></div>
-            <p><strong>Jumlah Soal:</strong> 50 soal</p>
-            <p class="mt-1"><strong>Tipe:</strong> Literasi (25) + Numerasi (25)</p>
+            <p><strong>Jumlah Soal:</strong> 20 soal</p>
+            <p class="mt-1"><strong>Tipe:</strong> Literasi (10) + Numerasi (10)</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
-            <p class="mt-1"><strong>Format:</strong> ANBK SMP</p>
+            <p class="mt-1"><strong>Format:</strong> TKA</p>
         </div>
     </div>
     <div class="card mt-2">
