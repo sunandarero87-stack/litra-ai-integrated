@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Gunakan nama model OpenRouter (DeepSeek)
-const AI_MODEL = "deepseek/deepseek-chat";
+// Gunakan nama model yang lebih cepat performanya di OpenRouter
+const AI_MODEL = "google/gemini-2.5-flash"; // Jauh lebih cepat dari deepseek
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
