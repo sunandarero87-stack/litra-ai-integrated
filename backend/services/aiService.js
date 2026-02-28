@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan DeepSeek R1 Free Version (Bebas Kredit)
-const AI_MODEL = "deepseek/deepseek-r1:free";
+// Menggunakan model Gemini Free di OpenRouter karena deepseek-r1:free sedang tidak stabil
+const AI_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
