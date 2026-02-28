@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan DeepSeek R1
-const AI_MODEL = "deepseek/deepseek-r1:free";
+// Menggunakan DeepSeek R1 (Membutuhkan Kredit OpenRouter aktif / Berbayar)
+const AI_MODEL = "deepseek/deepseek-r1";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
