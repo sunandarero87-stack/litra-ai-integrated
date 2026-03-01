@@ -141,8 +141,8 @@ async function generateReflections(username, chatHistory) {
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa." },
-                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}` }
+                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENGAR, SEDERHANA, DAN SANGAT MUDAH DIMENGERTI OLEH SISWA SMP." },
+                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nPastikan bahasanya komunikatif, tidak kaku, dan tidak menggunakan istilah bahasa Inggris yang rumit.\n\nCHAT:\n${historyText}` }
             ]
         };
 
@@ -161,8 +161,8 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL." },
-                { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT JSON:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh). JANGAN PERNAH LEBIH.\n2. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING.\n3. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
+                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+                { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh).\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia yang natural, mudah dipahami siswa, dan tidak terlihat seperti hasil terjemahan mesin kaku.\n3. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
             ],
             max_tokens: 4096,
             temperature: 0.4
