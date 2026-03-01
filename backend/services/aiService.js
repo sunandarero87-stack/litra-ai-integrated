@@ -187,49 +187,6 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
     }
 }
 
-async function generateBankSoalBatch() {
-    const payload = {
-        model: AI_MODEL,
-        messages: [
-            { role: "system", content: "Kamu adalah Ahli Asesmen Pendidikan Nasional yang bertugas memproduksi Bank Soal berformat Literasi dan Numerasi level HOTS (Higher Order Thinking Skills) untuk Fase D (Kelas 7 SMP). OUTPUT WAJIB BERUPA PURE JSON ARRAY BERISI TEPAT 20 SOAL." },
-            {
-                role: "user", content: `Buat 20 soal HOTS acak yang BERBEDA-BEDA dengan stimulus cerita/tabel/infografik untuk kelas 7 kurikulum merdeka.
-Topik Utama: Analisis Data (Data sains, pengumpulan, penyajian data ganda, membaca grafik, rata-rata, peluang).
-
-Format output WAJIB berbentuk JSON array of objects polos persis seperti ini:
-[{"question": "Stimulus cerita dan pertanyaannya...", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan mengapa opsi 0 benar", "type": "literasi"}]
-
-ATURAN KETAT:
-1. Pastikan setiap soal memiliki stimulus (cerita/masalah dunia nyata) yang cukup matang sebelum pertanyaan inti (HOTS).
-2. "type" wajib berupa "literasi" atau "numerasi" (usahakan 50:50).
-3. OUTPUT HANYA JSON. JANGAN TULIS MARKDOWN ATAU KATA PENGANTAR.
-4. AWALI DENGAN KODE: [` }
-        ],
-        max_tokens: 4096,
-        temperature: 0.9 // Higher temp to ensure different questions on subsequent batches
-    };
-
-    let retries = 3;
-    let delayMs = 4000;
-
-    while (retries > 0) {
-        try {
-            const response = await axios.post(API_URL, payload, { headers: getHeaders() });
-            return JSON.parse(cleanJson(response.data.choices[0].message.content));
-        } catch (e) {
-            if (e.response && (e.response.status === 429 || e.response.status >= 500) && retries > 1) {
-                console.warn(`[API Retry] Bank Soal in ${delayMs}ms... (${retries - 1} left)`);
-                await new Promise(r => setTimeout(r, delayMs));
-                delayMs *= 2;
-                retries--;
-            } else {
-                console.error("Bank Soal Gen Error:", e.message);
-                return [];
-            }
-        }
-    }
-}
-
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
         const payload = {
@@ -268,7 +225,6 @@ module.exports = {
     generateResponse,
     generateReflections,
     generateAssessment,
-    generateBankSoalBatch,
     analyzeReadiness,
     analyzeHabits
 };

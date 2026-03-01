@@ -13,9 +13,14 @@ const authController = require('./controllers/authController');
 const progressController = require('./controllers/progressController');
 const materialController = require('./controllers/materialController');
 const assessmentController = require('./controllers/assessmentController');
+const questionBankController = require('./controllers/questionBankController');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Setup Multer for Memory Storage (Excel uploads)
+const upload = multer({ storage: multer.memoryStorage() });
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/litra-ai';
 
 // ---- Middleware ----
@@ -64,6 +69,13 @@ app.post('/api/reflections', chatController.handleReflections);
 app.post('/api/assessment/generate-from-bank', assessmentController.generateFromBank);
 app.post('/api/assessment/analyze', chatController.handleAnalysis);
 app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
+
+// Question Bank Management Routes
+app.get('/api/question-bank', questionBankController.getQuestions);
+app.post('/api/question-bank', questionBankController.addQuestion);
+app.delete('/api/question-bank/:id', questionBankController.deleteQuestion);
+app.get('/api/question-bank/template', questionBankController.downloadTemplate);
+app.post('/api/question-bank/upload', upload.single('file'), questionBankController.uploadExcel);
 
 // Auth & Users
 app.post('/api/auth/login', authController.login);

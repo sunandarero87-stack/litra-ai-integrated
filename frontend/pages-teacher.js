@@ -436,13 +436,206 @@ async function submitAssessmentReview(username) {
     alert(`Berhasil! Asesmen telah dikunci dan Tahap 3 terbuka untuk ${username}`);
 }
 
+// ---- BANK SOAL MANAGEMENT ----
+let _bankSoalCache = [];
+
+async function renderBankSoal(main) {
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat Bank Soal...</p></div>';
+
+    try {
+        const res = await fetch('/api/question-bank');
+        const data = await res.json();
+        _bankSoalCache = data.questions || [];
+    } catch (err) {
+        console.error(err);
+        _bankSoalCache = [];
+    }
+
+    main.innerHTML = `
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📚 Bank Soal</h3>
+        </div>
+        <div class="tabs">
+            <button class="tab-button active" onclick="initBankSoalTab('list')">Daftar Soal (${_bankSoalCache.length})</button>
+            <button class="tab-button" onclick="initBankSoalTab('upload')">Tambah / Upload Soal</button>
+        </div>
+        <div id="bank-soal-list-tab" class="tab-content active">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Tipe</th>
+                            <th style="width:50%">Pertanyaan</th>
+                            <th>Jawaban Benar</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${_bankSoalCache.map((q, index) => `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type === 'literasi' ? 'Literasi' : 'Numerasi'}</span></td>
+                                <td>${q.question.substring(0, 150)}${q.question.length > 150 ? '...' : ''}</td>
+                                <td><strong>${String.fromCharCode(65 + q.correct)}</strong></td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada soal di bank soal.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="bank-soal-upload-tab" class="tab-content">
+            <div class="grid-2">
+                <div>
+                    <h4>📥 Upload Massal (Excel)</h4>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Gunakan format Excel standar untuk mengupload ratusan soal sekaligus.</p>
+                    <div class="upload-zone" onclick="document.getElementById('bank-soal-upload').click()">
+                        <i class="fas fa-file-excel" style="color: #217346"></i>
+                        <p>Klik untuk memilih file Excel (.xlsx)</p>
+                        <input type="file" id="bank-soal-upload" accept=".xlsx" style="display:none" onchange="handleBankSoalUpload(event)">
+                    </div>
+                    <button class="btn btn-primary mt-2 w-100" onclick="downloadBankSoalTemplate()"><i class="fas fa-download"></i> Download Template Excel</button>
+                </div>
+                <div>
+                    <h4>➕ Tambah Manual (1 Soal)</h4>
+                    <form id="form-manual-soal" onsubmit="handleManualSoal(event)" style="display:flex; flex-direction:column; gap:0.8rem">
+                        <div class="form-group"><label>Tipe Soal</label><select id="ms-type"><option value="literasi">Literasi</option><option value="numerasi">Numerasi</option></select></div>
+                        <div class="form-group"><label>Pertanyaan / Stimulus</label><textarea id="ms-q" required rows="3" placeholder="Masukkan cerita/soal..."></textarea></div>
+                        <div class="form-group"><label>Opsi A</label><input type="text" id="ms-a" required></div>
+                        <div class="form-group"><label>Opsi B</label><input type="text" id="ms-b" required></div>
+                        <div class="form-group"><label>Opsi C</label><input type="text" id="ms-c" required></div>
+                        <div class="form-group"><label>Opsi D</label><input type="text" id="ms-d" required></div>
+                        <div class="form-group"><label>Kunci Jawaban</label><select id="ms-correct"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></div>
+                        <div class="form-group"><label>Pembahasan</label><textarea id="ms-exp" required rows="2"></textarea></div>
+                        <button type="submit" class="btn btn-success w-100"><i class="fas fa-save"></i> Simpan Soal</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function initBankSoalTab(tabName) {
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    const btn = document.querySelector(`.tab-button[onclick="initBankSoalTab('${tabName}')"]`);
+    if (btn) btn.classList.add('active');
+
+    document.getElementById(`bank-soal-${tabName}-tab`).classList.add('active');
+}
+
+function downloadBankSoalTemplate() {
+    window.location.href = '/api/question-bank/template';
+}
+
+async function handleBankSoalUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xlsx')) {
+        alert('Format file harus .xlsx!');
+        event.target.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const main = document.getElementById('main-content');
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Mengupload dan memproses file Excel, mohon tunggu...</p></div>';
+
+    try {
+        const res = await fetch('/api/question-bank/upload', {
+            method: 'POST',
+            body: formData // Multer will parse this multipart/form-data
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || 'Soal berhasil diimpor!');
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal upload soal dari Excel.');
+            renderBankSoal(document.getElementById('main-content'));
+        }
+    } catch (err) {
+        alert('Server error saat upload excel.');
+        renderBankSoal(document.getElementById('main-content'));
+    }
+}
+
+async function handleManualSoal(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = 'Menyimpan...';
+
+    const payload = {
+        question: document.getElementById('ms-q').value,
+        options: [
+            document.getElementById('ms-a').value,
+            document.getElementById('ms-b').value,
+            document.getElementById('ms-c').value,
+            document.getElementById('ms-d').value
+        ],
+        correct: parseInt(document.getElementById('ms-correct').value),
+        explanation: document.getElementById('ms-exp').value,
+        type: document.getElementById('ms-type').value,
+        topic: 'Analisis Data',
+        grade: '7 SMP',
+        difficulty: 'HOTS'
+    };
+
+    try {
+        const res = await fetch('/api/question-bank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+            alert('Soal manual berhasil ditambahkan!');
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Gagal menambahkan soal.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save"></i> Simpan Soal';
+        }
+    } catch (err) {
+        alert('Server error.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Simpan Soal';
+    }
+}
+
+async function deleteBankSoal(id) {
+    if (!confirm('Hapus soal ini dari Bank Soal?')) return;
+    try {
+        const res = await fetch(`/api/question-bank/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            alert('Gagal menghapus soal.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Server error.');
+    }
+}
+
 // ---- STUDENT ACCOUNT MANAGEMENT ----
 function renderStudentAccounts(main) {
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
 
     main.innerHTML = `
-        < div class= "flex justify-between items-center mb-2" style = "flex-wrap:wrap;gap:0.5rem" >
+        <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
         <h3>Akun Siswa (${students.length})</h3>
         <div class="flex gap-1">
             <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()"><i class="fas fa-plus"></i> Tambah Siswa</button>
@@ -450,7 +643,7 @@ function renderStudentAccounts(main) {
             <button class="btn btn-warning btn-sm" onclick="document.getElementById('excel-upload').click()"><i class="fas fa-upload"></i> Upload Excel</button>
             <input type="file" id="excel-upload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(event)">
         </div>
-    </div >
+    </div>
     <div class="card">
         <div class="table-container">
             <table>
@@ -472,7 +665,7 @@ function renderStudentAccounts(main) {
 
 function showAddStudentModal() {
     document.getElementById('modal-container').innerHTML = `
-    < div class= "modal-overlay" onclick = "if(event.target===this)this.remove()" >
+    <div class="modal-overlay" onclick="if(event.target===this)this.remove()">
     <div class="modal">
         <div class="modal-header"><h2>Tambah Siswa Baru</h2><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
         <div class="form-group"><label>Username</label><input type="text" id="new-student-username" placeholder="contoh: siswa001"></div>
@@ -484,7 +677,7 @@ function showAddStudentModal() {
             <button class="btn btn-primary" onclick="addStudentAccount()">Simpan</button>
         </div>
     </div>
-    </div > `;
+    </div>`;
 }
 
 async function addStudentAccount() {
@@ -522,7 +715,7 @@ async function deleteUser(username) {
     if (!confirm(`Hapus akun ${username} ? `)) return;
 
     try {
-        const res = await fetch(`/ api / users / ${username}`, { method: 'DELETE' });
+        const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
 
         await syncUsers();
@@ -588,7 +781,7 @@ function handleExcelUpload(event) {
 // ---- PROFILE ----
 function renderProfile(main) {
     main.innerHTML = `
-    < div class= "profile-card card" >
+    <div class="profile-card card">
         <div class="profile-photo-section">
             <div class="profile-photo" id="profile-photo-display">
                 ${currentUser.photo ? `<img src="${currentUser.photo}" alt="Foto">` : '<i class="fas fa-user"></i>'}
@@ -604,7 +797,7 @@ function renderProfile(main) {
         <div class="form-group"><label>Username</label><input type="text" value="${currentUser.username}" disabled></div>
         <div class="form-group"><label>Nama Lengkap</label><input type="text" id="profile-name" value="${currentUser.name}"></div>
         ${currentUser.role === 'siswa' ? `<div class="form-group"><label>Kelas</label><input type="text" value="${currentUser.kelas || '-'}" disabled></div>` : ''}
-    < div style = "border-top:1px solid var(--border-color);margin:1.5rem 0;padding-top:1.5rem" >
+    <div style="border-top:1px solid var(--border-color);margin:1.5rem 0;padding-top:1.5rem">
             <h3 style="font-size:1rem;margin-bottom:1rem">🔑 Ganti Password</h3>
             <div class="form-group"><label>Password Lama</label><input type="password" id="profile-old-pwd" placeholder="Masukkan password lama"></div>
             <div class="form-group"><label>Password Baru</label><input type="password" id="profile-new-pwd" placeholder="Min. 6 karakter"></div>
