@@ -3,9 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan model Llama 3.1 8B (free) di OpenRouter dengan fallback manual ke Step 3.5 Flash
-const PRIMARY_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
-const FALLBACK_MODEL = "stepfun/step-3.5-flash:free";
+// Menggunakan model tunggal Llama 3.1 8B (free) di OpenRouter
+const AI_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -16,24 +15,6 @@ function getHeaders() {
         "HTTP-Referer": "https://litra-ai.railway.app", // Opsional, diperlukan OpenRouter
         "X-Title": "Litra-AI" // Opsional, diperlukan OpenRouter
     };
-}
-
-/**
- * Helper request ke OpenRouter dengan manual fallback jika model utama terkena Limit 429
- */
-async function fetchFromOpenRouterWithFallback(payload, isRetry = false) {
-    try {
-        if (!payload.model) payload.model = PRIMARY_MODEL;
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
-        return response;
-    } catch (error) {
-        if (!isRetry && error.response && (error.response.status === 429 || error.response.status === 402 || error.response.status === 404)) {
-            console.warn(`\n[aiService] ${payload.model} terkena limit/error ${error.response.status}. Switching to FALLBACK_MODEL: ${FALLBACK_MODEL}`);
-            payload.model = FALLBACK_MODEL;
-            return await fetchFromOpenRouterWithFallback(payload, true);
-        }
-        throw error;
-    }
 }
 
 /**
@@ -68,13 +49,13 @@ TAHAP: ${stage}`;
         });
 
         const payload = {
-            model: PRIMARY_MODEL,
+            model: AI_MODEL,
             messages: messages,
             temperature: 0.7,
             max_tokens: 1024,
         };
 
-        const response = await fetchFromOpenRouterWithFallback(payload);
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
 
         // Validasi response path
         if (!response.data.choices || !response.data.choices[0]) {
@@ -85,7 +66,7 @@ TAHAP: ${stage}`;
 
         // Logging (Tetap sama)
         try {
-            await ChatLog.create({ username, role: 'bot', content: aiReply, model: payload.model, metadata: { stage, selectedMaterial } });
+            await ChatLog.create({ username, role: 'bot', content: aiReply, model: AI_MODEL, metadata: { stage, selectedMaterial } });
             await ChatLog.create({ username, role: 'user', content: question, metadata: { stage, selectedMaterial } });
         } catch (e) { console.warn('Logging failed'); }
 
@@ -158,15 +139,14 @@ async function generateReflections(username, chatHistory) {
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
 
         const payload = {
-            model: PRIMARY_MODEL,
+            model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID." },
-                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini:\n\nCHAT:\n${historyText}\n\nFormat output WAJIB JSON array murni penuh kutip ganda standar:\n["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]\n\nATURAN KETAT JSON:\n1. GUNAKAN KUTIP GANDA (") UNTUK SETIAP ELEMEN STRING DI DALAM ARRAY.\n2. Jika ada kutipan di dalam teks, gunakan tanda petik tunggal (') di dalam string tersebut.\n3. Jangan tulis kata pengantar (markdown), langsung JSON array mulai dari [\n4. Pastikan struktur JSON tidak terpotong.` }
-            ],
-            temperature: 0.4
+                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa." },
+                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}` }
+            ]
         };
 
-        const response = await fetchFromOpenRouterWithFallback(payload);
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
         const text = response.data.choices[0].message.content;
         return JSON.parse(cleanJson(text));
     } catch (error) {
@@ -179,15 +159,13 @@ async function generateReflections(username, chatHistory) {
 async function generateAssessment(username, reflectionAnswers, materialContext) {
     try {
         const payload = {
-            model: PRIMARY_MODEL,
+            model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID." },
-                { role: "user", content: `Buat 10 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT JSON:\n1. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING.\n2. Jika ada kutipan di dalam teks soal/opsi, gunakan tanda petik tunggal (') di dalam string tersebut.\n3. Format JSON harus lengkap tanpa terpotong.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
-            ],
-            max_tokens: 4096,
-            temperature: 0.4
+                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
+                { role: "user", content: `Buat 20 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 20 soal dan sesuai dengan materi yang dibahas.` }
+            ]
         };
-        const response = await fetchFromOpenRouterWithFallback(payload);
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Assessment Gen Error:", e.message);
@@ -198,14 +176,13 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
         const payload = {
-            model: PRIMARY_MODEL,
+            model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa. OUTPUT WAJIB BERUPA PURE JSON OBJECT." },
-                { role: "user", content: `Analisislah kesiapan siswa berdasarkan refleksi ini:\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB JSON object murni:\n{"ready": true, "analysis": "Analisis singkat", "recommendation": "Rekomendasi singkat"}\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam teks jawaban string. Gunakan kutip tunggal ('/').\n2. Jangan tulis kata pengantar apapun, langsung JSON object.` }
-            ],
-            temperature: 0.3
+                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa." },
+                { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
+            ]
         };
-        const response = await fetchFromOpenRouterWithFallback(payload);
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Readiness Gen Error:", e.message);
@@ -216,14 +193,13 @@ async function analyzeReadiness(username, reflectionAnswers) {
 async function analyzeHabits(username, habitAnswers) {
     try {
         const payload = {
-            model: PRIMARY_MODEL,
+            model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis perilaku siswa memonitor 7 Kebiasaan Hebat. OUTPUT WAJIB BERUPA PURE JSON OBJECT." },
-                { role: "user", content: `Analisislah jawaban esai siswa berikut:\n${JSON.stringify(habitAnswers)}\n\nFormat output WAJIB JSON object murni:\n{"score": 85, "analysis": "Feedback analitis singkat", "details": ["feedback 1", "feedback 2"]}\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam teks feedback string. Gunakan kutip tunggal ('/').\n2. Jangan tulis kata pengantar apapun, langsung JSON object.` }
-            ],
-            temperature: 0.3
+                { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat." },
+                { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
+            ]
         };
-        const response = await fetchFromOpenRouterWithFallback(payload);
+        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Habit Analysis Error:", e.message);
