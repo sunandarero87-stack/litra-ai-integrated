@@ -322,7 +322,7 @@ async function approveStudent(username, btnElement) {
 
     } catch (err) {
         console.error(err);
-        alert('Gagal mengambil/membuat pertanyaan dari AI!');
+        alert(err.message || 'Gagal menyiapkan soal dari Bank Soal!');
         if (btnElement) {
             btnElement.disabled = false;
             btnElement.innerHTML = 'Approve';
