@@ -161,9 +161,11 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
-                { role: "user", content: `Buat 20 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 20 soal dan sesuai dengan materi yang dibahas.` }
-            ]
+                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL." },
+                { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT JSON:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh). JANGAN PERNAH LEBIH.\n2. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING.\n3. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
+            ],
+            max_tokens: 4096,
+            temperature: 0.4
         };
         const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
