@@ -156,21 +156,34 @@ async function generateReflections(username, chatHistory) {
 
 // Fungsi lainnya menggunakan pola yang sama
 async function generateAssessment(username, reflectionAnswers, materialContext) {
-    try {
-        const payload = {
-            model: AI_MODEL,
-            messages: [
-                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
-                { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh).\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia yang natural, mudah dipahami siswa, dan tidak terlihat seperti hasil terjemahan mesin kaku.\n3. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
-            ],
-            max_tokens: 4096,
-            temperature: 0.4
-        };
-        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
-        return JSON.parse(cleanJson(response.data.choices[0].message.content));
-    } catch (e) {
-        console.error("Assessment Gen Error:", e.message);
-        return [];
+    const payload = {
+        model: AI_MODEL,
+        messages: [
+            { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+            { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh).\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia yang natural, mudah dipahami siswa, dan tidak terlihat seperti hasil terjemahan mesin kaku.\n3. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
+        ],
+        max_tokens: 4096,
+        temperature: 0.4
+    };
+
+    let retries = 3;
+    let delayMs = 4000;
+
+    while (retries > 0) {
+        try {
+            const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+            return JSON.parse(cleanJson(response.data.choices[0].message.content));
+        } catch (e) {
+            if (e.response && e.response.status === 429 && retries > 1) {
+                console.warn(`[429 Rate Limit] Retrying Assessment Gen in ${delayMs}ms... (${retries - 1} attempts left)`);
+                await new Promise(r => setTimeout(r, delayMs));
+                delayMs *= 2; // Exponential backoff
+                retries--;
+            } else {
+                console.error("Assessment Gen Error:", e.response ? e.response.status + ' ' + JSON.stringify(e.response.data) : e.message);
+                throw new Error("Gagal meracik soal karena kendala server AI (Error: " + (e.response ? e.response.status : e.message) + "). Silakan coba lagi nanti.");
+            }
+        }
     }
 }
 
