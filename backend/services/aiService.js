@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan model DeepSeek (free) di OpenRouter dengan fallback manual ke Step 3.5 Flash
-const PRIMARY_MODEL = "deepseek/deepseek-r1:free";
+// Menggunakan model Llama 3.1 8B (free) di OpenRouter dengan fallback manual ke Step 3.5 Flash
+const PRIMARY_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
 const FALLBACK_MODEL = "stepfun/step-3.5-flash:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
