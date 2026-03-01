@@ -108,22 +108,46 @@ function cleanJson(text) {
 
     // Attempt to extract from markdown first
     const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-    if (match) return match[1].trim();
+    let extracted = str;
+    if (match) {
+        extracted = match[1].trim();
+    } else {
+        // Fallback: finding first bracket or brace
+        const startObj = str.indexOf('{');
+        const startArr = str.indexOf('[');
 
-    // Fallback: finding first bracket or brace
-    const startObj = str.indexOf('{');
-    const startArr = str.indexOf('[');
-
-    if (startObj !== -1 && (startArr === -1 || startObj < startArr)) {
-        const endObj = str.lastIndexOf('}');
-        if (endObj !== -1) return str.substring(startObj, endObj + 1);
-    } else if (startArr !== -1) {
-        const endArr = str.lastIndexOf(']');
-        if (endArr !== -1) return str.substring(startArr, endArr + 1);
+        if (startObj !== -1 && (startArr === -1 || startObj < startArr)) {
+            const endObj = str.lastIndexOf('}');
+            if (endObj !== -1) extracted = str.substring(startObj, endObj + 1);
+        } else if (startArr !== -1) {
+            const endArr = str.lastIndexOf(']');
+            if (endArr !== -1) extracted = str.substring(startArr, endArr + 1);
+        } else {
+            extracted = str.replace(/```json/gi, "").replace(/```/g, "").trim();
+        }
     }
 
-    // Safest ultimate fallback: clean manually
-    return str.replace(/```json/gi, "").replace(/```/g, "").trim();
+    // Perbaikan darurat jika AI menggunakan kutip tunggal di luar standar JSON murni
+    if (extracted.startsWith("['") || extracted.includes("':") || extracted.includes(", '") || extracted.includes("{'")) {
+        try {
+            // Mencoba me-replace kutip tunggal yang membungkus key/value agar menjadi kutip ganda
+            // Warning: ini regex kasar, tapi darurat untuk format AI
+            const fixedStr = extracted
+                .replace(/'([^']*)'\s*:/g, '"$1":') // Fix keys: 'key': -> "key":
+                .replace(/:\s*'([^']*)'/g, ': "$1"') // Fix values: : 'value' -> : "value"
+                .replace(/\[\s*'([^']*)'/g, '["$1"') // Fix array start: ['value' -> ["value"
+                .replace(/,\s*'([^']*)'/g, ', "$1"') // Fix array next: , 'value' -> , "value"
+                .replace(/'\s*\]/g, '"]');           // Fix array end: ' ] -> "]
+
+            // Cek apakah string hasil sudah valid JSON
+            JSON.parse(fixedStr);
+            return fixedStr;
+        } catch (e) {
+            // Jika regex gagal parse, kembalikan versi aslinya
+        }
+    }
+
+    return extracted;
 }
 
 /**
@@ -136,8 +160,8 @@ async function generateReflections(username, chatHistory) {
         const payload = {
             model: PRIMARY_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. OUTPUT WAJIB BERUPA PURE JSON ARRAY." },
-                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini:\n\nCHAT:\n${historyText}\n\nFormat output WAJIB JSON array murni:\n["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam kalimat pertanyaan. Gunakan kutip tunggal (') sebagai gantinya.\n2. Jangan tulis kata pengantar apapun, langsung JSON array.` }
+                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID." },
+                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini:\n\nCHAT:\n${historyText}\n\nFormat output WAJIB JSON array murni penuh kutip ganda standar:\n["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]\n\nATURAN KETAT JSON:\n1. GUNAKAN KUTIP GANDA (") UNTUK SETIAP ELEMEN STRING DI DALAM ARRAY.\n2. Jika ada kutipan di dalam teks, gunakan tanda petik tunggal (') di dalam string tersebut.\n3. Jangan tulis kata pengantar (markdown), langsung JSON array mulai dari [\n4. Pastikan struktur JSON tidak terpotong.` }
             ],
             temperature: 0.4
         };
@@ -158,7 +182,7 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
             model: PRIMARY_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID." },
-                { role: "user", content: `Buat 10 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam teks pertanyaan, opsi, maupun penjelasan (Gunakan kutip tunggal (') sebagai gantinya).\n2. Format JSON harus lengkap tanpa terpotong.\n3. Jangan tulis kata pengantar apapun, langsung JSON array.` }
+                { role: "user", content: `Buat 10 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT JSON:\n1. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING.\n2. Jika ada kutipan di dalam teks soal/opsi, gunakan tanda petik tunggal (') di dalam string tersebut.\n3. Format JSON harus lengkap tanpa terpotong.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
             ],
             max_tokens: 4096,
             temperature: 0.4
