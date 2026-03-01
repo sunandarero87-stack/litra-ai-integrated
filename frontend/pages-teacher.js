@@ -239,11 +239,13 @@ function renderAssessmentMgmt(main) {
             <button class="btn btn-primary" onclick="saveAssessmentDuration()"><i class="fas fa-save"></i> Simpan</button>
         </div>
         <div class="card">
-            <div class="card-header"><h3 class="card-title">📋 Info Asesmen</h3></div>
-            <p><strong>Jumlah Soal:</strong> 20 soal</p>
-            <p class="mt-1"><strong>Tipe:</strong> Literasi (10) + Numerasi (10)</p>
+            <div class="card-header"><h3 class="card-title">📋 Info Asesmen & Pengaturan</h3></div>
+            <div class="form-group mt-1">
+                <label>Jumlah Soal Asesmen (Default: 20)</label>
+                <input type="number" id="assessment-amount" value="20" min="5" max="100">
+            </div>
+            <p class="mt-1"><strong>Tipe:</strong> Proporsional Literasi & Numerasi</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
-            <p class="mt-1"><strong>Format:</strong> TKA</p>
         </div>
     </div>
     <div class="card mt-2">
@@ -269,8 +271,8 @@ function renderAssessmentMgmt(main) {
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
                             <td>
-                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-sync"></i> Generate Soal</button></div>` :
-                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-magic"></i> Generate Soal</button>` :
+                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-plus-circle"></i> Tambahkan Soal</button></div>` :
+                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-plus-circle"></i> Tambahkan Soal</button>` :
                     '<span class="text-muted">Menunggu Refleksi</span>'}
                             </td>
                         </tr>`;
@@ -292,8 +294,11 @@ function saveAssessmentDuration() {
 async function approveStudent(username, btnElement) {
     if (btnElement) {
         btnElement.disabled = true;
-        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generate Soal...';
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan...';
     }
+
+    const amountInput = document.getElementById('assessment-amount');
+    const amount = amountInput ? parseInt(amountInput.value) || 20 : 20;
 
     try {
         const progress = getProgress(username);
@@ -303,7 +308,7 @@ async function approveStudent(username, btnElement) {
         const genRes = await fetch('/api/assessment/generate-from-bank', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username })
+            body: JSON.stringify({ username, amount })
         });
 
         if (!genRes.ok) {

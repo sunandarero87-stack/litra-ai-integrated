@@ -306,6 +306,7 @@ function updateSidebar() {
             <div class="nav-section">Manajemen</div>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
+            <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
@@ -317,6 +318,7 @@ function updateSidebar() {
             <div class="nav-section">Manajemen</div>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
+            <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
@@ -350,6 +352,7 @@ function navigateTo(page) {
         'student-results': 'Hasil Penilaian Siswa',
         'materials': 'Manajemen Materi',
         'assessment-mgmt': 'Manajemen Asesmen',
+        'banksoal': 'Bank Soal (HOTS)',
         'student-accounts': 'Manajemen Akun Siswa',
         'chat-history': 'Riwayat Chat Siswa'
     };
@@ -401,6 +404,9 @@ function renderPage(page) {
             break;
         case 'assessment-mgmt':
             renderAssessmentMgmt(main);
+            break;
+        case 'banksoal':
+            renderBankSoal(main);
             break;
         case 'student-accounts':
             renderStudentAccounts(main);
