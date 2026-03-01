@@ -157,8 +157,9 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
             model: PRIMARY_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
-                { role: "user", content: `Buat 20 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 20 soal dan sesuai dengan materi yang dibahas.` }
-            ]
+                { role: "user", content: `Buat 10 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 10 soal dan sesuai dengan materi yang dibahas.` }
+            ],
+            max_tokens: 4096 // Tambahkan limit token ekstra besar
         };
         const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
