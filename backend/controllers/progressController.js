@@ -67,6 +67,9 @@ exports.updateProgress = async (req, res) => {
         }
 
         Object.assign(p, progressData);
+        p.markModified('generatedAssessment');
+        p.markModified('reflectionAnswers');
+        p.markModified('tahap4Details');
         await p.save();
         res.json({ success: true, progress: p });
     } catch (err) {

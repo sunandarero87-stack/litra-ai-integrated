@@ -269,7 +269,7 @@ function renderAssessmentMgmt(main) {
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
                             <td>
-                                ${approved ? '<span class="badge badge-success">Disetujui</span>' :
+                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-sync"></i> Racik Ulang</button></div>` :
                 hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)">Approve</button>` :
                     '<span class="text-muted">Menunggu Refleksi</span>'}
                             </td>

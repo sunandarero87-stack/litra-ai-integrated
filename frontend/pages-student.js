@@ -428,7 +428,7 @@ async function renderTahap2(main) {
         <div class="quiz-container">
         <div class="quiz-header">
             <h3>📝 Tahap 2: Refleksi Belajar</h3>
-            <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan Litra-AI.</p>
+            <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan NARA-AI.</p>
         </div>
         <div class="card mt-2">
             <form id="reflection-form">
@@ -543,7 +543,7 @@ function renderTahap3(main) {
         <div class="card" style="max-width:600px;margin:0 auto;text-align:center;padding:2.5rem">
             <div class="tahap-icon exam" style="margin:0 auto 1.5rem"><i class="fas fa-file-alt"></i></div>
             <h2>Asesmen Utama</h2>
-            <p class="text-muted mt-1">Format ANBK (Literasi & Numerasi)</p>
+            <p class="text-muted mt-1">Format TKA (Literasi & Numerasi)</p>
             <div style="margin:1.5rem 0;text-align:left" class="card" style="background:var(--bg-input)">
                 <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> 20 soal</p>
                 <p class="mt-1"><i class="fas fa-clock"></i> <strong>Waktu:</strong> ${settings.duration} menit</p>
