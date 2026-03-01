@@ -477,20 +477,14 @@ async function renderTahap2(main) {
             });
             const analysisData = await analysisRes.json();
 
-            // 2. Generate Assessment Questions
-            const genRes = await fetch('/api/assessment/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: currentUser.username, reflectionAnswers: answers })
-            });
-            const genData = await genRes.json();
+            // PENTING: Dulu AI membuat 20 soal asesmen di sini, sekarang tidak. Soal akan dibuat nanti saat Guru meng-Approve.
 
-            // Update local progress with generated questions and analysis
+            // Update local progress with analysis and raw reflection answers
             const progress = getProgress(currentUser.username);
             progress.tahap2Complete = true;
             progress.aiReadiness = analysisData.analysis.analysis;
             progress.isReady = analysisData.analysis.ready;
-            progress.generatedAssessment = genData.questions;
+            progress.reflectionAnswers = answers; // Save raw answers for later generation
             updateProgress(currentUser.username, progress);
 
             // Notify Guru Recommendation in background (handled by progress object usually)

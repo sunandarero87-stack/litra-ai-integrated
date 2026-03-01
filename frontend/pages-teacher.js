@@ -270,7 +270,7 @@ function renderAssessmentMgmt(main) {
                             </td>
                             <td>
                                 ${approved ? '<span class="badge badge-success">Disetujui</span>' :
-                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}')">Approve</button>` :
+                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)">Approve</button>` :
                     '<span class="text-muted">Menunggu Refleksi</span>'}
                             </td>
                         </tr>`;
@@ -289,9 +289,148 @@ function saveAssessmentDuration() {
     alert('✅ Durasi asesmen berhasil disimpan!');
 }
 
-async function approveStudent(username) {
+async function approveStudent(username, btnElement) {
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Meracik Soal...';
+    }
+
+    try {
+        const progress = getProgress(username);
+        const reflectionAnswers = progress.reflectionAnswers || [];
+
+        // Langsung generate dari server
+        const genRes = await fetch('/api/assessment/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, reflectionAnswers })
+        });
+
+        if (!genRes.ok) throw new Error("Gagal membuat soal dari AI");
+        const genData = await genRes.json();
+
+        // Buka Modal untuk Review Guru
+        showAssessmentReviewModal(username, genData.questions);
+
+    } catch (err) {
+        console.error(err);
+        alert('Gagal mengambil/membuat pertanyaan dari AI!');
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = 'Approve';
+        }
+    }
+}
+
+function showAssessmentReviewModal(username, originalQuestions) {
+    // Pastikan array soal berjumlah sesuai (kalau kurang dari 20, kita tetap tampilkan apa adanya)
+
+    // Simpan ke memory temporary agar mudah dibaca di submit form
+    window.tempReviewQuestions = [...originalQuestions];
+
+    const questionsHTML = originalQuestions.map((q, index) => `
+        <div class="review-question-card" style="border:1px solid var(--border-color); padding:1rem; border-radius:8px; margin-bottom:1rem; background:var(--bg-input);">
+            <div style="font-weight:bold; margin-bottom:0.5rem">Soal ${index + 1}</div>
+            
+            <label>Teks Pertanyaan:</label>
+            <textarea id="rev-q-${index}-text" style="width:100%; height:80px; margin-bottom:0.5rem">${q.question || ''}</textarea>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; margin-bottom:0.5rem">
+                <div>
+                    <label>A.</label>
+                    <input type="text" id="rev-q-${index}-opt0" value="${q.options && q.options[0] ? q.options[0].replace(/"/g, '&quot;') : ''}">
+                </div>
+                <div>
+                    <label>B.</label>
+                    <input type="text" id="rev-q-${index}-opt1" value="${q.options && q.options[1] ? q.options[1].replace(/"/g, '&quot;') : ''}">
+                </div>
+                <div>
+                    <label>C.</label>
+                    <input type="text" id="rev-q-${index}-opt2" value="${q.options && q.options[2] ? q.options[2].replace(/"/g, '&quot;') : ''}">
+                </div>
+                <div>
+                    <label>D.</label>
+                    <input type="text" id="rev-q-${index}-opt3" value="${q.options && q.options[3] ? q.options[3].replace(/"/g, '&quot;') : ''}">
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:1rem;">
+                <div style="flex:1">
+                    <label>Kunci Jawaban Benar:</label>
+                    <select id="rev-q-${index}-correct" class="form-control">
+                        <option value="0" ${q.correct === 0 ? 'selected' : ''}>A</option>
+                        <option value="1" ${q.correct === 1 ? 'selected' : ''}>B</option>
+                        <option value="2" ${q.correct === 2 ? 'selected' : ''}>C</option>
+                        <option value="3" ${q.correct === 3 ? 'selected' : ''}>D</option>
+                    </select>
+                </div>
+                <div style="flex:1">
+                    <label>Tipe Soal:</label>
+                    <select id="rev-q-${index}-type" class="form-control">
+                        <option value="literasi" ${q.type === 'literasi' ? 'selected' : ''}>Literasi</option>
+                        <option value="numerasi" ${q.type === 'numerasi' ? 'selected' : ''}>Numerasi</option>
+                    </select>
+                </div>
+            </div>
+            
+            <label style="margin-top:0.5rem; display:block">Penjelasan (Opsional):</label>
+            <textarea id="rev-q-${index}-explanation" style="width:100%; height:40px;">${q.explanation || ''}</textarea>
+        </div>
+    `).join('');
+
+    document.getElementById('modal-container').innerHTML = `
+    <div class="modal-overlay" style="z-index:9999" onclick="if(event.target===this) { if(confirm('Yakin ingin membatalkan review? Pertanyaan akan hilang.')) this.remove(); }">
+        <div class="modal" style="width:90%; max-width:800px; max-height:90vh; overflow-y:auto">
+            <div class="modal-header">
+                <h2>Review Asesmen AI (Siswa: ${username})</h2>
+                <button class="modal-close" onclick="if(confirm('Batalkan review?')) this.closest('.modal-overlay').remove()">&times;</button>
+            </div>
+            <p class="text-muted" style="margin-bottom:1rem">Berikut 20 soal buatan AI berdasarkan chat siswa. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
+            
+            <div id="review-questions-container">
+                ${questionsHTML}
+            </div>
+            
+            <div class="modal-actions" style="margin-top:1.5rem; justify-content:space-between">
+                <button class="btn btn-outline" onclick="if(confirm('Batalkan review?')) this.closest('.modal-overlay').remove()">Batal</button>
+                <button class="btn btn-primary" onclick="submitAssessmentReview('${username}')"><i class="fas fa-check-circle"></i> Simpan & Approve Siswa</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+async function submitAssessmentReview(username) {
+    if (!confirm("Apakah Anda yakin soal ini sudah benar dan siap dikerjakan siswa?")) return;
+
+    const finalQuestions = [];
+    const qCount = window.tempReviewQuestions.length;
+
+    for (let i = 0; i < qCount; i++) {
+        finalQuestions.push({
+            question: document.getElementById(`rev-q-${i}-text`).value,
+            options: [
+                document.getElementById(`rev-q-${i}-opt0`).value,
+                document.getElementById(`rev-q-${i}-opt1`).value,
+                document.getElementById(`rev-q-${i}-opt2`).value,
+                document.getElementById(`rev-q-${i}-opt3`).value
+            ],
+            correct: parseInt(document.getElementById(`rev-q-${i}-correct`).value),
+            type: document.getElementById(`rev-q-${i}-type`).value,
+            explanation: document.getElementById(`rev-q-${i}-explanation`).value
+        });
+    }
+
+    // 1. Simpan soal matang ke progress siswa
+    const progress = getProgress(username);
+    progress.generatedAssessment = finalQuestions;
+    updateProgress(username, progress);
+
+    // 2. Tandai sebagai Approved
     await saveApprovalForUser(username, { date: new Date().toISOString(), approvedBy: currentUser.username });
+
+    document.querySelector('.modal-overlay').remove();
     renderAssessmentMgmt(document.getElementById('main-content'));
+    alert(`Berhasil! Asesmen telah dikunci dan Tahap 3 terbuka untuk ${username}`);
 }
 
 // ---- STUDENT ACCOUNT MANAGEMENT ----
@@ -300,7 +439,7 @@ function renderStudentAccounts(main) {
     const students = users.filter(u => u.role === 'siswa');
 
     main.innerHTML = `
-    <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
+        < div class= "flex justify-between items-center mb-2" style = "flex-wrap:wrap;gap:0.5rem" >
         <h3>Akun Siswa (${students.length})</h3>
         <div class="flex gap-1">
             <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()"><i class="fas fa-plus"></i> Tambah Siswa</button>
@@ -308,7 +447,7 @@ function renderStudentAccounts(main) {
             <button class="btn btn-warning btn-sm" onclick="document.getElementById('excel-upload').click()"><i class="fas fa-upload"></i> Upload Excel</button>
             <input type="file" id="excel-upload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(event)">
         </div>
-    </div>
+    </div >
     <div class="card">
         <div class="table-container">
             <table>
@@ -330,19 +469,19 @@ function renderStudentAccounts(main) {
 
 function showAddStudentModal() {
     document.getElementById('modal-container').innerHTML = `
-    <div class="modal-overlay" onclick="if(event.target===this)this.remove()">
-        <div class="modal">
-            <div class="modal-header"><h2>Tambah Siswa Baru</h2><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
-            <div class="form-group"><label>Username</label><input type="text" id="new-student-username" placeholder="contoh: siswa001"></div>
-            <div class="form-group"><label>Nama Lengkap</label><input type="text" id="new-student-name" placeholder="Nama lengkap siswa"></div>
-            <div class="form-group"><label>Kelas</label><select id="new-student-kelas"><option value="7.6">7.6</option><option value="7.7">7.7</option><option value="7.8">7.8</option><option value="7.9">7.9</option><option value="7.10">7.10</option><option value="7.11">7.11</option></select></div>
-            <div class="form-group"><label>Password Awal</label><input type="text" id="new-student-password" value="siswa123" placeholder="Password awal"></div>
-            <div class="modal-actions">
-                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
-                <button class="btn btn-primary" onclick="addStudentAccount()">Simpan</button>
-            </div>
+    < div class= "modal-overlay" onclick = "if(event.target===this)this.remove()" >
+    <div class="modal">
+        <div class="modal-header"><h2>Tambah Siswa Baru</h2><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="form-group"><label>Username</label><input type="text" id="new-student-username" placeholder="contoh: siswa001"></div>
+        <div class="form-group"><label>Nama Lengkap</label><input type="text" id="new-student-name" placeholder="Nama lengkap siswa"></div>
+        <div class="form-group"><label>Kelas</label><select id="new-student-kelas"><option value="7.6">7.6</option><option value="7.7">7.7</option><option value="7.8">7.8</option><option value="7.9">7.9</option><option value="7.10">7.10</option><option value="7.11">7.11</option></select></div>
+        <div class="form-group"><label>Password Awal</label><input type="text" id="new-student-password" value="siswa123" placeholder="Password awal"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+            <button class="btn btn-primary" onclick="addStudentAccount()">Simpan</button>
         </div>
-    </div>`;
+    </div>
+    </div > `;
 }
 
 async function addStudentAccount() {
@@ -377,10 +516,10 @@ async function addStudentAccount() {
 
 async function deleteUser(username) {
     if (currentUser.role !== 'admin') { alert('Hanya admin yang dapat menghapus akun!'); return; }
-    if (!confirm(`Hapus akun ${username}?`)) return;
+    if (!confirm(`Hapus akun ${username} ? `)) return;
 
     try {
-        const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
+        const res = await fetch(`/ api / users / ${username}`, { method: 'DELETE' });
         if (!res.ok) throw new Error();
 
         await syncUsers();
@@ -446,7 +585,7 @@ function handleExcelUpload(event) {
 // ---- PROFILE ----
 function renderProfile(main) {
     main.innerHTML = `
-    <div class="profile-card card">
+    < div class= "profile-card card" >
         <div class="profile-photo-section">
             <div class="profile-photo" id="profile-photo-display">
                 ${currentUser.photo ? `<img src="${currentUser.photo}" alt="Foto">` : '<i class="fas fa-user"></i>'}
@@ -462,17 +601,17 @@ function renderProfile(main) {
         <div class="form-group"><label>Username</label><input type="text" value="${currentUser.username}" disabled></div>
         <div class="form-group"><label>Nama Lengkap</label><input type="text" id="profile-name" value="${currentUser.name}"></div>
         ${currentUser.role === 'siswa' ? `<div class="form-group"><label>Kelas</label><input type="text" value="${currentUser.kelas || '-'}" disabled></div>` : ''}
-        <div style="border-top:1px solid var(--border-color);margin:1.5rem 0;padding-top:1.5rem">
+    < div style = "border-top:1px solid var(--border-color);margin:1.5rem 0;padding-top:1.5rem" >
             <h3 style="font-size:1rem;margin-bottom:1rem">🔑 Ganti Password</h3>
             <div class="form-group"><label>Password Lama</label><input type="password" id="profile-old-pwd" placeholder="Masukkan password lama"></div>
             <div class="form-group"><label>Password Baru</label><input type="password" id="profile-new-pwd" placeholder="Min. 6 karakter"></div>
-        </div>
+        </div >
         <div class="flex gap-1">
             <button class="btn btn-primary" onclick="saveProfile()"><i class="fas fa-save"></i> Simpan Profil</button>
             <button class="btn btn-success" onclick="changeProfilePassword()"><i class="fas fa-key"></i> Ganti Password</button>
         </div>
         <div id="profile-msg" class="mt-2"></div>
-    </div>`;
+    </div > `;
 }
 
 function handlePhotoUpload(event) {

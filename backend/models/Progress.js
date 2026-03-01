@@ -11,6 +11,7 @@ const progressSchema = new mongoose.Schema({
     tahap4Score: { type: Number, default: 0 },
     tahap4Analysis: { type: Object, default: null },
     tahap4Details: { type: Array, default: [] },
+    reflectionAnswers: { type: Array, default: [] },
     aiReadiness: { type: String },
     isReady: { type: Boolean, default: false },
     generatedAssessment: { type: Array, default: [] },
