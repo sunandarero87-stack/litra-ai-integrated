@@ -3,8 +3,8 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan model tunggal Llama 3.1 8B (free) di OpenRouter
-const AI_MODEL = "meta-llama/llama-3.1-8b-instruct:free";
+// Menggunakan rute auto-fallback bawaan OpenRouter untuk model gratis yang tersedia
+const AI_MODEL = "openrouter/free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
