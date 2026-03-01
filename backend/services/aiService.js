@@ -27,7 +27,7 @@ async function fetchFromOpenRouterWithFallback(payload, isRetry = false) {
         const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
         return response;
     } catch (error) {
-        if (!isRetry && error.response && (error.response.status === 429 || error.response.status === 402)) {
+        if (!isRetry && error.response && (error.response.status === 429 || error.response.status === 402 || error.response.status === 404)) {
             console.warn(`\n[aiService] ${payload.model} terkena limit/error ${error.response.status}. Switching to FALLBACK_MODEL: ${FALLBACK_MODEL}`);
             payload.model = FALLBACK_MODEL;
             return await fetchFromOpenRouterWithFallback(payload, true);
