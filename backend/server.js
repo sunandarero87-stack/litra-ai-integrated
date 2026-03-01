@@ -12,6 +12,7 @@ const chatController = require('./controllers/chatController');
 const authController = require('./controllers/authController');
 const progressController = require('./controllers/progressController');
 const materialController = require('./controllers/materialController');
+const assessmentController = require('./controllers/assessmentController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,7 +61,7 @@ app.post('/api/chat', chatController.handleChat);
 
 // New Routes for Stage 2 & 3
 app.post('/api/reflections', chatController.handleReflections);
-app.post('/api/assessment/generate', chatController.handleAssessmentGeneration);
+app.post('/api/assessment/generate-from-bank', assessmentController.generateFromBank);
 app.post('/api/assessment/analyze', chatController.handleAnalysis);
 app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
 

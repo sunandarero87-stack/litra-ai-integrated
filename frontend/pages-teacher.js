@@ -269,8 +269,8 @@ function renderAssessmentMgmt(main) {
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
                             <td>
-                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-sync"></i> Racik Ulang</button></div>` :
-                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)">Approve</button>` :
+                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-sync"></i> Generate Soal</button></div>` :
+                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-magic"></i> Generate Soal</button>` :
                     '<span class="text-muted">Menunggu Refleksi</span>'}
                             </td>
                         </tr>`;
@@ -292,21 +292,24 @@ function saveAssessmentDuration() {
 async function approveStudent(username, btnElement) {
     if (btnElement) {
         btnElement.disabled = true;
-        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Meracik Soal...';
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generate Soal...';
     }
 
     try {
         const progress = getProgress(username);
         const reflectionAnswers = progress.reflectionAnswers || [];
 
-        // Langsung generate dari server
-        const genRes = await fetch('/api/assessment/generate', {
+        // Langsung generate dari database
+        const genRes = await fetch('/api/assessment/generate-from-bank', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, reflectionAnswers })
+            body: JSON.stringify({ username })
         });
 
-        if (!genRes.ok) throw new Error("Gagal membuat soal dari AI");
+        if (!genRes.ok) {
+            const errBody = await genRes.json();
+            throw new Error(errBody.error || "Gagal mengambil soal dari Bank Soal");
+        }
         const genData = await genRes.json();
 
         // Buka Modal untuk Review Guru
