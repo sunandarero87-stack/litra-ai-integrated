@@ -136,9 +136,10 @@ async function generateReflections(username, chatHistory) {
         const payload = {
             model: PRIMARY_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa." },
-                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nCHAT:\n${historyText}` }
-            ]
+                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. OUTPUT WAJIB BERUPA PURE JSON ARRAY." },
+                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini:\n\nCHAT:\n${historyText}\n\nFormat output WAJIB JSON array murni:\n["Pertanyaan 1", "Pertanyaan 2", "Pertanyaan 3", "Pertanyaan 4", "Pertanyaan 5"]\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam kalimat pertanyaan. Gunakan kutip tunggal (') sebagai gantinya.\n2. Jangan tulis kata pengantar apapun, langsung JSON array.` }
+            ],
+            temperature: 0.4
         };
 
         const response = await fetchFromOpenRouterWithFallback(payload);
@@ -156,10 +157,11 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
         const payload = {
             model: PRIMARY_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like)." },
-                { role: "user", content: `Buat 10 soal pilihan ganda (array of objects murni berformat JSON [{question, options:["A","B","C","D"], correct: 0, explanation, type:"literasi" atau "numerasi"}]) berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nPastikan berjumlah tepat 10 soal dan sesuai dengan materi yang dibahas.` }
+                { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID." },
+                { role: "user", content: `Buat 10 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam teks pertanyaan, opsi, maupun penjelasan (Gunakan kutip tunggal (') sebagai gantinya).\n2. Format JSON harus lengkap tanpa terpotong.\n3. Jangan tulis kata pengantar apapun, langsung JSON array.` }
             ],
-            max_tokens: 4096 // Tambahkan limit token ekstra besar
+            max_tokens: 4096,
+            temperature: 0.4
         };
         const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
@@ -174,9 +176,10 @@ async function analyzeReadiness(username, reflectionAnswers) {
         const payload = {
             model: PRIMARY_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa." },
-                { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
-            ]
+                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa. OUTPUT WAJIB BERUPA PURE JSON OBJECT." },
+                { role: "user", content: `Analisislah kesiapan siswa berdasarkan refleksi ini:\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB JSON object murni:\n{"ready": true, "analysis": "Analisis singkat", "recommendation": "Rekomendasi singkat"}\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam teks jawaban string. Gunakan kutip tunggal ('/').\n2. Jangan tulis kata pengantar apapun, langsung JSON object.` }
+            ],
+            temperature: 0.3
         };
         const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
@@ -191,9 +194,10 @@ async function analyzeHabits(username, habitAnswers) {
         const payload = {
             model: PRIMARY_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat." },
-                { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
-            ]
+                { role: "system", content: "Kamu adalah sistem analis perilaku siswa memonitor 7 Kebiasaan Hebat. OUTPUT WAJIB BERUPA PURE JSON OBJECT." },
+                { role: "user", content: `Analisislah jawaban esai siswa berikut:\n${JSON.stringify(habitAnswers)}\n\nFormat output WAJIB JSON object murni:\n{"score": 85, "analysis": "Feedback analitis singkat", "details": ["feedback 1", "feedback 2"]}\n\nATURAN KETAT JSON:\n1. JANGAN PERNAH memakai tanda kutip ganda (\") di dalam teks feedback string. Gunakan kutip tunggal ('/').\n2. Jangan tulis kata pengantar apapun, langsung JSON object.` }
+            ],
+            temperature: 0.3
         };
         const response = await fetchFromOpenRouterWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
