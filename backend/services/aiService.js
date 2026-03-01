@@ -3,10 +3,9 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Menggunakan rute auto-fallback bawaan OpenRouter untuk model gratis yang tersedia
-const AI_MODEL = "openrouter/free";
-
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+// Default fallback to openrouter if not specified in .env
+const AI_MODEL = process.env.AI_MODEL || "openrouter/free";
+const API_URL = process.env.AI_BASE_URL || "https://openrouter.ai/api/v1/chat/completions";
 
 function getHeaders() {
     return {
@@ -55,7 +54,7 @@ TAHAP: ${stage}`;
             max_tokens: 1024,
         };
 
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
 
         // Validasi response path
         if (!response.data.choices || !response.data.choices[0]) {
@@ -146,7 +145,7 @@ async function generateReflections(username, chatHistory) {
             ]
         };
 
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
         const text = response.data.choices[0].message.content;
         return JSON.parse(cleanJson(text));
     } catch (error) {
@@ -167,7 +166,7 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
             max_tokens: 4096,
             temperature: 0.4
         };
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Assessment Gen Error:", e.message);
@@ -184,7 +183,7 @@ async function analyzeReadiness(username, reflectionAnswers) {
                 { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
             ]
         };
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Readiness Gen Error:", e.message);
@@ -201,7 +200,7 @@ async function analyzeHabits(username, habitAnswers) {
                 { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
             ]
         };
-        const response = await axios.post(OPENROUTER_URL, payload, { headers: getHeaders() });
+        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Habit Analysis Error:", e.message);
