@@ -63,7 +63,7 @@ function renderStudentResults(main) {
     const avgNum = count ? Math.round(totalNum / count) : 0;
     const avgAll = count ? Math.round(totalAll / count) : 0;
 
-    const progressData = getProgressAll();
+    const progressData = getStudentProgress();
 
     main.innerHTML = `
     <div class="analysis-grid">
@@ -137,7 +137,7 @@ function renderStudentResults(main) {
 // ---- EXPORT FUNCTIONS ----
 function exportStage2ToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
-    const progresses = getProgressAll();
+    const progresses = getStudentProgress();
 
     let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Pertanyaan Refleksi</th><th>Jawaban Siswa</th></tr></thead><tbody>';
 
@@ -198,7 +198,7 @@ function exportStage3ToExcel() {
 
 function exportStage4ToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
-    const progresses = getProgressAll();
+    const progresses = getStudentProgress();
 
     let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Nilai 7 Kebiasaan</th><th>Analisis AI (Kesimpulan)</th><th>Kebiasaan yang Dinilai</th><th>Jawaban Siswa</th><th>Feedback AI Spesifik</th></tr></thead><tbody>';
 
