@@ -719,10 +719,25 @@ async function deleteBankSoal(id) {
     }
 }
 
+let currentStudentAccountPage = 1;
+const studentsPerPage = 20;
+
+function changeStudentPage(direction) {
+    currentStudentAccountPage += direction;
+    renderStudentAccounts(document.getElementById('main-content'));
+}
+
 // ---- STUDENT ACCOUNT MANAGEMENT ----
 function renderStudentAccounts(main) {
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
+
+    const totalPages = Math.ceil(students.length / studentsPerPage) || 1;
+    if (currentStudentAccountPage > totalPages) currentStudentAccountPage = totalPages;
+    if (currentStudentAccountPage < 1) currentStudentAccountPage = 1;
+
+    const startIndex = (currentStudentAccountPage - 1) * studentsPerPage;
+    const paginatedStudents = students.slice(startIndex, startIndex + studentsPerPage);
 
     main.innerHTML = `
         <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
@@ -739,7 +754,7 @@ function renderStudentAccounts(main) {
             <table>
                 <thead><tr><th>Username</th><th>Nama</th><th>Kelas</th><th>Dibuat</th><th>Aksi</th></tr></thead>
                 <tbody>
-                    ${students.map(s => `<tr>
+                    ${paginatedStudents.map(s => `<tr>
                         <td>${s.username}</td><td>${s.name}</td><td>${s.kelas || '-'}</td>
                         <td>${new Date(s.createdAt).toLocaleDateString('id-ID')}</td>
                         <td>
@@ -749,6 +764,26 @@ function renderStudentAccounts(main) {
                 </tbody>
             </table>
         </div>
+        
+        <!-- Pagination Controls -->
+        ${totalPages > 1 ? `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding: 0.5rem; flex-wrap:wrap; gap:1rem;">
+            <div class="text-muted" style="font-size: 0.9rem;">
+                Menampilkan ${startIndex + 1} - ${Math.min(startIndex + studentsPerPage, students.length)} dari total ${students.length} Akun
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button class="btn btn-outline btn-sm" onclick="changeStudentPage(-1)" ${currentStudentAccountPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i> Sebelumnya
+                </button>
+                <div style="background:var(--bg-color); padding:0.25rem 0.75rem; border-radius:0.5rem; border:1px solid var(--border-color); font-weight:bold;">
+                    Halaman ${currentStudentAccountPage} / ${totalPages}
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="changeStudentPage(1)" ${currentStudentAccountPage === totalPages ? 'disabled' : ''}>
+                    Selanjutnya <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        ` : ''}
     </div>
     <div id="modal-container"></div>`;
 }
