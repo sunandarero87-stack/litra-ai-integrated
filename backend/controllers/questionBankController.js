@@ -57,26 +57,50 @@ exports.uploadExcel = async (req, res) => {
 
         const questionsToInsert = [];
         let errorCount = 0;
+        const errorDetails = [];
 
         rawData.forEach((row, index) => {
-            // Mapping kolom (support huruf kapital/kecil)
-            const getVal = (key) => {
-                const foundKey = Object.keys(row).find(k => k.toLowerCase().trim() === key.toLowerCase());
+            const rowNumber = index + 2; // Data starts at row 2
+
+            // Mapping kolom (support exact and fuzzy match)
+            const findKeyExactOrIncludes = (exacts, includesKw) => {
+                const foundKey = Object.keys(row).find(k => {
+                    const cleanH = k.toLowerCase().trim();
+                    if (exacts.map(e => e.toLowerCase()).includes(cleanH)) return true;
+                    if (includesKw && cleanH.replace(/[^a-z0-9]/g, '').includes(includesKw.toLowerCase().replace(/[^a-z0-9]/g, ''))) return true;
+                    return false;
+                });
                 return foundKey ? row[foundKey] : undefined;
             };
 
-            const questionText = getVal('Soal');
-            const optA = getVal('Opsi A') || getVal('A');
-            const optB = getVal('Opsi B') || getVal('B');
-            const optC = getVal('Opsi C') || getVal('C');
-            const optD = getVal('Opsi D') || getVal('D');
-            let correctVal = getVal('Kunci Jawaban') || getVal('Kunci');
-            const explanation = getVal('Pembahasan');
-            const typeVal = getVal('Tipe') || 'literasi';
+            const questionText = findKeyExactOrIncludes(['soal', 'pertanyaan'], 'soal');
+            const optA = findKeyExactOrIncludes(['a', 'opsi a', 'pilihan a'], 'opsia');
+            const optB = findKeyExactOrIncludes(['b', 'opsi b', 'pilihan b'], 'opsib');
+            const optC = findKeyExactOrIncludes(['c', 'opsi c', 'pilihan c'], 'opsic');
+            const optD = findKeyExactOrIncludes(['d', 'opsi d', 'pilihan d'], 'opsid');
+            let correctVal = findKeyExactOrIncludes(['kunci', 'kunci jawaban', 'kunci (a/b/c/d)'], 'kunci');
+            const explanation = findKeyExactOrIncludes(['pembahasan', 'penjelasan'], 'bahas');
+            const typeVal = findKeyExactOrIncludes(['tipe', 'tipe (literasi/numerasi)', 'jenis'], 'tipe');
+            const topicVal = findKeyExactOrIncludes(['topik', 'materi', 'bab'], 'topik');
 
-            if (!questionText || !optA || !optB || !optC || !optD || correctVal === undefined) {
+            if (!questionText || !String(questionText).trim()) {
+                // Ignore truly empty rows silently
+                if (!optA && !optB && !optC && !optD && !correctVal) return;
+                errorDetails.push(`Baris ${rowNumber}: Kolom Soal kosong.`);
                 errorCount++;
-                return; // Skip invalid row
+                return;
+            }
+
+            if (!optA || !optB || !optC || !optD) {
+                errorDetails.push(`Baris ${rowNumber}: Ada opsi (A/B/C/D) yang kosong.`);
+                errorCount++;
+                return;
+            }
+
+            if (correctVal === undefined || correctVal === null || correctVal === '') {
+                errorDetails.push(`Baris ${rowNumber}: Kunci Jawaban kosong.`);
+                errorCount++;
+                return;
             }
 
             // Parse Correct Index (A=0, B=1, C=2, D=3) or number
@@ -93,6 +117,7 @@ exports.uploadExcel = async (req, res) => {
             }
 
             if (isNaN(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+                errorDetails.push(`Baris ${rowNumber}: Kunci Jawaban "${correctVal}" tidak valid (harus A, B, C, atau D).`);
                 errorCount++;
                 return;
             }
@@ -102,8 +127,8 @@ exports.uploadExcel = async (req, res) => {
                 options: [String(optA).trim(), String(optB).trim(), String(optC).trim(), String(optD).trim()],
                 correct: correctIndex,
                 explanation: String(explanation || 'Jawaban benar adalah opsi ' + (['A', 'B', 'C', 'D'][correctIndex])).trim(),
-                type: String(typeVal).toLowerCase().includes('num') ? 'numerasi' : 'literasi',
-                topic: getVal('Topik') || 'Analisis Data',
+                type: String(typeVal || '').toLowerCase().includes('num') ? 'numerasi' : 'literasi',
+                topic: topicVal || 'Analisis Data',
                 grade: '7 SMP',
                 curriculum: 'Fase D',
                 difficulty: 'HOTS'
@@ -114,11 +139,18 @@ exports.uploadExcel = async (req, res) => {
             await QuestionBank.insertMany(questionsToInsert);
         }
 
+        let message = `Berhasil mengimpor ${questionsToInsert.length} soal.`;
+        if (errorCount > 0) {
+            const previewErrors = errorDetails.slice(0, 3).join(' | ');
+            message += `\n(Gagal/Dilewati: ${errorCount} baris)\nAlasan: ${previewErrors}${errorDetails.length > 3 ? ' ...' : ''}`;
+        }
+
         res.json({
             success: true,
             inserted: questionsToInsert.length,
             failed: errorCount,
-            message: `Berhasil mengimpor ${questionsToInsert.length} soal. (Gagal/Dilewati: ${errorCount} baris)`
+            message: message,
+            errorDetails: errorDetails
         });
 
     } catch (err) {
