@@ -83,6 +83,7 @@ app.post('/api/auth/change-password', authController.changePassword);
 app.get('/api/users', authController.getUsers);
 app.post('/api/users', authController.createUsers);
 app.post('/api/users/upload', upload.single('file'), authController.uploadExcel);
+app.post('/api/users/bulk-delete', authController.bulkDeleteUsers);
 app.delete('/api/users/:username', authController.deleteUser);
 app.put('/api/users/profile', authController.updateProfile);
 

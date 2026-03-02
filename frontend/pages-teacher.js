@@ -743,6 +743,7 @@ function renderStudentAccounts(main) {
         <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
         <h3>Akun Siswa (${students.length})</h3>
         <div class="flex gap-1">
+            ${currentUser.role === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="bulkDeleteStudents()" id="btn-bulk-delete" style="display:none;"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected">0</span>)</button>` : ''}
             <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()"><i class="fas fa-plus"></i> Tambah Siswa</button>
             <button class="btn btn-success btn-sm" onclick="downloadExcelTemplate()"><i class="fas fa-download"></i> Template Excel</button>
             <button class="btn btn-warning btn-sm" onclick="document.getElementById('excel-upload').click()"><i class="fas fa-upload"></i> Upload Excel</button>
@@ -752,9 +753,15 @@ function renderStudentAccounts(main) {
     <div class="card">
         <div class="table-container">
             <table>
-                <thead><tr><th>Username</th><th>Nama</th><th>Kelas</th><th>Dibuat</th><th>Aksi</th></tr></thead>
+                <thead>
+                    <tr>
+                        ${currentUser.role === 'admin' ? `<th><input type="checkbox" id="check-all-students" onchange="toggleAllStudents(this)"></th>` : ''}
+                        <th>Username</th><th>Nama</th><th>Kelas</th><th>Dibuat</th><th>Aksi</th>
+                    </tr>
+                </thead>
                 <tbody>
                     ${paginatedStudents.map(s => `<tr>
+                        ${currentUser.role === 'admin' ? `<td><input type="checkbox" class="check-student" value="${s.username}" onchange="updateBulkDeleteBtn()"></td>` : ''}
                         <td>${s.username}</td><td>${s.name}</td><td>${s.kelas || '-'}</td>
                         <td>${new Date(s.createdAt).toLocaleDateString('id-ID')}</td>
                         <td>
@@ -847,6 +854,57 @@ async function deleteUser(username) {
         renderStudentAccounts(document.getElementById('main-content'));
     } catch (err) {
         alert('Gagal menghapus akun.');
+    }
+}
+
+function toggleAllStudents(source) {
+    const checkboxes = document.querySelectorAll('.check-student');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateBulkDeleteBtn();
+}
+
+function updateBulkDeleteBtn() {
+    const checkboxes = document.querySelectorAll('.check-student:checked');
+    const btn = document.getElementById('btn-bulk-delete');
+    const countSpan = document.getElementById('count-selected');
+    if (btn && countSpan) {
+        if (checkboxes.length > 0) {
+            btn.style.display = 'inline-block';
+            countSpan.textContent = checkboxes.length;
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+}
+
+async function bulkDeleteStudents() {
+    if (currentUser.role !== 'admin') { alert('Hanya admin yang dapat menghapus akun!'); return; }
+    const checkboxes = document.querySelectorAll('.check-student:checked');
+    const usernames = Array.from(checkboxes).map(cb => cb.value);
+
+    if (usernames.length === 0) return;
+    if (!confirm(`Hapus ${usernames.length} siswa terpilih secara permanen?`)) return;
+
+    try {
+        const res = await fetch('/api/users/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Server Error');
+
+        await syncUsers();
+        alert(data.message || 'Siswa berhasil dihapus.');
+        // If current page is empty after delete, go back 1 page
+        const newTotal = getUsers().filter(u => u.role === 'siswa').length;
+        const totalPages = Math.ceil(newTotal / studentsPerPage) || 1;
+        if (currentStudentAccountPage > totalPages) currentStudentAccountPage = totalPages;
+
+        renderStudentAccounts(document.getElementById('main-content'));
+    } catch (err) {
+        alert(err.message || 'Gagal menghapus banyak akun sekaligus.');
     }
 }
 

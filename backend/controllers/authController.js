@@ -179,6 +179,20 @@ const uploadExcel = async (req, res) => {
     }
 };
 
+const bulkDeleteUsers = async (req, res) => {
+    try {
+        const { usernames } = req.body;
+        if (!Array.isArray(usernames) || usernames.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada user yang dipilih untuk dihapus' });
+        }
+
+        const result = await User.deleteMany({ username: { $in: usernames }, role: 'siswa' });
+        res.json({ message: `Berhasil menghapus ${result.deletedCount} akun siswa` });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 module.exports = {
     initDefaultUsers,
     login,
@@ -187,5 +201,6 @@ module.exports = {
     getUsers,
     createUsers,
     deleteUser,
-    uploadExcel
+    uploadExcel,
+    bulkDeleteUsers
 };
