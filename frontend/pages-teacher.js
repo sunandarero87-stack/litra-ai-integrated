@@ -91,9 +91,7 @@ function renderStudentResults(main) {
                 <p class="text-muted" style="font-size:0.85rem; margin-top:0.2rem"><em><i class="fas fa-robot text-primary"></i> Semua Nilai Dianalisis AI</em></p>
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                <button class="btn btn-outline btn-sm" onclick="exportStage2ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 2</button>
-                <button class="btn btn-outline btn-sm" onclick="exportStage3ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 3</button>
-                <button class="btn btn-outline btn-sm" onclick="exportStage4ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 4</button>
+                <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
         <div class="table-container">
@@ -135,99 +133,91 @@ function renderStudentResults(main) {
 }
 
 // ---- EXPORT FUNCTIONS ----
-function exportStage2ToExcel() {
+function exportAllStagesToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
     const progresses = getStudentProgress();
-
-    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Pertanyaan Refleksi</th><th>Jawaban Siswa</th></tr></thead><tbody>';
-
-    let hasData = false;
-    users.forEach(s => {
-        const p = progresses[s.username];
-        if (p && p.reflectionAnswers && p.reflectionAnswers.length > 0) {
-            hasData = true;
-            p.reflectionAnswers.forEach((ans, index) => {
-                const isFirst = index === 0;
-                tableHTML += `<tr>
-                    <td>${isFirst ? s.name : ''}</td>
-                    <td>${isFirst ? (s.kelas || '-') : ''}</td>
-                    <td>${ans.question}</td>
-                    <td>${ans.answer}</td>
-                </tr>`;
-            });
-        }
-    });
-    tableHTML += '</tbody></table>';
-
-    if (!hasData) return alert('Tidak ada data Refleksi Tahap 2 untuk di-download.');
-    downloadExcelFile(tableHTML, 'Laporan_Tahap2_Refleksi');
-}
-
-function exportStage3ToExcel() {
-    const users = getUsers().filter(u => u.role === 'siswa');
     const results = getAssessmentResults();
 
-    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Benar Literasi</th><th>Benar Numerasi</th><th>Total Nilai Asesmen</th><th>Status Kelulusan</th><th>Jumlah Pelanggaran Ujian</th><th>Tanggal Mengerjakan</th></tr></thead><tbody>';
+    // Table Header
+    let tableHTML = '<table><thead><tr>' +
+        '<th>Nama Siswa</th><th>Kelas</th>' +
+        '<th style="background-color:#E2EFDA">Nilai Refleksi (Tahap 2)</th>' +
+        '<th style="background-color:#E2EFDA">Pertanyaan Refleksi</th>' +
+        '<th style="background-color:#E2EFDA">Jawaban Refleksi</th>' +
+        '<th style="background-color:#FFF2CC">Total Nilai Asesmen (Tahap 3)</th>' +
+        '<th style="background-color:#FFF2CC">Literasi (Benar/Total)</th>' +
+        '<th style="background-color:#FFF2CC">Numerasi (Benar/Total)</th>' +
+        '<th style="background-color:#FFF2CC">Status Asesmen</th>' +
+        '<th style="background-color:#D9E1F2">Nilai 7 Kebiasaan (Tahap 4)</th>' +
+        '<th style="background-color:#D9E1F2">Analisis Karakter AI</th>' +
+        '<th style="background-color:#D9E1F2">Detail Evaluasi Kebiasaan</th>' +
+        '</tr></thead><tbody>';
 
     let hasData = false;
+
     users.forEach(s => {
+        const p = progresses[s.username] || {};
         const r = results[s.username];
+
+        // Prepare Tahap 2 Data (multiple rows if multiple answers, but we'll try to flatten or pick first)
+        let t2Score = p.tahap2Score ? parseFloat(p.tahap2Score).toFixed(2).replace('.', ',') : '-';
+        let t2Questions = [];
+        let t2Answers = [];
+        if (p.reflectionAnswers && p.reflectionAnswers.length > 0) {
+            hasData = true;
+            p.reflectionAnswers.forEach(ans => {
+                t2Questions.push(ans.question);
+                t2Answers.push(ans.answer);
+            });
+        }
+
+        // Prepare Tahap 3 Data
+        let t3Score = '-', t3Lit = '-', t3Num = '-', t3Status = '-';
         if (r) {
             hasData = true;
-            const exactScore = ((r.score / r.total) * 100).toFixed(2);
-            const status = r.pass ? 'Lulus' : 'Tidak Lulus';
-            const dateStr = new Date(r.date).toLocaleDateString('id-ID');
+            t3Score = ((r.score / r.total) * 100).toFixed(2).replace('.', ',');
+            t3Lit = `${r.literasi}/${r.litTotal}`;
+            t3Num = `${r.numerasi}/${r.numTotal}`;
+            t3Status = r.pass ? 'Lulus' : 'Tidak Lulus';
+        }
 
+        // Prepare Tahap 4 Data
+        let t4Score = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2).replace('.', ',') : '-';
+        let t4Summary = p.tahap4Analysis && p.tahap4Analysis.summary ? p.tahap4Analysis.summary : '-';
+        let t4DetailsList = [];
+        if (p.tahap4Complete && p.tahap4Details && p.tahap4Details.length > 0) {
+            hasData = true;
+            p.tahap4Details.forEach(det => {
+                t4DetailsList.push(`[${det.habit}] Jwb: ${det.answer} | AI: ${det.feedback}`);
+            });
+        }
+
+        // Find max rows needed for this student (based on reflection text arrays usually longest)
+        let rowCount = Math.max(1, t2Questions.length, t4DetailsList.length);
+
+        for (let i = 0; i < rowCount; i++) {
+            const isFirst = i === 0;
             tableHTML += `<tr>
-                <td>${s.name}</td>
-                <td>${s.kelas || '-'}</td>
-                <td>${r.literasi}/${r.litTotal}</td>
-                <td>${r.numerasi}/${r.numTotal}</td>
-                <td>${exactScore.replace('.', ',')}</td>
-                <td>${status}</td>
-                <td>${r.violations || 0}</td>
-                <td>${dateStr}</td>
+                <td>${isFirst ? s.name : ''}</td>
+                <td>${isFirst ? (s.kelas || '-') : ''}</td>
+                <td>${isFirst ? t2Score : ''}</td>
+                <td>${t2Questions[i] || ''}</td>
+                <td>${t2Answers[i] || ''}</td>
+                <td>${isFirst ? t3Score : ''}</td>
+                <td>${isFirst ? t3Lit : ''}</td>
+                <td>${isFirst ? t3Num : ''}</td>
+                <td>${isFirst ? t3Status : ''}</td>
+                <td>${isFirst ? t4Score : ''}</td>
+                <td>${isFirst ? t4Summary : ''}</td>
+                <td>${t4DetailsList[i] || ''}</td>
             </tr>`;
         }
     });
+
     tableHTML += '</tbody></table>';
 
-    if (!hasData) return alert('Tidak ada data Asesmen Tahap 3 untuk di-download.');
-    downloadExcelFile(tableHTML, 'Laporan_Tahap3_Asesmen');
-}
-
-function exportStage4ToExcel() {
-    const users = getUsers().filter(u => u.role === 'siswa');
-    const progresses = getStudentProgress();
-
-    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Nilai 7 Kebiasaan</th><th>Analisis AI (Kesimpulan)</th><th>Kebiasaan yang Dinilai</th><th>Jawaban Siswa</th><th>Feedback AI Spesifik</th></tr></thead><tbody>';
-
-    let hasData = false;
-    users.forEach(s => {
-        const p = progresses[s.username];
-        if (p && p.tahap4Complete && p.tahap4Details && p.tahap4Details.length > 0) {
-            hasData = true;
-            const score = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2).replace('.', ',') : '0,00';
-            const aiSummary = p.tahap4Analysis && p.tahap4Analysis.summary ? p.tahap4Analysis.summary : '-';
-
-            p.tahap4Details.forEach((det, index) => {
-                const isFirst = index === 0;
-                tableHTML += `<tr>
-                    <td>${isFirst ? s.name : ''}</td>
-                    <td>${isFirst ? (s.kelas || '-') : ''}</td>
-                    <td>${isFirst ? score : ''}</td>
-                    <td>${isFirst ? aiSummary : ''}</td>
-                    <td>${det.habit}</td>
-                    <td>${det.answer}</td>
-                    <td>${det.feedback}</td>
-                </tr>`;
-            });
-        }
-    });
-    tableHTML += '</tbody></table>';
-
-    if (!hasData) return alert('Tidak ada data Esai Tahap 4 untuk di-download.');
-    downloadExcelFile(tableHTML, 'Laporan_Tahap4_Esai');
+    if (!hasData) return alert('Belum ada data progres siswa untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Keseluruhan_Siswa');
 }
 
 function downloadExcelFile(tableHTML, filePrefix) {
