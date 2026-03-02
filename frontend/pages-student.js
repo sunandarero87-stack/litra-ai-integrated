@@ -579,41 +579,85 @@ function startAssessment() {
         }
     }, 1000);
 
-    // Tab visibility detection
+    // Advanced Anti-Cheat Listeners
     document.addEventListener('visibilitychange', handleTabSwitch);
+    window.addEventListener('blur', handleTabSwitch);
+    window.addEventListener('resize', handleResizeViolation);
+
+    // Disable right-click, copy, paste during assessment
+    document.addEventListener('contextmenu', preventDefaultAction);
+    document.addEventListener('copy', preventDefaultAction);
+    document.addEventListener('paste', preventDefaultAction);
 
     showAssessmentQuestion(document.getElementById('main-content'));
 }
 
-function handleTabSwitch() {
+function preventDefaultAction(e) {
+    e.preventDefault();
+}
+
+function handleResizeViolation() {
     if (!assessmentActive) return;
-    if (document.hidden) {
-        tabViolationCount++;
-        assessmentAnswers = {};
-        assessmentCurrentQ = 0;
-
-        if (tabViolationCount >= 3) {
-            alert('⚠️ Asesmen Dibatalkan! Kamu telah melakukan pelanggaran lebih dari 3 kali. Asesmen dihentikan dan jawabanmu tidak sah.');
-            submitAssessment();
-            return;
-        }
-
-        // Show violation overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'tab-violation-overlay';
-        overlay.id = 'tab-violation-overlay';
-        overlay.innerHTML = `
-        <div class="tab-violation-content">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h2>⚠️ Pelanggaran Terdeteksi!</h2>
-                <p>Kamu membuka tab lain! Semua jawaban direset. Timer tetap berjalan.</p>
-                <p>Pelanggaran ke-${tabViolationCount}</p>
-                <button class="btn btn-outline" onclick="dismissViolation()" style="color:white;border-color:white">
-                    Kembali ke Soal
-                </button>
-            </div>`;
-        document.body.appendChild(overlay);
+    // Allow small resizes (like mobile address bar hiding), detect large resizes (split screen)
+    if (!window._lastWidth) {
+        window._lastWidth = window.innerWidth;
+        window._lastHeight = window.innerHeight;
+        return;
     }
+
+    const widthDiff = Math.abs(window.innerWidth - window._lastWidth);
+    const heightDiff = Math.abs(window.innerHeight - window._lastHeight);
+
+    // If window resizes by more than 20%, consider it an attempt to split screen
+    if (widthDiff > window._lastWidth * 0.2 || heightDiff > window._lastHeight * 0.2) {
+        window._lastWidth = window.innerWidth;
+        window._lastHeight = window.innerHeight;
+        handleTabSwitch({ type: 'resize' });
+    } else {
+        window._lastWidth = window.innerWidth;
+        window._lastHeight = window.innerHeight;
+    }
+}
+
+function handleTabSwitch(e = {}) {
+    if (!assessmentActive) return;
+
+    // Prevent triggering twice instantly
+    if (window._lastViolationTime && (Date.now() - window._lastViolationTime < 2000)) return;
+    window._lastViolationTime = Date.now();
+
+    // Only detect hidden document or window blur/resize
+    if (e.type === 'visibilitychange' && !document.hidden) return;
+
+    tabViolationCount++;
+    assessmentAnswers = {};
+    assessmentCurrentQ = 0;
+
+    let violationReason = "membuka aplikasi lain / pindah tab";
+    if (e.type === 'blur') violationReason = "membuka aplikasi mengambang / Notification Box";
+    if (e.type === 'resize') violationReason = "membagi layar (Split Screen) / memutar perangkat aneh";
+
+    if (tabViolationCount >= 3) {
+        alert('⚠️ Asesmen Dibatalkan! Kamu telah melakukan pelanggaran lebih dari 3 kali. Asesmen dihentikan dan jawabanmu tidak sah.');
+        submitAssessment();
+        return;
+    }
+
+    // Show violation overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'tab-violation-overlay';
+    overlay.id = 'tab-violation-overlay';
+    overlay.innerHTML = `
+    <div class="tab-violation-content">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h2>⚠️ Pelanggaran Terdeteksi!</h2>
+            <p>Sistem mendeteksi kamu <b>${violationReason}</b>! Semua jawaban direset. Timer tetap berjalan.</p>
+            <p style="color:var(--danger); font-weight:bold;">Pelanggaran ke-${tabViolationCount} dari 3</p>
+            <button class="btn btn-outline" onclick="dismissViolation()" style="color:white;border-color:white;margin-top:1rem;">
+                Saya Mengerti, Kembali ke Soal
+            </button>
+        </div>`;
+    document.body.appendChild(overlay);
 }
 
 function dismissViolation() {
@@ -679,7 +723,15 @@ function selectAssessmentAnswer(qId, optIdx) {
 
 function submitAssessment() {
     if (assessmentTimer) { clearInterval(assessmentTimer); assessmentTimer = null; }
+
+    // Remove all anti-cheat listeners
     document.removeEventListener('visibilitychange', handleTabSwitch);
+    window.removeEventListener('blur', handleTabSwitch);
+    window.removeEventListener('resize', handleResizeViolation);
+    document.removeEventListener('contextmenu', preventDefaultAction);
+    document.removeEventListener('copy', preventDefaultAction);
+    document.removeEventListener('paste', preventDefaultAction);
+
     assessmentActive = false;
 
     const progress = getProgress(currentUser.username);
