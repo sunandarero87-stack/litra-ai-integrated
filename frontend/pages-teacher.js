@@ -825,44 +825,46 @@ function downloadExcelTemplate() {
     link.click();
 }
 
-function handleExcelUpload(event) {
+async function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async function (e) {
-        const text = e.target.result;
-        const lines = text.split('\n').filter(l => l.trim());
-        if (lines.length < 2) { alert('File kosong atau format salah!'); return; }
 
-        const newUsers = [];
-        for (let i = 1; i < lines.length; i++) {
-            const parts = lines[i].split(',').map(p => p.trim());
-            if (parts.length >= 3) {
-                const [username, name, kelas, password] = parts;
-                if (username && name) {
-                    newUsers.push({ username, password: password || 'siswa123', name, role: 'siswa', kelas: kelas || '7A', mustChangePassword: true });
-                }
-            }
-        }
+    if (!file.name.match(/\.(xlsx|xls|csv)$/)) {
+        alert('Format file harus .xlsx, .xls, atau .csv!');
+        event.target.value = '';
+        return;
+    }
 
-        try {
-            const res = await fetch('/api/users', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newUsers)
-            });
-            if (res.ok) {
-                await syncUsers();
-                alert(`✅ Sinkronisasi akun Excel selesai!`);
-                renderStudentAccounts(document.getElementById('main-content'));
-            } else {
-                alert('Gagal upload siswa dari Excel.');
-            }
-        } catch (err) {
-            alert('Server error sat upload excel.');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const main = document.getElementById('main-content');
+    const originalContent = main.innerHTML;
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Mengupload dan memproses file Excel, mohon tunggu...</p></div>';
+
+    try {
+        const res = await fetch('/api/users/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            await syncUsers();
+            alert(data.message || '✅ Akun siswa berhasil diimpor!');
+            renderStudentAccounts(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal upload siswa dari Excel.');
+            main.innerHTML = originalContent; // Restore if failed or re-render
+            renderStudentAccounts(document.getElementById('main-content'));
         }
-    };
-    reader.readAsText(file);
+    } catch (err) {
+        console.error(err);
+        alert('Server error saat upload excel.');
+        renderStudentAccounts(document.getElementById('main-content'));
+    }
+
     event.target.value = '';
 }
 

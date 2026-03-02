@@ -108,6 +108,77 @@ const deleteUser = async (req, res) => {
     }
 };
 
+const uploadExcel = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'File Excel tidak ditemukan dalam request!' });
+        }
+
+        const xlsx = require('xlsx');
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const rawData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+
+        if (rawData.length === 0) {
+            return res.status(400).json({ error: 'File Excel kosong atau format tidak sesuai.' });
+        }
+
+        const usersToInsert = [];
+        let errorCount = 0;
+
+        rawData.forEach((row, index) => {
+            // Mapping kolom case-insensitive
+            const findKey = (kw) => {
+                const foundKey = Object.keys(row).find(k => k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(kw.toLowerCase()));
+                return foundKey ? row[foundKey] : undefined;
+            };
+
+            const username = findKey('username') || findKey('user');
+            const name = findKey('nama') || findKey('name');
+            const kelas = findKey('kelas') || '7A';
+            const password = findKey('password') || 'siswa123';
+
+            if (username && name) {
+                const safeUsername = String(username).replace(/\s+/g, '').toLowerCase();
+                usersToInsert.push({
+                    username: safeUsername,
+                    name: String(name).trim(),
+                    kelas: String(kelas).trim(),
+                    role: 'siswa',
+                    password: String(password).trim() || 'siswa123',
+                    mustChangePassword: true
+                });
+            } else {
+                errorCount++;
+            }
+        });
+
+        if (usersToInsert.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada data valid yang bisa disimpan. Pastikan judul kolom ada "Username" dan "Nama".' });
+        }
+
+        // Filter duplicates against existing DB
+        const existingUsers = await User.find({ username: { $in: usersToInsert.map(u => u.username) } });
+        const existingUsernames = existingUsers.map(u => u.username);
+        const newUsers = usersToInsert.filter(u => !existingUsernames.includes(u.username));
+
+        let importCount = 0;
+        if (newUsers.length > 0) {
+            await User.insertMany(newUsers);
+            importCount = newUsers.length;
+        }
+
+        res.json({
+            success: true,
+            message: `Berhasil mengimpor ${importCount} akun siswa.${errorCount > 0 ? ` (Ada ${errorCount} baris bermasalah diabaikan).` : ''}${existingUsernames.length > 0 ? ` (${existingUsernames.length} akun terlewat karena username sudah ada).` : ''}`
+        });
+
+    } catch (err) {
+        console.error('Error saat upload excel pengguna:', err);
+        res.status(500).json({ error: 'Gagal membaca file Excel. Pastikan format file benar (.xlsx) dan tidak corrupt.' });
+    }
+};
+
 module.exports = {
     initDefaultUsers,
     login,
@@ -115,5 +186,6 @@ module.exports = {
     updateProfile,
     getUsers,
     createUsers,
-    deleteUser
+    deleteUser,
+    uploadExcel
 };
