@@ -86,7 +86,10 @@ function renderStudentResults(main) {
     
     <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <h3 class="card-title">Hasil Penilaian Per Siswa</h3>
+            <div>
+                <h3 class="card-title">Hasil Penilaian Per Siswa</h3>
+                <p class="text-muted" style="font-size:0.85rem; margin-top:0.2rem"><em><i class="fas fa-robot text-primary"></i> Semua Nilai Dianalisis AI</em></p>
+            </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                 <button class="btn btn-outline btn-sm" onclick="exportStage2ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 2</button>
                 <button class="btn btn-outline btn-sm" onclick="exportStage3ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 3</button>
@@ -97,15 +100,11 @@ function renderStudentResults(main) {
             <table>
                 <thead>
                     <tr>
-                        <th>Nama</th>
+                        <th>Nama Siswa</th>
                         <th>Kelas</th>
-                        <th>Literasi</th>
-                        <th>Numerasi</th>
-                        <th>Total Nilai</th>
-                        <th>Status Asesmen</th>
-                        <th style="color:var(--danger)">Pelanggaran</th>
-                        <th style="color:var(--primary)">Nilai 7 Kebiasaan</th>
-                        <th>Tanggal</th>
+                        <th style="color:var(--info)">Nilai Refleksi <br><small>(Tahap 2)</small></th>
+                        <th style="color:var(--success)">Nilai Asesmen <br><small>(Tahap 3)</small></th>
+                        <th style="color:var(--primary)">Nilai 7 Kebiasaan <br><small>(Tahap 4)</small></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -113,28 +112,22 @@ function renderStudentResults(main) {
         const r = results[s.username];
         const p = progressData[s.username] || {};
 
-        let assesmentHtml = '<td colspan="4" class="text-muted">Belum mengerjakan</td>';
-        let violationHtml = '<td>-</td>';
-        let dateHtml = '<td>-</td>';
+        const tahap2Score = p.tahap2Score ? parseFloat(p.tahap2Score).toFixed(2) : '-';
+        const tahap4Score = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2) : '-';
+        let assesmentScore = '-';
 
         if (r) {
-            const exactScore = ((r.score / r.total) * 100).toFixed(2);
-            assesmentHtml = `<td>${r.literasi}/${r.litTotal}</td><td>${r.numerasi}/${r.numTotal}</td><td><strong>${exactScore}</strong></td><td>${r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>'}</td>`;
-            violationHtml = `<td style="${r.violations > 0 ? 'color:var(--danger);font-weight:bold' : ''}">${r.violations || 0}</td>`;
-            dateHtml = `<td>${new Date(r.date).toLocaleDateString('id-ID')}</td>`;
+            assesmentScore = ((r.score / r.total) * 100).toFixed(2);
         }
-
-        const habitsScore = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2) : '-';
 
         return `<tr>
             <td>${s.name}</td>
             <td>${s.kelas || '-'}</td>
-            ${assesmentHtml}
-            ${violationHtml}
-            <td><strong>${habitsScore}</strong></td>
-            ${dateHtml}
+            <td><strong>${tahap2Score}</strong></td>
+            <td><strong>${assesmentScore}</strong></td>
+            <td><strong>${tahap4Score}</strong></td>
         </tr>`;
-    }).join('') || '<tr><td colspan="9" class="text-center text-muted">Belum ada data</td></tr>'}
+    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada data</td></tr>'}
                 </tbody>
             </table>
         </div>
