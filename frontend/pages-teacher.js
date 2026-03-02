@@ -63,6 +63,8 @@ function renderStudentResults(main) {
     const avgNum = count ? Math.round(totalNum / count) : 0;
     const avgAll = count ? Math.round(totalAll / count) : 0;
 
+    const progressData = getProgressAll();
+
     main.innerHTML = `
     <div class="analysis-grid">
         <div class="analysis-card">
@@ -81,65 +83,165 @@ function renderStudentResults(main) {
             <p class="text-muted" style="font-size:0.8rem">AI Analysis</p>
         </div>
     </div>
+    
     <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <h3 class="card-title">⚠️ Laporan Siswa Melakukan Pelanggaran</h3>
-            <button class="btn btn-success btn-sm" onclick="downloadViolationsExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+            <h3 class="card-title">Hasil Penilaian Per Siswa</h3>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button class="btn btn-outline btn-sm" onclick="exportStage2ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 2</button>
+                <button class="btn btn-outline btn-sm" onclick="exportStage3ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 3</button>
+                <button class="btn btn-outline btn-sm" onclick="exportStage4ToExcel()"><i class="fas fa-file-excel"></i> Laporan Tahap 4</button>
+            </div>
         </div>
         <div class="table-container">
             <table>
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Jumlah Pelanggaran</th><th>Nilai Siswa</th></tr></thead>
-                <tbody>
-                    ${students.filter(s => results[s.username] && results[s.username].violations > 0).map(s => {
-        const r = results[s.username];
-        const exactScore = ((r.score / r.total) * 100).toFixed(1);
-        return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td style="color:var(--danger);font-weight:bold">${r.violations}</td><td>${exactScore}</td></tr>`;
-    }).join('') || '<tr><td colspan="4" class="text-center text-muted">Belum ada siswa yang melakukan pelanggaran</td></tr>'}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div class="card mt-2">
-        <div class="card-header"><h3 class="card-title">Hasil Penilaian Per Siswa</h3></div>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Literasi</th><th>Numerasi</th><th>Total</th><th>Status</th><th>Tanggal</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Nama</th>
+                        <th>Kelas</th>
+                        <th>Literasi</th>
+                        <th>Numerasi</th>
+                        <th>Total Nilai</th>
+                        <th>Status Asesmen</th>
+                        <th style="color:var(--danger)">Pelanggaran</th>
+                        <th style="color:var(--primary)">Nilai 7 Kebiasaan</th>
+                        <th>Tanggal</th>
+                    </tr>
+                </thead>
                 <tbody>
                     ${students.map(s => {
         const r = results[s.username];
-        if (!r) return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td colspan="5" class="text-muted">Belum mengerjakan asesmen</td></tr>`;
-        return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td>${r.literasi}/${r.litTotal}</td><td>${r.numerasi}/${r.numTotal}</td><td><strong>${r.pct}%</strong></td><td>${r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>'}</td><td>${new Date(r.date).toLocaleDateString('id-ID')}</td></tr>`;
-    }).join('') || '<tr><td colspan="7" class="text-center text-muted">Belum ada data</td></tr>'}
+        const p = progressData[s.username] || {};
+
+        let assesmentHtml = '<td colspan="4" class="text-muted">Belum mengerjakan</td>';
+        let violationHtml = '<td>-</td>';
+        let dateHtml = '<td>-</td>';
+
+        if (r) {
+            const exactScore = ((r.score / r.total) * 100).toFixed(2);
+            assesmentHtml = `<td>${r.literasi}/${r.litTotal}</td><td>${r.numerasi}/${r.numTotal}</td><td><strong>${exactScore}</strong></td><td>${r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>'}</td>`;
+            violationHtml = `<td style="${r.violations > 0 ? 'color:var(--danger);font-weight:bold' : ''}">${r.violations || 0}</td>`;
+            dateHtml = `<td>${new Date(r.date).toLocaleDateString('id-ID')}</td>`;
+        }
+
+        const habitsScore = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2) : '-';
+
+        return `<tr>
+            <td>${s.name}</td>
+            <td>${s.kelas || '-'}</td>
+            ${assesmentHtml}
+            ${violationHtml}
+            <td><strong>${habitsScore}</strong></td>
+            ${dateHtml}
+        </tr>`;
+    }).join('') || '<tr><td colspan="9" class="text-center text-muted">Belum ada data</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
 }
 
-function downloadViolationsExcel() {
-    const users = getUsers();
-    const students = users.filter(u => u.role === 'siswa');
-    const results = getAssessmentResults();
-    const violators = students.filter(s => results[s.username] && results[s.username].violations > 0);
+// ---- EXPORT FUNCTIONS ----
+function exportStage2ToExcel() {
+    const users = getUsers().filter(u => u.role === 'siswa');
+    const progresses = getProgressAll();
 
-    if (violators.length === 0) {
-        alert('Tidak ada data pelanggaran untuk di-download.');
-        return;
-    }
+    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Pertanyaan Refleksi</th><th>Jawaban Siswa</th></tr></thead><tbody>';
 
-    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Jumlah Pelanggaran</th><th>Nilai Siswa</th></tr></thead><tbody>';
-    violators.forEach(s => {
-        const r = results[s.username];
-        const exactScore = ((r.score / r.total) * 100).toFixed(1);
-        // Using comma for decimal to match typical local excel parsing expectations if possible, or keeping original string.
-        tableHTML += `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td>${r.violations}</td><td>${exactScore.replace('.', ',')}</td></tr>`;
+    let hasData = false;
+    users.forEach(s => {
+        const p = progresses[s.username];
+        if (p && p.reflectionAnswers && p.reflectionAnswers.length > 0) {
+            hasData = true;
+            p.reflectionAnswers.forEach((ans, index) => {
+                const isFirst = index === 0;
+                tableHTML += `<tr>
+                    <td>${isFirst ? s.name : ''}</td>
+                    <td>${isFirst ? (s.kelas || '-') : ''}</td>
+                    <td>${ans.question}</td>
+                    <td>${ans.answer}</td>
+                </tr>`;
+            });
+        }
     });
     tableHTML += '</tbody></table>';
 
+    if (!hasData) return alert('Tidak ada data Refleksi Tahap 2 untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Tahap2_Refleksi');
+}
+
+function exportStage3ToExcel() {
+    const users = getUsers().filter(u => u.role === 'siswa');
+    const results = getAssessmentResults();
+
+    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Benar Literasi</th><th>Benar Numerasi</th><th>Total Nilai Asesmen</th><th>Status Kelulusan</th><th>Jumlah Pelanggaran Ujian</th><th>Tanggal Mengerjakan</th></tr></thead><tbody>';
+
+    let hasData = false;
+    users.forEach(s => {
+        const r = results[s.username];
+        if (r) {
+            hasData = true;
+            const exactScore = ((r.score / r.total) * 100).toFixed(2);
+            const status = r.pass ? 'Lulus' : 'Tidak Lulus';
+            const dateStr = new Date(r.date).toLocaleDateString('id-ID');
+
+            tableHTML += `<tr>
+                <td>${s.name}</td>
+                <td>${s.kelas || '-'}</td>
+                <td>${r.literasi}/${r.litTotal}</td>
+                <td>${r.numerasi}/${r.numTotal}</td>
+                <td>${exactScore.replace('.', ',')}</td>
+                <td>${status}</td>
+                <td>${r.violations || 0}</td>
+                <td>${dateStr}</td>
+            </tr>`;
+        }
+    });
+    tableHTML += '</tbody></table>';
+
+    if (!hasData) return alert('Tidak ada data Asesmen Tahap 3 untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Tahap3_Asesmen');
+}
+
+function exportStage4ToExcel() {
+    const users = getUsers().filter(u => u.role === 'siswa');
+    const progresses = getProgressAll();
+
+    let tableHTML = '<table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Nilai 7 Kebiasaan</th><th>Analisis AI (Kesimpulan)</th><th>Kebiasaan yang Dinilai</th><th>Jawaban Siswa</th><th>Feedback AI Spesifik</th></tr></thead><tbody>';
+
+    let hasData = false;
+    users.forEach(s => {
+        const p = progresses[s.username];
+        if (p && p.tahap4Complete && p.tahap4Details && p.tahap4Details.length > 0) {
+            hasData = true;
+            const score = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2).replace('.', ',') : '0,00';
+            const aiSummary = p.tahap4Analysis && p.tahap4Analysis.summary ? p.tahap4Analysis.summary : '-';
+
+            p.tahap4Details.forEach((det, index) => {
+                const isFirst = index === 0;
+                tableHTML += `<tr>
+                    <td>${isFirst ? s.name : ''}</td>
+                    <td>${isFirst ? (s.kelas || '-') : ''}</td>
+                    <td>${isFirst ? score : ''}</td>
+                    <td>${isFirst ? aiSummary : ''}</td>
+                    <td>${det.habit}</td>
+                    <td>${det.answer}</td>
+                    <td>${det.feedback}</td>
+                </tr>`;
+            });
+        }
+    });
+    tableHTML += '</tbody></table>';
+
+    if (!hasData) return alert('Tidak ada data Esai Tahap 4 untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Tahap4_Esai');
+}
+
+function downloadExcelFile(tableHTML, filePrefix) {
     const blob = new Blob(['\ufeff' + tableHTML], { type: 'application/vnd.ms-excel;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Laporan_Pelanggaran_Asesmen_${new Date().getTime()}.xls`;
+    link.download = `${filePrefix}_${new Date().getTime()}.xls`;
     link.click();
 }
 
