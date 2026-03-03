@@ -74,6 +74,7 @@ app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
 app.get('/api/question-bank', questionBankController.getQuestions);
 app.post('/api/question-bank', questionBankController.addQuestion);
 app.delete('/api/question-bank/:id', questionBankController.deleteQuestion);
+app.post('/api/question-bank/bulk-delete', questionBankController.bulkDeleteQuestions);
 app.get('/api/question-bank/template', questionBankController.downloadTemplate);
 app.post('/api/question-bank/upload', upload.single('file'), questionBankController.uploadExcel);
 

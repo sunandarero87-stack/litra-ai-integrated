@@ -618,10 +618,14 @@ async function renderBankSoal(main) {
             <button class="tab-button" onclick="initBankSoalTab('upload')">Tambah / Upload Soal</button>
         </div>
         <div id="bank-soal-list-tab" class="tab-content active">
+            <div style="margin-bottom: 0.5rem; display: flex; justify-content: flex-end;">
+                <button class="btn btn-danger btn-sm" id="btn-bulk-delete-soal" style="display:none;" onclick="bulkDeleteBankSoal()"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected-soal">0</span>)</button>
+            </div>
             <div class="table-container">
                 <table>
                     <thead>
                         <tr>
+                            <th><input type="checkbox" id="check-all-bank-soal" onchange="toggleAllBankSoal(this)"></th>
                             <th>No.</th>
                             <th>Tipe</th>
                             <th style="width:50%">Pertanyaan</th>
@@ -632,6 +636,7 @@ async function renderBankSoal(main) {
                     <tbody>
                         ${_bankSoalCache.map((q, index) => `
                             <tr>
+                                <td><input type="checkbox" class="check-bank-soal" value="${q._id}" onchange="updateBankSoalDeleteBtn()"></td>
                                 <td>${index + 1}</td>
                                 <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type === 'literasi' ? 'Literasi' : 'Numerasi'}</span></td>
                                 <td>${q.question.substring(0, 150)}${q.question.length > 150 ? '...' : ''}</td>
@@ -783,6 +788,64 @@ async function deleteBankSoal(id) {
     } catch (err) {
         console.error(err);
         alert('Server error.');
+    }
+}
+
+function toggleAllBankSoal(source) {
+    const checkboxes = document.querySelectorAll('.check-bank-soal');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateBankSoalDeleteBtn();
+}
+
+function updateBankSoalDeleteBtn() {
+    const checkedBoxes = document.querySelectorAll('.check-bank-soal:checked');
+    const btn = document.getElementById('btn-bulk-delete-soal');
+    const countSpan = document.getElementById('count-selected-soal');
+
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.innerText = checkedBoxes.length;
+    } else {
+        btn.style.display = 'none';
+        const checkAll = document.getElementById('check-all-bank-soal');
+        if (checkAll) checkAll.checked = false;
+    }
+}
+
+async function bulkDeleteBankSoal() {
+    const checkedBoxes = document.querySelectorAll('.check-bank-soal:checked');
+    const ids = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (ids.length === 0) return;
+    if (!confirm(`Hapus permanen ${ids.length} soal terpilih dari Bank Soal?`)) return;
+
+    const btn = document.getElementById('btn-bulk-delete-soal');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
+
+    try {
+        const res = await fetch('/api/question-bank/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(`Berhasil menghapus ${data.count} soal.`);
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal menghapus soal terpilih.');
+        }
+    } catch (err) {
+        console.error('Error bulk deleting question bank:', err);
+        alert('Server error saat menghapus soal.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
 }
 

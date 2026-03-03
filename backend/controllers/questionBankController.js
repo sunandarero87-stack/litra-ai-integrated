@@ -38,6 +38,19 @@ exports.deleteQuestion = async (req, res) => {
     }
 };
 
+exports.bulkDeleteQuestions = async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'Tidak ada ID soal yang dikirim.' });
+        }
+        await QuestionBank.deleteMany({ _id: { $in: ids } });
+        res.json({ success: true, count: ids.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 exports.uploadExcel = async (req, res) => {
     try {
         if (!req.file) {
