@@ -27,10 +27,16 @@ function renderTeacherDashboard(main) {
         <div class="stat-card"><div class="stat-icon red"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>${students.length - total}</h3><p>Belum Asesmen</p></div></div>
     </div>
     <div class="card mt-2">
-        <div class="card-header"><h3 class="card-title">📋 Status Progres Siswa</h3></div>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title">📋 Status Progres Siswa</h3>
+            <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset Pembelajaran (<span id="count-reset-selected">0</span>)</button>
+        </div>
         <div class="table-container">
             <table>
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Tahap</th><th>Rekomendasi AI</th><th>Status Hasil</th></tr></thead>
+                <thead><tr>
+                    <th><input type="checkbox" id="check-all-progress" onchange="toggleAllProgress(this)"></th>
+                    <th>Nama</th><th>Kelas</th><th>Tahap</th><th>Rekomendasi AI</th><th>Status Hasil</th>
+                </tr></thead>
                 <tbody>
                     ${students.map(s => {
         const p = getProgress(s.username);
@@ -38,14 +44,75 @@ function renderTeacherDashboard(main) {
         const stage = p.tahap4Complete ? 'Selesai' : p.tahap3Complete ? 'Tahap 4' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
         const badge = r ? (r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>') : '<span class="badge badge-warning">Proses</span>';
         const aiRec = p.tahap2Complete ? (p.isReady ? '<span class="text-success"><i class="fas fa-check-circle"></i> SIAP</span>' : '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> PERLU BIMBINGAN</span>') : '<span class="text-muted">-</span>';
-        return `<tr><td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${aiRec}</td><td>${badge}</td></tr>`;
-    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
+        return `<tr>
+                    <td><input type="checkbox" class="check-progress" value="${s.username}" onchange="updateResetBtn()"></td>
+                    <td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${aiRec}</td><td>${badge}</td>
+                </tr>`;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
 }
 
+// ---- RESET PROGRESS FUNCTIONS ----
+function toggleAllProgress(source) {
+    const checkboxes = document.querySelectorAll('.check-progress');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateResetBtn();
+}
+
+function updateResetBtn() {
+    const checkedBoxes = document.querySelectorAll('.check-progress:checked');
+    const btn = document.getElementById('btn-reset-progress');
+    const countSpan = document.getElementById('count-reset-selected');
+
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.innerText = checkedBoxes.length;
+    } else {
+        btn.style.display = 'none';
+        document.getElementById('check-all-progress').checked = false;
+    }
+}
+
+async function resetSelectedProgress() {
+    const checkedBoxes = document.querySelectorAll('.check-progress:checked');
+    const usernames = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (usernames.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin mereset pembelajaran untuk ${usernames.length} siswa terpilih? Mereka akan kembali ke Tahap 1 dan semua nilai (refleksi, asesmen) akan dihapus!`)) return;
+
+    const btn = document.getElementById('btn-reset-progress');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mereset...';
+
+    try {
+        const res = await fetch('/api/progress/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || 'Mereset pembelajaran berhasil.');
+            await syncData(); // Sync progress from backend
+            renderTeacherDashboard(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Terjadi kesalahan saat mereset.');
+        }
+    } catch (err) {
+        console.error('Error resetting progress:', err);
+        alert('Server error saat mereset pembelajaran.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
 
 // ---- STUDENT RESULTS ----
 function renderStudentResults(main) {

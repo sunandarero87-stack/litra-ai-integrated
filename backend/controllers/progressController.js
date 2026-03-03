@@ -119,3 +119,41 @@ exports.saveSettings = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.resetProgress = async (req, res) => {
+    try {
+        const { usernames } = req.body;
+        if (!usernames || !Array.isArray(usernames)) {
+            return res.status(400).json({ error: 'Usernames array is required' });
+        }
+
+        const updateData = {
+            tahap: 1,
+            tahap1Complete: false,
+            tahap2Complete: false,
+            tahap3Complete: false,
+            tahap4Complete: false,
+            tahap2Score: 0,
+            tahap4Score: 0,
+            tahap4Analysis: null,
+            tahap4Details: [],
+            reflectionAnswers: [],
+            aiReadiness: '',
+            isReady: false,
+            generatedAssessment: [],
+            assessmentResult: null,
+            approvedForAssessment: false,
+            approvedBy: null,
+            approvalDate: null
+        };
+
+        const result = await Progress.updateMany(
+            { username: { $in: usernames } },
+            { $set: updateData }
+        );
+
+        res.json({ success: true, message: `Berhasil mereset ${result.modifiedCount} siswa` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
