@@ -244,7 +244,38 @@ exports.generateFromAI = async (req, res) => {
 
         await QuestionBank.insertMany(questionsToInsert);
 
-        res.json({ success: true, count: questionsToInsert.length, message: `Berhasil membuat ${questionsToInsert.length} soal dari AI.` });
+        // --- Generate Excel File to download ---
+        const ws_data = [
+            ['Soal', 'Opsi A', 'Opsi B', 'Opsi C', 'Opsi D', 'Kunci (A/B/C/D)', 'Pembahasan', 'Tipe (literasi/numerasi)', 'Topik']
+        ];
+
+        questionsToInsert.forEach(q => {
+            ws_data.push([
+                q.question,
+                q.options[0],
+                q.options[1],
+                q.options[2],
+                q.options[3],
+                ['A', 'B', 'C', 'D'][q.correct],
+                q.explanation,
+                q.type,
+                q.topic
+            ]);
+        });
+
+        const ws = xlsx.utils.aoa_to_sheet(ws_data);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "Soal AI");
+
+        // Output format as base64 string
+        const base64Excel = xlsx.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+        res.json({
+            success: true,
+            count: questionsToInsert.length,
+            message: `Berhasil membuat ${questionsToInsert.length} soal dari AI. Soal telah disimpan dan file Excel akan didownload otomatis.`,
+            excelData: base64Excel
+        });
 
     } catch (err) {
         console.error('generateFromAI error:', err);

@@ -229,8 +229,8 @@ async function generateBankSoal(objectivesArray, amount = 10) {
     const payload = {
         model: AI_MODEL,
         messages: [
-            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
-            { role: "user", content: `Buat TEPAT ${amount} soal pilihan ganda berdasarkan daftar Tujuan Pembelajaran berikut ini:\n\n${JSON.stringify(objectivesArray)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT ${amount}.\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia yang natural dan mudah dipahami.\n3. Nilai "correct" adalah index bilangan bulat (0 untuk A, 1 untuk B, 2 untuk C, 3 untuk D).\n4. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n5. Jangan tulis kata pengantar (markdown) apapun, langsung output array JSON dimulai dengan karakter [\n6. Nilai "type" isi dengan "literasi" atau "numerasi".` }
+            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda). OUTPUT WAJIB BERUPA TEKS DENGAN DELIMITER ||| (TIGA GARIS LURUS). JANGAN GUNAKAN JSON ATAU MARKDOWN TABLE.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+            { role: "user", content: `Buat TEPAT ${amount} soal pilihan ganda berdasarkan daftar Tujuan Pembelajaran berikut ini:\n\n${JSON.stringify(objectivesArray)}\n\nFormat output WAJIB setiap barisnya berisi tepat 8 kolom yang dipisahkan oleh ||| seperti format berikut:\nSoal ||| Opsi A ||| Opsi B ||| Opsi C ||| Opsi D ||| Kunci_Jawaban (Hanya huruf A, B, C, atau D) ||| Pembahasan ||| Tipe (literasi atau numerasi)\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT ${amount} baris teks terpisah.\n2. Jangan gunakan enter/garis baru di dalam satu kalimat soal atau di dalam pembahasan. Satu baris panjang mewakili tepat satu nomor soal utuh!\n3. Jangan tulis kata pengantar, header, atau format markdown. Langsung baris pertama adalah soal ke-1 dipisahkan |||.\n4. Kunci_Jawaban WAJIB HANYA SATU HURUF KAPITAL: A, B, C, atau D.` }
         ],
         max_tokens: 4096,
         temperature: 0.5
@@ -243,7 +243,34 @@ async function generateBankSoal(objectivesArray, amount = 10) {
         try {
             const response = await axios.post(API_URL, payload, { headers: getHeaders() });
             const resultText = response.data.choices[0].message.content;
-            return JSON.parse(cleanJson(resultText));
+
+            const lines = resultText.split('\n').map(l => l.trim()).filter(l => l.length > 10 && l.includes('|||'));
+            const parsedQuestions = [];
+
+            for (const line of lines) {
+                const parts = line.split('|||').map(p => p.trim());
+                if (parts.length >= 8) {
+                    let correctIndex = 0;
+                    const ans = parts[5].toUpperCase();
+                    if (ans === 'B') correctIndex = 1;
+                    else if (ans === 'C') correctIndex = 2;
+                    else if (ans === 'D') correctIndex = 3;
+
+                    parsedQuestions.push({
+                        question: parts[0],
+                        options: [parts[1], parts[2], parts[3], parts[4]],
+                        correct: correctIndex,
+                        explanation: parts[6],
+                        type: parts[7].toLowerCase().includes('num') ? 'numerasi' : 'literasi'
+                    });
+                }
+            }
+
+            if (parsedQuestions.length === 0) {
+                throw new Error("Format output AI tidak dapat diparsing menggunakan delimiter |||");
+            }
+
+            return parsedQuestions;
         } catch (e) {
             if (retries > 1) {
                 console.warn(`[Retry] Bank Soal Gen error: ${e.message}. Retrying in ${delayMs}ms... (${retries - 1} attempts left)`);

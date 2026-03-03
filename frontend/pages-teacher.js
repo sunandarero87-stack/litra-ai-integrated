@@ -735,6 +735,31 @@ async function generateBankSoalAI() {
 
         if (res.ok) {
             alert(data.message || 'Soal otomatis berhasil dibuat!');
+
+            // Auto download excel
+            if (data.excelData) {
+                try {
+                    const byteCharacters = atob(data.excelData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'Soal_AI_Generated.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } catch (e) {
+                    console.error("Gagal mendownload otomatis Excel:", e);
+                }
+            }
+
             renderBankSoal(document.getElementById('main-content'));
         } else {
             alert(data.error || 'Gagal membuat soal dari AI.');
