@@ -661,6 +661,19 @@ async function renderBankSoal(main) {
                         <input type="file" id="bank-soal-upload" accept=".xlsx" style="display:none" onchange="handleBankSoalUpload(event)">
                     </div>
                     <button class="btn btn-primary mt-2 w-100" onclick="downloadBankSoalTemplate()"><i class="fas fa-download"></i> Download Template Excel</button>
+                    
+                    <hr style="margin: 2rem 0;">
+                    
+                    <h4>🤖 Buat Soal Otomatis (AI)</h4>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat maksimal 10 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
+                    <div class="form-group">
+                        <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
+                        <input type="number" id="ai-objective-count" min="1" max="10" value="1" onchange="renderObjectiveInputs()" oninput="renderObjectiveInputs()">
+                    </div>
+                    <div id="ai-objectives-container" style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem;">
+                        <input type="text" class="form-control ai-objective-input" placeholder="Tujuan Pembelajaran 1..." required>
+                    </div>
+                    <button class="btn btn-success w-100" id="btn-generate-ai" onclick="generateBankSoalAI()"><i class="fas fa-magic"></i> Buat Soal Otomatis</button>
                 </div>
                 <div>
                     <h4>➕ Tambah Manual (1 Soal)</h4>
@@ -679,6 +692,61 @@ async function renderBankSoal(main) {
             </div>
         </div>
     </div>`;
+}
+
+function renderObjectiveInputs() {
+    const countInput = document.getElementById('ai-objective-count');
+    let count = parseInt(countInput.value) || 1;
+    if (count > 10) { count = 10; countInput.value = 10; }
+    if (count < 1) { count = 1; countInput.value = 1; }
+
+    const container = document.getElementById('ai-objectives-container');
+    let html = '';
+    for (let i = 1; i <= count; i++) {
+        html += `<input type="text" class="form-control ai-objective-input" placeholder="Tujuan Pembelajaran ${i}..." required>`;
+    }
+    container.innerHTML = html;
+}
+
+async function generateBankSoalAI() {
+    const inputs = document.querySelectorAll('.ai-objective-input');
+    const objectives = [];
+    inputs.forEach(inp => {
+        if (inp.value.trim() !== '') objectives.push(inp.value.trim());
+    });
+
+    if (objectives.length === 0) {
+        alert('Harap isi minimal 1 Tujuan Pembelajaran.');
+        return;
+    }
+
+    const btn = document.getElementById('btn-generate-ai');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang Membuat Soal... (Bisa memakan waktu 1-2 menit)';
+
+    try {
+        const res = await fetch('/api/question-bank/generate-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ objectives: objectives, amount: 10 })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(data.message || 'Soal otomatis berhasil dibuat!');
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal membuat soal dari AI.');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-magic"></i> Buat Soal Otomatis';
+        }
+    } catch (err) {
+        console.error('Error in generateBankSoalAI:', err);
+        alert('Server error saat membuat soal menggunakan AI.');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-magic"></i> Buat Soal Otomatis';
+    }
 }
 
 function initBankSoalTab(tabName) {

@@ -225,10 +225,43 @@ async function analyzeHabits(username, habitAnswers) {
     }
 }
 
+async function generateBankSoal(objectivesArray, amount = 10) {
+    const payload = {
+        model: AI_MODEL,
+        messages: [
+            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+            { role: "user", content: `Buat TEPAT ${amount} soal pilihan ganda berdasarkan daftar Tujuan Pembelajaran berikut ini:\n\n${JSON.stringify(objectivesArray)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT ${amount}.\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia yang natural dan mudah dipahami.\n3. Nilai "correct" adalah index bilangan bulat (0 untuk A, 1 untuk B, 2 untuk C, 3 untuk D).\n4. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n5. Jangan tulis kata pengantar (markdown) apapun, langsung output array JSON dimulai dengan karakter [\n6. Nilai "type" isi dengan "literasi" atau "numerasi".` }
+        ],
+        max_tokens: 3000,
+        temperature: 0.5
+    };
+
+    let retries = 3;
+    let delayMs = 3000;
+
+    while (retries > 0) {
+        try {
+            const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+            return JSON.parse(cleanJson(response.data.choices[0].message.content));
+        } catch (e) {
+            if (e.response && e.response.status === 429 && retries > 1) {
+                console.warn(`[429 Rate Limit] Retrying Bank Soal Gen in ${delayMs}ms... (${retries - 1} attempts left)`);
+                await new Promise(r => setTimeout(r, delayMs));
+                delayMs *= 2;
+                retries--;
+            } else {
+                console.error("Generate Bank Soal Error:", e.response ? e.response.status + ' ' + JSON.stringify(e.response.data) : e.message);
+                throw new Error("Gagal membuat soal dari AI: " + (e.response ? e.response.status : e.message));
+            }
+        }
+    }
+}
+
 module.exports = {
     generateResponse,
     generateReflections,
     generateAssessment,
     analyzeReadiness,
-    analyzeHabits
+    analyzeHabits,
+    generateBankSoal
 };
