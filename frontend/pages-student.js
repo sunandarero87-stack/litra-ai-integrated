@@ -580,9 +580,26 @@ function startAssessment() {
     }, 1000);
 
     // Advanced Anti-Cheat Listeners
+    // 1. Fullscreen Enforcement
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => console.log(err));
+    } else if (elem.webkitRequestFullscreen) { /* Safari */
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 */
+        elem.msRequestFullscreen();
+    }
+
     document.addEventListener('visibilitychange', handleTabSwitch);
     window.addEventListener('blur', handleTabSwitch);
     window.addEventListener('resize', handleResizeViolation);
+
+    // Detect fullscreen exit (Notification swipe down often exits fullscreen on mobile)
+    document.addEventListener('fullscreenchange', handleFullscreenSwitch);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenSwitch);
+
+    // Detect mouse/touch leaving the upper boundary (swiping notifications)
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     // Disable right-click, copy, paste during assessment
     document.addEventListener('contextmenu', preventDefaultAction);
@@ -594,6 +611,27 @@ function startAssessment() {
 
 function preventDefaultAction(e) {
     e.preventDefault();
+}
+
+function handleFullscreenSwitch(e) {
+    if (!assessmentActive) return;
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        // They exited full screen (e.g. pulled down notification bar or pressed physical back button)
+        handleTabSwitch({ type: 'fullscreenexit' });
+
+        // Try to force fullscreen back
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) elem.requestFullscreen().catch(err => { });
+        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+    }
+}
+
+function handleMouseLeave(e) {
+    if (!assessmentActive) return;
+    // If pointer leaves from the top, they might be pulling down notifications
+    if (e.clientY <= 0) {
+        handleTabSwitch({ type: 'swipe_notification' });
+    }
 }
 
 function handleResizeViolation() {
@@ -634,8 +672,10 @@ function handleTabSwitch(e = {}) {
     assessmentCurrentQ = 0;
 
     let violationReason = "membuka aplikasi lain / pindah tab";
-    if (e.type === 'blur') violationReason = "membuka aplikasi mengambang / Notification Box";
-    if (e.type === 'resize') violationReason = "membagi layar (Split Screen) / memutar perangkat aneh";
+    if (e.type === 'blur') violationReason = "membuka aplikasi mengambang (Bubble) / Notification Box";
+    if (e.type === 'resize') violationReason = "membagi layar (Split Screen) / merespons aplikasi lain";
+    if (e.type === 'fullscreenexit') violationReason = "keluar dari mode layar penuh / menarik panel notifikasi";
+    if (e.type === 'swipe_notification') violationReason = "mengusap layar hp untuk melihat notifikasi";
 
     if (tabViolationCount >= 3) {
         alert('⚠️ Asesmen Dibatalkan! Kamu telah melakukan pelanggaran lebih dari 3 kali. Asesmen dihentikan dan jawabanmu tidak sah.');
@@ -663,6 +703,12 @@ function handleTabSwitch(e = {}) {
 function dismissViolation() {
     const overlay = document.getElementById('tab-violation-overlay');
     if (overlay) overlay.remove();
+
+    // Try to force fullscreen back on dismiss
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) elem.requestFullscreen().catch(err => { });
+    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+
     showAssessmentQuestion(document.getElementById('main-content'));
 }
 
@@ -728,9 +774,18 @@ function submitAssessment() {
     document.removeEventListener('visibilitychange', handleTabSwitch);
     window.removeEventListener('blur', handleTabSwitch);
     window.removeEventListener('resize', handleResizeViolation);
+    document.removeEventListener('fullscreenchange', handleFullscreenSwitch);
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenSwitch);
+    document.removeEventListener('mouseleave', handleMouseLeave);
     document.removeEventListener('contextmenu', preventDefaultAction);
     document.removeEventListener('copy', preventDefaultAction);
     document.removeEventListener('paste', preventDefaultAction);
+
+    // Exit fullscreen if active
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(err => { });
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
 
     assessmentActive = false;
 
