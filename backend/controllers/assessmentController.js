@@ -4,8 +4,12 @@ exports.generateFromBank = async (req, res) => {
     try {
         const amount = parseInt(req.body.amount) || 20;
 
-        // Mongoose $sample fetches N random documents efficiently
-        const questions = await QuestionBank.aggregate([{ $sample: { size: amount } }]);
+        // Mongoose aggregasi: Group by question agar tidak ada soal duplikat, lalu replaceRoot & sample acak
+        const questions = await QuestionBank.aggregate([
+            { $group: { _id: "$question", doc: { $first: "$$ROOT" } } },
+            { $replaceRoot: { newRoot: "$doc" } },
+            { $sample: { size: amount } }
+        ]);
 
         // Jika bank soal masih kosong/kurang
         if (questions.length === 0) {
