@@ -220,7 +220,7 @@ exports.generateFromAI = async (req, res) => {
             return res.status(400).json({ error: 'Tujuan Pembelajaran wajib diisi.' });
         }
 
-        const questionAmount = amount ? parseInt(amount) : 10;
+        const questionAmount = amount ? parseInt(amount) : 50;
 
         // Memanggil aiService
         const aiService = require('../services/aiService');

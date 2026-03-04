@@ -665,7 +665,7 @@ async function renderBankSoal(main) {
                     <hr style="margin: 2rem 0;">
                     
                     <h4>🤖 Buat Soal Otomatis (AI)</h4>
-                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat maksimal 10 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat otomatis 50 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
                     <div class="form-group">
                         <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
                         <input type="number" id="ai-objective-count" min="1" max="10" value="1" onchange="renderObjectiveInputs()" oninput="renderObjectiveInputs()">
@@ -728,7 +728,7 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ objectives: objectives, amount: 10 })
+            body: JSON.stringify({ objectives: objectives, amount: 50 })
         });
 
         const data = await res.json();
