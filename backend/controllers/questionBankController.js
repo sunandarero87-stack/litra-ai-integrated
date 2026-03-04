@@ -264,6 +264,20 @@ exports.generateFromAI = async (req, res) => {
         });
 
         const ws = xlsx.utils.aoa_to_sheet(ws_data);
+
+        // Sesuaikan pengaturan lebar kolom persis dengan "Download Template Excel"
+        ws['!cols'] = [
+            { wch: 50 }, // Soal
+            { wch: 20 }, // A
+            { wch: 20 }, // B
+            { wch: 20 }, // C
+            { wch: 20 }, // D
+            { wch: 15 }, // Kunci
+            { wch: 40 }, // Pembahasan
+            { wch: 25 }, // Tipe
+            { wch: 20 }  // Topik
+        ];
+
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, "Soal AI");
 

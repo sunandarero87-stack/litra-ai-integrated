@@ -29,6 +29,7 @@ Jangan menambahkan kalimat lain jika konteksnya sudah keluar dari materi.
 Kamu masih boleh merespons ramah terhadap sapaan awal (misal: "Halo", "Selamat pagi"), tetapi jika obrolan berlanjut ke topik di luar materi, gunakan HANYA kalimat penolakan tersebut.
 
 SIKAP: Suportif, jangan beri jawaban langsung, pandu siswa berpikir. Gunakan analogi-analogi yang mudah dipahami oleh siswa.
+WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA.
 KONTEKS: ${materialContext}
 TAHAP: ${stage}`;
 
@@ -144,7 +145,7 @@ async function generateReflections(username, chatHistory) {
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENGAR, SEDERHANA, DAN SANGAT MUDAH DIMENGERTI OLEH SISWA SMP." },
+                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
                 { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nPastikan bahasanya komunikatif, tidak kaku, dan tidak menggunakan istilah bahasa Inggris yang rumit.\n\nCHAT:\n${historyText}` }
             ]
         };
@@ -163,8 +164,8 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
     const payload = {
         model: AI_MODEL,
         messages: [
-            { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
-            { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh).\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia yang natural, mudah dipahami siswa, dan tidak terlihat seperti hasil terjemahan mesin kaku.\n3. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
+            { role: "system", content: "Kamu adalah AI spesialis pembuatan soal asesmen berformat ANBK (PISA-like). OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID BERISI TEPAT 20 SOAL. JANGAN LEBIH DARI 20 SOAL.\nWAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+            { role: "user", content: `Buat TEPAT 20 soal pilihan ganda berdasarkan refleksi siswa dan utamanya berdasarkan materi berikut:\n\nMATERI:\n${materialContext}\n\nREFLEKSI:\n${JSON.stringify(reflectionAnswers)}\n\nFormat output WAJIB berbentuk JSON array of objects murni seperti ini:\n[{"question": "Pertanyaan", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Penjelasan", "type": "literasi"}]\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT 20 (Dua Puluh).\n2. Soal, opsi jawaban, dan penjelasan WAJIB menggunakan Bahasa Indonesia baku dengan Ejaan Yang Disempurnakan (EYD) yang natural, mudah dipahami siswa Indonesia, dan tidak terlihat seperti hasil terjemahan mesin kaku.\n3. WAJIB GUNAKAN KUTIP GANDA (") UNTUK SETIAP KEY DAN VALUE STRING dalam JSON.\n4. Jangan tulis kata pengantar (markdown) apapun, langsung JSON array mulai dari [` }
         ],
         max_tokens: 4096,
         temperature: 0.4
@@ -196,7 +197,7 @@ async function analyzeReadiness(username, reflectionAnswers) {
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa." },
+                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
                 { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
             ]
         };
@@ -213,7 +214,7 @@ async function analyzeHabits(username, habitAnswers) {
         const payload = {
             model: AI_MODEL,
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat." },
+                { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
                 { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
             ]
         };
@@ -229,8 +230,8 @@ async function generateBankSoal(objectivesArray, amount = 10) {
     const payload = {
         model: AI_MODEL,
         messages: [
-            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda). OUTPUT WAJIB BERUPA TEKS DENGAN DELIMITER ||| (TIGA GARIS LURUS). JANGAN GUNAKAN JSON ATAU MARKDOWN TABLE.\nWAJIB MENGGUNAKAN BAHASA INDONESIA YANG BAIK, BENAR, DAN MUDAH DIMENGERTI OLEH SISWA TINGKAT SMP. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
-            { role: "user", content: `Buat TEPAT ${amount} soal pilihan ganda berdasarkan daftar Tujuan Pembelajaran berikut ini:\n\n${JSON.stringify(objectivesArray)}\n\nFormat output WAJIB setiap barisnya berisi tepat 8 kolom yang dipisahkan oleh ||| seperti format berikut:\nSoal ||| Opsi A ||| Opsi B ||| Opsi C ||| Opsi D ||| Kunci_Jawaban (Hanya huruf A, B, C, atau D) ||| Pembahasan ||| Tipe (literasi atau numerasi)\n\nATURAN KETAT:\n1. JUMLAH SOAL HARUS TEPAT ${amount} baris teks terpisah.\n2. Jangan gunakan enter/garis baru di dalam satu kalimat soal atau di dalam pembahasan. Satu baris panjang mewakili tepat satu nomor soal utuh!\n3. Jangan tulis kata pengantar, header, atau format markdown. Langsung baris pertama adalah soal ke-1 dipisahkan |||.\n4. Kunci_Jawaban WAJIB HANYA SATU HURUF KAPITAL: A, B, C, atau D.` }
+            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda). OUTPUT WAJIB BERUPA TEKS DENGAN DELIMITER ||| (TIGA GARIS LURUS). JANGAN GUNAKAN JSON ATAU MARKDOWN TABLE.\nWAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda berdasarkan daftar Tujuan Pembelajaran berikut ini:\n\n${JSON.stringify(objectivesArray)}\n\nFormat output WAJIB berupa teks biasa, di mana SETIAP BARIS menyajikan tepat SATU soal utuh beserta 8 bagiannya yang dipisahkan oleh ||| seperti format berikut:\nSoal_Lengkap_Dengan_Stimulus ||| Opsi A ||| Opsi B ||| Opsi C ||| Opsi D ||| Kunci_Jawaban (Hanya huruf A, B, C, atau D) ||| Pembahasan ||| Tipe (literasi atau numerasi)\n\nATURAN KETAT DAN MUTLAK:\n1. JUMLAH SOAL HARUS TEPAT ${amount} BARIS TEKS. Jika jumlah Tujuan Pembelajaran yang diberikan lebih sedikit dari ${amount}, kamu WAJIB MENDISTRIBUSIKAN PEMBUATAN SOAL sehingga total hasil akhir tetap berjumlah persis ${amount} soal! Jangan pernah menghasilkan kurang dari ${amount} soal.\n2. Setiap soal WAJIB dilengkapi dengan "Pertanyaan Stimulus" (seperti cerita pendek, pengantar kasus, atau fakta menarik) sebelum pertanyaan utamanya.\n3. Jangan gunakan enter/garis baru di dalam kalimat soal atau di dalam kalimat pembahasan. Satu baris mewakili 1 nomor soal secara penuh! Gunakan spasi untuk memisahkan stimulus dengan pertanyaan utama.\n4. Jangan tulis kata pengantar, header tulisan apapun, atau format tabel markdown. Output harus 100% langsung dimulai dari baris soal ke-1 yang dipisahkan |||.\n5. Kunci_Jawaban WAJIB HANYA 1 HURUF KAPITAL tanpa tanda baca: A, B, C, atau D.` }
         ],
         max_tokens: 4096,
         temperature: 0.5
