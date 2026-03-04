@@ -572,6 +572,12 @@ function startAssessment() {
     assessmentTimer = setInterval(() => {
         assessmentTimeLeft--;
         updateTimerDisplay();
+
+        // Anti-bubble continuous check (detect if foreground app loses UI focus but not completely hidden)
+        if (document.hasFocus && !document.hasFocus()) {
+            handleTabSwitch({ type: 'blur' });
+        }
+
         if (assessmentTimeLeft <= 0) {
             clearInterval(assessmentTimer);
             assessmentTimer = null;
@@ -583,12 +589,18 @@ function startAssessment() {
     // 1. Fullscreen Enforcement
     const elem = document.documentElement;
     if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(err => console.log(err));
+        elem.requestFullscreen({ navigationUI: "hide" }).catch(err => console.log(err));
     } else if (elem.webkitRequestFullscreen) { /* Safari */
         elem.webkitRequestFullscreen();
     } else if (elem.msRequestFullscreen) { /* IE11 */
         elem.msRequestFullscreen();
     }
+
+    // 2. Lockdown API / styling to prevent swiping & pull-to-refresh
+    document.body.style.touchAction = 'none';
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
 
     document.addEventListener('visibilitychange', handleTabSwitch);
     window.addEventListener('blur', handleTabSwitch);
@@ -605,11 +617,20 @@ function startAssessment() {
     document.addEventListener('contextmenu', preventDefaultAction);
     document.addEventListener('copy', preventDefaultAction);
     document.addEventListener('paste', preventDefaultAction);
+    document.addEventListener('touchmove', preventSwipeAction, { passive: false });
 
     showAssessmentQuestion(document.getElementById('main-content'));
 }
 
 function preventDefaultAction(e) {
+    e.preventDefault();
+}
+
+function preventSwipeAction(e) {
+    // allow scroll if needed for content, but prevent global page swipe
+    if (e.target.closest('.quiz-container') || e.target.closest('.main-content')) {
+        return;
+    }
     e.preventDefault();
 }
 
@@ -780,6 +801,13 @@ function submitAssessment() {
     document.removeEventListener('contextmenu', preventDefaultAction);
     document.removeEventListener('copy', preventDefaultAction);
     document.removeEventListener('paste', preventDefaultAction);
+    document.removeEventListener('touchmove', preventSwipeAction, { passive: false });
+
+    // Remove Lockdown styling
+    document.body.style.touchAction = '';
+    document.body.style.overflow = '';
+    document.documentElement.style.touchAction = '';
+    document.documentElement.style.overflow = '';
 
     // Exit fullscreen if active
     if (document.fullscreenElement || document.webkitFullscreenElement) {
