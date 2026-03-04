@@ -181,6 +181,17 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
 }
 
+// Heartbeat to track online users (every 30 seconds)
+setInterval(() => {
+    if (currentUser) {
+        fetch('/api/auth/heartbeat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username })
+        }).catch(err => console.error('Heartbeat failed:', err));
+    }
+}, 30000);
+
 // ---- AUTH ----
 async function handleLogin(e) {
     e.preventDefault();
@@ -308,6 +319,8 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
             <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
+            <div class="nav-section">Monitoring</div>
+            <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Siswa</button>
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
     } else {
@@ -320,6 +333,8 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
             <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
+            <div class="nav-section">Monitoring</div>
+            <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Siswa</button>
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
     }
@@ -354,7 +369,8 @@ function navigateTo(page) {
         'assessment-mgmt': 'Manajemen Asesmen',
         'banksoal': 'Bank Soal (HOTS)',
         'student-accounts': 'Manajemen Akun Siswa',
-        'chat-history': 'Riwayat Chat Siswa'
+        'chat-history': 'Riwayat Chat Siswa',
+        'monitoring': 'Monitoring Status Siswa'
     };
     document.getElementById('topbar-title').textContent = titles[page] || 'Dashboard';
 
@@ -413,6 +429,9 @@ function renderPage(page) {
             break;
         case 'chat-history':
             renderChatHistory(main);
+            break;
+        case 'monitoring':
+            renderMonitoring(main);
             break;
         default:
             main.innerHTML = '<p>Halaman tidak ditemukan.</p>';

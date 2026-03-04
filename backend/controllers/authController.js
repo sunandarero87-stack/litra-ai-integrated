@@ -193,6 +193,20 @@ const bulkDeleteUsers = async (req, res) => {
     }
 };
 
+const heartbeat = async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ error: 'Username required' });
+        await User.findOneAndUpdate(
+            { username },
+            { lastSeen: new Date() }
+        );
+        res.json({ message: 'Heartbeat recorded' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 module.exports = {
     initDefaultUsers,
     login,
@@ -202,5 +216,6 @@ module.exports = {
     createUsers,
     deleteUser,
     uploadExcel,
-    bulkDeleteUsers
+    bulkDeleteUsers,
+    heartbeat
 };

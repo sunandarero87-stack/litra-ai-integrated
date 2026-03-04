@@ -1307,3 +1307,114 @@ async function changeProfilePassword() {
         alert('Server error ganti password.');
     }
 }
+
+// ---- MONITORING STATUS SISWA ----
+async function renderMonitoring(main) {
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat status siswa...</p></div>';
+
+    try {
+        await syncUsers();
+    } catch (e) {
+        console.error("Gagal sync user untuk monitoring", e);
+    }
+
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+
+    const now = Date.now();
+    let onlineCount = 0;
+
+    // threshold: 2 minutes
+    const onlineThreshold = 2 * 60 * 1000;
+
+    const studentStatus = students.map(s => {
+        const lastSeenTime = s.lastSeen ? new Date(s.lastSeen).getTime() : 0;
+        const isOnline = (now - lastSeenTime) <= onlineThreshold;
+        if (isOnline) onlineCount++;
+
+        let timeStr = 'Belum pernah login';
+        if (lastSeenTime > 0) {
+            const diffMin = Math.floor((now - lastSeenTime) / 60000);
+            if (diffMin < 1) timeStr = 'Baru saja';
+            else if (diffMin < 60) timeStr = `${diffMin} menit yang lalu`;
+            else {
+                const diffHour = Math.floor(diffMin / 60);
+                if (diffHour < 24) timeStr = `${diffHour} jam yang lalu`;
+                else timeStr = new Date(s.lastSeen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+        }
+
+        return { ...s, isOnline, timeStr, lastSeenTime };
+    });
+
+    // sort: online first, then by lastSeen desc
+    studentStatus.sort((a, b) => {
+        if (a.isOnline === b.isOnline) {
+            return b.lastSeenTime - a.lastSeenTime;
+        }
+        return a.isOnline ? -1 : 1;
+    });
+
+    main.innerHTML = `
+    <div class="flex justify-between items-center mb-2">
+        <h3>Monitoring Status Siswa</h3>
+        <button class="btn btn-primary btn-sm" onclick="renderMonitoring(document.getElementById('main-content'))">
+            <i class="fas fa-sync-alt"></i> Refresh Manual
+        </button>
+    </div>
+    
+    <div class="grid-3 mb-2">
+        <div class="card stat-card" style="border-left: 4px solid var(--success)">
+            <div class="stat-icon" style="background: rgba(76, 175, 80, 0.1); color: var(--success)"><i class="fas fa-user-check"></i></div>
+            <div class="stat-info">
+                <h4>Online / Sedang Login</h4>
+                <div class="stat-value">${onlineCount} Siswa</div>
+            </div>
+        </div>
+        <div class="card stat-card" style="border-left: 4px solid var(--text-muted)">
+            <div class="stat-icon" style="background: rgba(158, 158, 158, 0.1); color: var(--text-muted)"><i class="fas fa-user-clock"></i></div>
+            <div class="stat-info">
+                <h4>Offline</h4>
+                <div class="stat-value">${students.length - onlineCount} Siswa</div>
+            </div>
+        </div>
+        <div class="card stat-card" style="border-left: 4px solid var(--primary-light)">
+            <div class="stat-icon" style="background: rgba(79, 195, 247, 0.1); color: var(--primary-light)"><i class="fas fa-users"></i></div>
+            <div class="stat-info">
+                <h4>Total Siswa</h4>
+                <div class="stat-value">${students.length} Siswa</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 class="card-title" style="margin-bottom: 1rem;"><i class="fas fa-desktop"></i> Status Aktivitas Terakhir</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th>Aktivitas Terakhir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${studentStatus.length > 0 ? studentStatus.map(s => `
+                        <tr>
+                            <td>
+                                ${s.isOnline
+            ? '<span class="badge badge-success"><i class="fas fa-circle" style="font-size:0.6rem; vertical-align:middle; margin-right:4px;"></i> Online</span>'
+            : '<span class="badge" style="background:var(--bg-input);color:var(--text-muted)"><i class="far fa-circle" style="font-size:0.6rem; vertical-align:middle; margin-right:4px;"></i> Offline</span>'}
+                            </td>
+                            <td><strong>${s.name}</strong><br><small class="text-muted">@${s.username}</small></td>
+                            <td>${s.kelas || '-'}</td>
+                            <td>${s.isOnline ? '<span style="color:var(--success)">Aktif sekarang</span>' : s.timeStr}</td>
+                        </tr>
+                    `).join('') : '<tr><td colspan="4" class="text-center text-muted">Belum ada data siswa</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    `;
+}

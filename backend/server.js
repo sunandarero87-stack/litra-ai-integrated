@@ -82,6 +82,7 @@ app.post('/api/question-bank/generate-ai', questionBankController.generateFromAI
 // Auth & Users
 app.post('/api/auth/login', authController.login);
 app.post('/api/auth/change-password', authController.changePassword);
+app.post('/api/auth/heartbeat', authController.heartbeat);
 app.get('/api/users', authController.getUsers);
 app.post('/api/users', authController.createUsers);
 app.post('/api/users/upload', upload.single('file'), authController.uploadExcel);
