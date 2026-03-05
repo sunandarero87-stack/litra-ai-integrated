@@ -393,8 +393,8 @@ function renderAssessmentMgmt(main) {
         <div class="card">
             <div class="card-header"><h3 class="card-title">📋 Info Asesmen & Pengaturan</h3></div>
             <div class="form-group mt-1">
-                <label>Jumlah Soal Asesmen (Default: 20, Maksimal: 20)</label>
-                <input type="number" id="assessment-amount" value="20" min="5" max="20">
+                <label>Jumlah Soal Asesmen (Default: 50)</label>
+                <input type="number" id="assessment-amount" value="50" min="5" max="100">
             </div>
             <p class="mt-1"><strong>Tipe:</strong> Proporsional Literasi & Numerasi</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
@@ -450,7 +450,7 @@ async function approveStudent(username, btnElement) {
     }
 
     const amountInput = document.getElementById('assessment-amount');
-    const amount = amountInput ? parseInt(amountInput.value) || 20 : 20;
+    const amount = amountInput ? parseInt(amountInput.value) || 50 : 50;
 
     try {
         const progress = getProgress(username);
@@ -483,7 +483,7 @@ async function approveStudent(username, btnElement) {
 }
 
 function showAssessmentReviewModal(username, originalQuestions) {
-    // Pastikan array soal berjumlah sesuai (kalau kurang dari 20, kita tetap tampilkan apa adanya)
+    // Pastikan array soal berjumlah sesuai (kalau kurang dari 50, kita tetap tampilkan apa adanya)
 
     // Simpan ke memory temporary agar mudah dibaca di submit form
     window.tempReviewQuestions = [...originalQuestions];
@@ -542,10 +542,10 @@ function showAssessmentReviewModal(username, originalQuestions) {
     <div class="modal-overlay" style="z-index:9999" onclick="if(event.target===this) { if(confirm('Yakin ingin membatalkan review? Pertanyaan akan hilang.')) this.remove(); }">
         <div class="modal" style="width:90%; max-width:800px; max-height:90vh; overflow-y:auto">
             <div class="modal-header">
-                <h2>Review Asesmen (Siswa: ${username})</h2>
+                <h2>Review Asesmen AI (Siswa: ${username})</h2>
                 <button class="modal-close" onclick="if(confirm('Batalkan review?')) this.closest('.modal-overlay').remove()">&times;</button>
             </div>
-            <p class="text-muted" style="margin-bottom:1rem">Berikut ${originalQuestions.length} soal asesmen dari Bank Soal. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
+            <p class="text-muted" style="margin-bottom:1rem">Berikut 50 soal buatan AI berdasarkan chat siswa. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
             
             <div id="review-questions-container">
                 ${questionsHTML}
