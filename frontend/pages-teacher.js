@@ -157,12 +157,13 @@ function renderStudentResults(main) {
                 <h3 class="card-title">Hasil Penilaian Per Siswa</h3>
                 <p class="text-muted" style="font-size:0.85rem; margin-top:0.2rem"><em><i class="fas fa-robot text-primary"></i> Semua Nilai Dianalisis AI</em></p>
             </div>
-            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
         <div class="table-container">
-            <table>
+            <table id="table-student-results">
                 <thead>
                     <tr>
                         <th>Nama Siswa</th>
@@ -401,9 +402,12 @@ function renderAssessmentMgmt(main) {
         </div>
     </div>
     <div class="card mt-2">
-        <div class="card-header"><h3 class="card-title">✅ Persetujuan Siswa untuk Asesmen</h3></div>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title" style="margin-bottom:0;">✅ Persetujuan Siswa untuk Asesmen</h3>
+            <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-assessment-approval', 'table-assessment-approval')">
+        </div>
         <div class="table-container">
-            <table>
+            <table id="table-assessment-approval">
                 <thead><tr><th>Nama</th><th>Kelas</th><th>Progres</th><th>Analisis AI (Kesiapan)</th><th>Aksi Approval</th></tr></thead>
                 <tbody>
                     ${students.map(s => {
@@ -610,8 +614,9 @@ async function renderBankSoal(main) {
 
     main.innerHTML = `
     <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">📚 Bank Soal</h3>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title" style="margin-bottom:0;">📚 Bank Soal</h3>
+            <input type="text" id="search-bank-soal" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari Pertanyaan/Tipe..." onkeyup="filterTable('search-bank-soal', 'table-bank-soal')">
         </div>
         <div class="tabs">
             <button class="tab-button active" onclick="initBankSoalTab('list')">Daftar Soal (${_bankSoalCache.length})</button>
@@ -622,7 +627,7 @@ async function renderBankSoal(main) {
                 <button class="btn btn-danger btn-sm" id="btn-bulk-delete-soal" style="display:none;" onclick="bulkDeleteBankSoal()"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected-soal">0</span>)</button>
             </div>
             <div class="table-container">
-                <table>
+                <table id="table-bank-soal">
                     <thead>
                         <tr>
                             <th><input type="checkbox" id="check-all-bank-soal" onchange="toggleAllBankSoal(this)"></th>
@@ -965,7 +970,8 @@ function renderStudentAccounts(main) {
     main.innerHTML = `
         <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
         <h3>Akun Siswa (${students.length})</h3>
-        <div class="flex gap-1">
+        <div class="flex gap-1" style="align-items:center;">
+            <input type="text" id="search-student-accounts" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa/Kelas/Username..." onkeyup="filterTable('search-student-accounts', 'table-student-accounts')">
             ${currentUser.role === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="bulkDeleteStudents()" id="btn-bulk-delete" style="display:none;"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected">0</span>)</button>` : ''}
             <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()"><i class="fas fa-plus"></i> Tambah Siswa</button>
             <button class="btn btn-success btn-sm" onclick="downloadExcelTemplate()"><i class="fas fa-download"></i> Template Excel</button>
@@ -975,7 +981,7 @@ function renderStudentAccounts(main) {
     </div>
     <div class="card">
         <div class="table-container">
-            <table>
+            <table id="table-student-accounts">
                 <thead>
                     <tr>
                         ${currentUser.role === 'admin' ? `<th><input type="checkbox" id="check-all-students" onchange="toggleAllStudents(this)"></th>` : ''}
@@ -1388,9 +1394,12 @@ async function renderMonitoring(main) {
     </div>
 
     <div class="card">
-        <h3 class="card-title" style="margin-bottom: 1rem;"><i class="fas fa-desktop"></i> Status Aktivitas Terakhir</h3>
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; border-bottom:none; padding-bottom:0;">
+            <h3 class="card-title" style="margin-bottom: 1rem;"><i class="fas fa-desktop"></i> Status Aktivitas Terakhir</h3>
+            <input type="text" id="search-monitoring" class="form-control" style="margin-bottom:1rem; width:250px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-monitoring', 'table-monitoring')">
+        </div>
         <div class="table-container">
-            <table>
+            <table id="table-monitoring">
                 <thead>
                     <tr>
                         <th>Status</th>

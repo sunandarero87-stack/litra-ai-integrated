@@ -440,3 +440,28 @@ function renderPage(page) {
 
 // Initialize
 window.addEventListener('DOMContentLoaded', initApp);
+
+window.filterTable = function (inputId, tableId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const tr = table.getElementsByTagName("tr");
+
+    for (let i = 1; i < tr.length; i++) {
+        const tds = tr[i].getElementsByTagName("td");
+        if (tds.length === 0) continue; // skip headers
+        let found = false;
+        for (let j = 0; j < tds.length; j++) {
+            if (tds[j]) {
+                const txtValue = tds[j].textContent || tds[j].innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        tr[i].style.display = found ? "" : "none";
+    }
+}
