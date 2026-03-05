@@ -539,13 +539,16 @@ function renderTahap3(main) {
     // Show start screen
     if (!assessmentActive) {
         const settings = getAssessmentSettings();
+        const questionCount = progress.generatedAssessment && progress.generatedAssessment.length > 0
+            ? progress.generatedAssessment.length
+            : ASSESSMENT_QUESTIONS.length;
         main.innerHTML = `
         <div class="card" style="max-width:600px;margin:0 auto;text-align:center;padding:2.5rem">
             <div class="tahap-icon exam" style="margin:0 auto 1.5rem"><i class="fas fa-file-alt"></i></div>
             <h2>Asesmen Utama</h2>
             <p class="text-muted mt-1">Format TKA (Literasi & Numerasi)</p>
             <div style="margin:1.5rem 0;text-align:left" class="card" style="background:var(--bg-input)">
-                <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> 20 soal</p>
+                <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> ${questionCount} soal</p>
                 <p class="mt-1"><i class="fas fa-clock"></i> <strong>Waktu:</strong> ${settings.duration} menit</p>
                 <p class="mt-1"><i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> <strong>Peringatan:</strong> Jika membuka tab lain, soal akan diulang dari awal!</p>
                 <p class="mt-1"><i class="fas fa-percentage"></i> <strong>KKM:</strong> 70%</p>

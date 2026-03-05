@@ -393,8 +393,8 @@ function renderAssessmentMgmt(main) {
         <div class="card">
             <div class="card-header"><h3 class="card-title">📋 Info Asesmen & Pengaturan</h3></div>
             <div class="form-group mt-1">
-                <label>Jumlah Soal Asesmen (Default: 20)</label>
-                <input type="number" id="assessment-amount" value="20" min="5" max="100">
+                <label>Jumlah Soal Asesmen (Default: 20, Maksimal: 20)</label>
+                <input type="number" id="assessment-amount" value="20" min="5" max="20">
             </div>
             <p class="mt-1"><strong>Tipe:</strong> Proporsional Literasi & Numerasi</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
@@ -542,10 +542,10 @@ function showAssessmentReviewModal(username, originalQuestions) {
     <div class="modal-overlay" style="z-index:9999" onclick="if(event.target===this) { if(confirm('Yakin ingin membatalkan review? Pertanyaan akan hilang.')) this.remove(); }">
         <div class="modal" style="width:90%; max-width:800px; max-height:90vh; overflow-y:auto">
             <div class="modal-header">
-                <h2>Review Asesmen AI (Siswa: ${username})</h2>
+                <h2>Review Asesmen (Siswa: ${username})</h2>
                 <button class="modal-close" onclick="if(confirm('Batalkan review?')) this.closest('.modal-overlay').remove()">&times;</button>
             </div>
-            <p class="text-muted" style="margin-bottom:1rem">Berikut 20 soal buatan AI berdasarkan chat siswa. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
+            <p class="text-muted" style="margin-bottom:1rem">Berikut ${originalQuestions.length} soal asesmen dari Bank Soal. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
             
             <div id="review-questions-container">
                 ${questionsHTML}
