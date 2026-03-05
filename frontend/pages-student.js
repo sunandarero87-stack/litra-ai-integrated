@@ -103,7 +103,10 @@ function renderTahap1(main) {
                         <span style="font-weight: 500;">${m.name}</span>
                         <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
                     </div>
-                    <button class="btn btn-primary btn-sm">Buka Materi</button>
+                    <div style="display: flex; gap: 0.5rem;" onclick="event.stopPropagation()">
+                        <button class="btn btn-outline btn-sm" onclick="downloadMaterial('${m._id}', '${m.name}', '${m.type}', event)" title="Download Materi"><i class="fas fa-download"></i> Download</button>
+                        <button class="btn btn-primary btn-sm" onclick="viewMaterial('${m._id}', '${m.type}')">Buka Materi</button>
+                    </div>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi untuk dipelajari.</p>'}
         </div>
 
@@ -230,6 +233,23 @@ function switchMaterial(id) {
 
     // Toggle smoothly to new viewed material
     viewMaterial(material._id || material.name, material.type);
+}
+
+function downloadMaterial(id, name, type, event) {
+    if (event) event.stopPropagation();
+    const materials = getMaterials();
+    const material = materials.find(m => m._id === id || m.name === id);
+    if (!material) return;
+
+    const url = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
+
+    // Create a temporary anchor element
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name}.${type}`; // e.g., "Materi.pdf"
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 function closeMaterialViewer() {
