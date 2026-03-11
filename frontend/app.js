@@ -465,3 +465,31 @@ window.filterTable = function (inputId, tableId) {
         tr[i].style.display = found ? "" : "none";
     }
 }
+
+window.sortTable = function (tableId, colIndex, order) {
+    if (!order) return;
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const tbody = table.querySelector('tbody') || table;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    // Ignore rows like "Belum ada siswa" which span multiple cols
+    if (rows.length === 0 || rows[0].cells.length <= 1) return;
+
+    rows.sort((a, b) => {
+        const cellA = a.cells[colIndex];
+        const cellB = b.cells[colIndex];
+        if (!cellA || !cellB) return 0;
+        
+        let valA = (cellA.textContent || cellA.innerText).trim().toLowerCase();
+        let valB = (cellB.textContent || cellB.innerText).trim().toLowerCase();
+        
+        if (order === 'asc') {
+            return valA.localeCompare(valB);
+        } else {
+            return valB.localeCompare(valA);
+        }
+    });
+
+    rows.forEach(row => tbody.appendChild(row));
+}

@@ -159,6 +159,11 @@ function renderStudentResults(main) {
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
+                <select id="sort-student-results" class="form-control" style="margin-bottom:0; width:150px; padding:0.4rem;" onchange="sortTable('table-student-results', 0, this.value)">
+                    <option value="">Urutkan Nama...</option>
+                    <option value="asc">A - Z (Menaik)</option>
+                    <option value="desc">Z - A (Menurun)</option>
+                </select>
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
@@ -404,7 +409,14 @@ function renderAssessmentMgmt(main) {
     <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <h3 class="card-title" style="margin-bottom:0;">✅ Persetujuan Siswa untuk Asesmen</h3>
-            <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-assessment-approval', 'table-assessment-approval')">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-assessment-approval', 'table-assessment-approval')">
+                <select id="sort-assessment-approval" class="form-control" style="margin-bottom:0; width:150px; padding:0.4rem;" onchange="sortTable('table-assessment-approval', 0, this.value)">
+                    <option value="">Urutkan Nama...</option>
+                    <option value="asc">A - Z (Menaik)</option>
+                    <option value="desc">Z - A (Menurun)</option>
+                </select>
+            </div>
         </div>
         <div class="table-container">
             <table id="table-assessment-approval">
