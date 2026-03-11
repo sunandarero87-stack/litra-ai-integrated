@@ -466,30 +466,41 @@ window.filterTable = function (inputId, tableId) {
     }
 }
 
-window.sortTable = function (tableId, colIndex, order) {
-    if (!order) return;
+window.sortTable = function (tableId, colIndex) {
     const table = document.getElementById(tableId);
     if (!table) return;
     const tbody = table.querySelector('tbody') || table;
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    
-    // Ignore rows like "Belum ada siswa" which span multiple cols
+    const ths = table.querySelectorAll('thead th');
     if (rows.length === 0 || rows[0].cells.length <= 1) return;
-
+    let order = 'asc';
+    const th = ths[colIndex];
+    if (th) {
+        if (th.dataset.sortDir === 'asc') order = 'desc';
+        else order = 'asc';
+        ths.forEach(t => {
+            t.dataset.sortDir = '';
+            const icon = t.querySelector('.fa-sort, .fa-sort-up, .fa-sort-down');
+            if(icon) icon.className = 'fas fa-sort text-muted';
+        });
+        th.dataset.sortDir = order;
+        const icon = th.querySelector('i.fas');
+        if(icon) icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+    }
     rows.sort((a, b) => {
         const cellA = a.cells[colIndex];
         const cellB = b.cells[colIndex];
         if (!cellA || !cellB) return 0;
-        
-        let valA = (cellA.textContent || cellA.innerText).trim().toLowerCase();
-        let valB = (cellB.textContent || cellB.innerText).trim().toLowerCase();
-        
-        if (order === 'asc') {
-            return valA.localeCompare(valB);
-        } else {
-            return valB.localeCompare(valA);
+        let valA = (cellA.textContent || cellA.innerText).trim();
+        let valB = (cellB.textContent || cellB.innerText).trim();
+        let isNumA = !isNaN(parseFloat(valA)) && isFinite(valA.replace('%','').replace(/,/g,''));
+        let isNumB = !isNaN(parseFloat(valB)) && isFinite(valB.replace('%','').replace(/,/g,''));
+        if (isNumA && isNumB) {
+            let nA = parseFloat(valA.replace('%','').replace(/,/g,''));
+            let nB = parseFloat(valB.replace('%','').replace(/,/g,''));
+            return order === 'asc' ? nA - nB : nB - nA;
         }
+        return order === 'asc' ? valA.localeCompare(valB, undefined, {numeric: true}) : valB.localeCompare(valA, undefined, {numeric: true});
     });
-
     rows.forEach(row => tbody.appendChild(row));
 }

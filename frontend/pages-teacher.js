@@ -159,11 +159,6 @@ function renderStudentResults(main) {
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
-                <select id="sort-student-results" class="form-control" style="margin-bottom:0; width:150px; padding:0.4rem;" onchange="sortTable('table-student-results', 0, this.value)">
-                    <option value="">Urutkan Nama...</option>
-                    <option value="asc">A - Z (Menaik)</option>
-                    <option value="desc">Z - A (Menurun)</option>
-                </select>
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
@@ -171,11 +166,11 @@ function renderStudentResults(main) {
             <table id="table-student-results">
                 <thead>
                     <tr>
-                        <th>Nama Siswa</th>
-                        <th>Kelas</th>
-                        <th style="color:var(--info)">Nilai Refleksi <br><small>(Tahap 2)</small></th>
-                        <th style="color:var(--success)">Nilai Asesmen <br><small>(Tahap 3)</small></th>
-                        <th style="color:var(--primary)">Nilai 7 Kebiasaan <br><small>(Tahap 4)</small></th>
+                        <th onclick="sortTable('table-student-results', 0)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama Siswa <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 2)" style="cursor:pointer; color:var(--info)" title="Klik untuk mengurutkan">Nilai Refleksi <br><small>(Tahap 2)</small> <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 3)" style="cursor:pointer; color:var(--success)" title="Klik untuk mengurutkan">Nilai Asesmen <br><small>(Tahap 3)</small> <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 4)" style="cursor:pointer; color:var(--primary)" title="Klik untuk mengurutkan">Nilai 7 Kebiasaan <br><small>(Tahap 4)</small> <i class="fas fa-sort text-muted"></i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -411,16 +406,17 @@ function renderAssessmentMgmt(main) {
             <h3 class="card-title" style="margin-bottom:0;">✅ Persetujuan Siswa untuk Asesmen</h3>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-assessment-approval', 'table-assessment-approval')">
-                <select id="sort-assessment-approval" class="form-control" style="margin-bottom:0; width:150px; padding:0.4rem;" onchange="sortTable('table-assessment-approval', 0, this.value)">
-                    <option value="">Urutkan Nama...</option>
-                    <option value="asc">A - Z (Menaik)</option>
-                    <option value="desc">Z - A (Menurun)</option>
-                </select>
             </div>
         </div>
         <div class="table-container">
             <table id="table-assessment-approval">
-                <thead><tr><th>Nama</th><th>Kelas</th><th>Progres</th><th>Analisis AI (Kesiapan)</th><th>Aksi Approval</th></tr></thead>
+                <thead><tr>
+                    <th onclick="sortTable('table-assessment-approval', 0)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 2)" style="cursor:pointer" title="Klik untuk mengurutkan">Progres <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 3)" style="cursor:pointer" title="Klik untuk mengurutkan">Analisis AI (Kesiapan) <i class="fas fa-sort text-muted"></i></th>
+                    <th>Aksi Approval</th>
+                </tr></thead>
                 <tbody>
                     ${students.map(s => {
         const p = getProgress(s.username);
