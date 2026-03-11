@@ -137,7 +137,7 @@ function renderTahap1(main) {
 
     <!-- Floating Chatbot -->
     <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; align-items: flex-end; flex-direction: column;">
-        <div id="chatbot-panel" style="display: none; width: 350px; height: 500px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease;">
+        <div id="chatbot-panel" style="display: none; width: 550px; max-width: 95vw; height: 600px; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease;">
             <div class="chat-header" style="background: var(--gradient-primary); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
                 <div class="bot-avatar" style="width:40px;height:40px;border-radius:50%;background:white;color:var(--primary);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
                     ${teacherPhoto}
@@ -293,7 +293,7 @@ function appendFloatingMessage(role, html, teacherPhoto) {
         <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:${role === 'bot' ? 'white' : 'var(--bg-input)'};color:${role === 'bot' ? 'var(--primary)' : 'var(--text-secondary)'};font-size:0.8rem;">
             ${avatarIcon}
         </div>
-        <div style="padding:0.75rem 1rem;font-size:0.9rem;line-height:1.6;background:${bgColor};color:${color};border-radius:${borderRadius};">
+        <div style="padding:0.75rem 1rem;font-size:0.9rem;line-height:1.6;background:${bgColor};color:${color};border-radius:${borderRadius}; overflow-x: auto; max-width: 100%;">
             ${html}
         </div>`;
 
