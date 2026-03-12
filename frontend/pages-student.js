@@ -136,8 +136,8 @@ function renderTahap1(main) {
     </div>
 
     <!-- Floating Chatbot -->
-    <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 20px; z-index: 1000; align-items: flex-end; flex-direction: column;">
-        <div id="chatbot-panel" style="display: none; width: 550px; max-width: 95vw; height: 600px; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease;">
+    <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 0; left: 0; padding: 0 20px; z-index: 1000; align-items: flex-end; flex-direction: column;">
+        <div id="chatbot-panel" style="display: none; width: 100%; max-width: 100vw; height: 75vh; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease;">
             <div class="chat-header" style="background: var(--gradient-primary); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
                 <div class="bot-avatar" style="width:40px;height:40px;border-radius:50%;background:white;color:var(--primary);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
                     ${teacherPhoto}
