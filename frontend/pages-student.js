@@ -453,11 +453,12 @@ async function renderTahap2(main) {
         <div class="card mt-2">
             <form id="reflection-form">
                 ${reflectionQuestions.map((q, i) => `
-                <div class="question-group mb-2">
-                    <label class="d-block mb-1"><strong>${i + 1}. ${q}</strong></label>
+                <div class="question-group mb-3" style="width: 100%; display: flex; flex-direction: column;">
+                    <label class="d-block mb-2"><strong>${i + 1}. ${q}</strong></label>
                     <textarea 
                         class="form-input reflection-input" 
-                        rows="3" 
+                        rows="5"
+                        style="width: 100%; min-height: 120px; box-sizing: border-box; resize: vertical;"
                         onpaste="return false;" 
                         oncopy="return false;" 
                         oncontextmenu="return false;"
@@ -720,7 +721,7 @@ function handleTabSwitch(e = {}) {
 
     if (tabViolationCount >= 3) {
         alert('⚠️ Asesmen Dibatalkan! Kamu telah melakukan pelanggaran lebih dari 3 kali. Asesmen dihentikan dan jawabanmu tidak sah.');
-        submitAssessment();
+        submitAssessment(true);
         return;
     }
 
@@ -808,7 +809,7 @@ function selectAssessmentAnswer(qId, optIdx) {
     showAssessmentQuestion(document.getElementById('main-content'));
 }
 
-function submitAssessment() {
+function submitAssessment(autoRedirect = false) {
     if (assessmentTimer) { clearInterval(assessmentTimer); assessmentTimer = null; }
 
     // Remove all anti-cheat listeners
@@ -867,6 +868,11 @@ function submitAssessment() {
         updateProgress(currentUser.username, { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false, tahap4Complete: false, tahap4Score: 0 });
         // Clear approval
         saveApprovalForUser(currentUser.username, null);
+    }
+
+    if (autoRedirect) {
+        navigateTo('dashboard');
+        return;
     }
 
     const main = document.getElementById('main-content');
