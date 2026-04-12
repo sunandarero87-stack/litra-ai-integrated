@@ -214,7 +214,7 @@ exports.downloadTemplate = (req, res) => {
 
 exports.generateFromAI = async (req, res) => {
     try {
-        const { objectives, amount } = req.body;
+        const { objectives, amount, indicatorType, indicatorValue } = req.body;
 
         if (!objectives || !Array.isArray(objectives) || objectives.length === 0) {
             return res.status(400).json({ error: 'Tujuan Pembelajaran wajib diisi.' });
@@ -224,7 +224,7 @@ exports.generateFromAI = async (req, res) => {
 
         // Memanggil aiService
         const aiService = require('../services/aiService');
-        const generatedQuestions = await aiService.generateBankSoal(objectives, questionAmount);
+        const generatedQuestions = await aiService.generateBankSoal(objectives, questionAmount, indicatorType, indicatorValue);
 
         if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
             return res.status(500).json({ error: 'AI gagal menghasilkan array soal yang valid.' });

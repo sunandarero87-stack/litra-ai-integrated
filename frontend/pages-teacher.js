@@ -679,6 +679,31 @@ async function renderBankSoal(main) {
                     
                     <h4>🤖 Buat Soal Otomatis (AI)</h4>
                     <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat otomatis 10 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
+                    <div class="form-group mb-2">
+                            <label>Pilih Tipe Soal</label>
+                            <select id="ai-indicator-type" class="form-control" onchange="const type = this.value; document.getElementById('group-literasi-indicator').style.display = type === 'literasi' ? 'block' : 'none'; document.getElementById('group-numerasi-indicator').style.display = type === 'numerasi' ? 'block' : 'none';">
+                                <option value="literasi">Literasi</option>
+                                <option value="numerasi">Numerasi</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-2" id="group-literasi-indicator">
+                            <label>Indikator Literasi</label>
+                            <select id="ai-literasi-indicator" class="form-control">
+                                <option value="Level Kognitif">Level Kognitif</option>
+                                <option value="Menemukan Informasi">Menemukan Informasi</option>
+                                <option value="Intepretasi dan integrasi">Intepretasi dan integrasi</option>
+                                <option value="Evaluasi dan Refleksi">Evaluasi dan Refleksi</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-2" id="group-numerasi-indicator" style="display:none;">
+                            <label>Indikator Numerasi</label>
+                            <select id="ai-numerasi-indicator" class="form-control">
+                                <option value="Bilangan">Bilangan</option>
+                                <option value="Geometri dan Pengukuran">Geometri dan Pengukuran</option>
+                                <option value="Aljabar">Aljabar</option>
+                                <option value="Data dan Ketidakpastian">Data dan Ketidakpastian</option>
+                            </select>
+                        </div>
                     <div class="form-group">
                         <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
                         <input type="number" id="ai-objective-count" min="1" max="10" value="1" onchange="renderObjectiveInputs()" oninput="renderObjectiveInputs()">
@@ -733,6 +758,9 @@ async function generateBankSoalAI() {
         return;
     }
 
+    const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
+    const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
+
     const btn = document.getElementById('btn-generate-ai');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang Membuat Soal... (Bisa memakan waktu 1-2 menit)';
@@ -741,7 +769,7 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ objectives: objectives, amount: 10 })
+            body: JSON.stringify({ objectives: objectives, amount: 10, indicatorType: indicatorType, indicatorValue: indicatorValue })
         });
 
         const data = await res.json();
