@@ -394,8 +394,8 @@ function renderAssessmentMgmt(main) {
         <div class="card">
             <div class="card-header"><h3 class="card-title">📋 Info Asesmen & Pengaturan</h3></div>
             <div class="form-group mt-1">
-                <label>Jumlah Soal Asesmen (Default: 50)</label>
-                <input type="number" id="assessment-amount" value="50" min="5" max="100">
+                <label>Jumlah Soal Asesmen (Default: 10)</label>
+                <input type="number" id="assessment-amount" value="10" min="5" max="100">
             </div>
             <p class="mt-1"><strong>Tipe:</strong> Proporsional Literasi & Numerasi</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
@@ -462,7 +462,7 @@ async function approveStudent(username, btnElement) {
     }
 
     const amountInput = document.getElementById('assessment-amount');
-    const amount = amountInput ? parseInt(amountInput.value) || 50 : 50;
+    const amount = amountInput ? parseInt(amountInput.value) || 10 : 10;
 
     try {
         const progress = getProgress(username);
@@ -495,7 +495,7 @@ async function approveStudent(username, btnElement) {
 }
 
 function showAssessmentReviewModal(username, originalQuestions) {
-    // Pastikan array soal berjumlah sesuai (kalau kurang dari 50, kita tetap tampilkan apa adanya)
+    // Pastikan array soal berjumlah sesuai (kalau kurang dari 10, kita tetap tampilkan apa adanya)
 
     // Simpan ke memory temporary agar mudah dibaca di submit form
     window.tempReviewQuestions = [...originalQuestions];
@@ -557,7 +557,7 @@ function showAssessmentReviewModal(username, originalQuestions) {
                 <h2>Review Asesmen AI (Siswa: ${username})</h2>
                 <button class="modal-close" onclick="if(confirm('Batalkan review?')) this.closest('.modal-overlay').remove()">&times;</button>
             </div>
-            <p class="text-muted" style="margin-bottom:1rem">Berikut 50 soal buatan AI berdasarkan chat siswa. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
+            <p class="text-muted" style="margin-bottom:1rem">Berikut 10 soal buatan AI berdasarkan chat siswa. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
             
             <div id="review-questions-container">
                 ${questionsHTML}
@@ -678,7 +678,7 @@ async function renderBankSoal(main) {
                     <hr style="margin: 2rem 0;">
                     
                     <h4>🤖 Buat Soal Otomatis (AI)</h4>
-                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat otomatis 50 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat otomatis 10 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
                     <div class="form-group">
                         <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
                         <input type="number" id="ai-objective-count" min="1" max="10" value="1" onchange="renderObjectiveInputs()" oninput="renderObjectiveInputs()">
@@ -741,7 +741,7 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ objectives: objectives, amount: 50 })
+            body: JSON.stringify({ objectives: objectives, amount: 10 })
         });
 
         const data = await res.json();
