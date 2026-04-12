@@ -4,12 +4,28 @@ exports.generateFromBank = async (req, res) => {
     try {
         const amount = parseInt(req.body.amount) || 20;
 
-        // Mongoose aggregasi: Group by question agar tidak ada soal duplikat, lalu replaceRoot & sample acak
-        const questions = await QuestionBank.aggregate([
+        // Ambil soal secara proporsional: Setengah Literasi, Setengah Numerasi
+        const queryLit = Math.ceil(amount / 2);
+        const queryNum = amount - queryLit;
+
+        const literasiQuestions = await QuestionBank.aggregate([
+            { $match: { type: 'literasi' } },
             { $group: { _id: "$question", doc: { $first: "$$ROOT" } } },
             { $replaceRoot: { newRoot: "$doc" } },
-            { $sample: { size: amount } }
+            { $sample: { size: queryLit } }
         ]);
+
+        const numerasiQuestions = await QuestionBank.aggregate([
+            { $match: { type: 'numerasi' } },
+            { $group: { _id: "$question", doc: { $first: "$$ROOT" } } },
+            { $replaceRoot: { newRoot: "$doc" } },
+            { $sample: { size: queryNum } }
+        ]);
+
+        let questions = [...literasiQuestions, ...numerasiQuestions];
+
+        // Acak urutan gabungan agar posisinya random tiap siswa
+        questions.sort(() => Math.random() - 0.5);
 
         // Jika bank soal masih kosong/kurang
         if (questions.length === 0) {
