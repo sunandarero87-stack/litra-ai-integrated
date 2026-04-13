@@ -2,9 +2,9 @@ const axios = require('axios');
 const ChatLog = require('../models/ChatLog');
 
 // Configuration
-const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-const AI_MODEL = process.env.AI_MODEL || "llama-3.3-70b-versatile";
-const API_URL = process.env.AI_BASE_URL || "https://api.groq.com/openai/v1/chat/completions";
+const AI_API_KEY = (process.env.AI_API_KEY || "").trim();
+const AI_MODEL = (process.env.AI_MODEL || "llama-3.3-70b-versatile").trim();
+const API_URL = (process.env.AI_BASE_URL || "https://api.groq.com/openai/v1/chat/completions").trim();
 
 // Daftar fallback model jika model utama gagal atau rate-limited
 const FALLBACK_MODELS = [
@@ -12,7 +12,7 @@ const FALLBACK_MODELS = [
     "llama-3.1-8b-instant",
     "gemma2-9b-it",
     "mixtral-8x7b-32768"
-];
+].filter((v, i, a) => v && a.indexOf(v) === i); // Unik dan tidak kosong
 
 function getHeaders() {
     const headers = {
