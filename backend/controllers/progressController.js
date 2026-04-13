@@ -157,3 +157,51 @@ exports.resetProgress = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+const User = require('../models/User');
+
+exports.simulateData = async (req, res) => {
+    try {
+        const students = await User.find({ role: 'siswa' });
+        const passCount = Math.round(students.length * 0.82);
+
+        for (let i = 0; i < students.length; i++) {
+            const s = students[i];
+            const willPass = i < passCount;
+            const litTotal = 5, numTotal = 5, total = 10;
+            
+            let lit, num;
+            if (willPass) {
+                lit = Math.floor(Math.random() * 2) + 4; // 4-5
+                num = Math.floor(Math.random() * 2) + 4; // 4-5
+            } else {
+                lit = Math.floor(Math.random() * 3) + 1; // 1-3
+                num = Math.floor(Math.random() * 3) + 1; // 1-3
+            }
+            
+            const score = lit + num;
+            const pct = Math.round((score / total) * 100);
+
+            await Progress.findOneAndUpdate({ username: s.username }, {
+                tahap: 4,
+                tahap1Complete: true,
+                tahap2Complete: true,
+                tahap3Complete: true,
+                tahap4Complete: true,
+                tahap2Score: Math.floor(Math.random() * 21) + 80,
+                tahap4Score: Math.floor(Math.random() * 21) + 80,
+                assessmentResult: {
+                    score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct, pass: willPass,
+                    date: new Date(), violations: 0
+                },
+                approvedForAssessment: true,
+                approvalDate: new Date(),
+                approvedBy: 'Simulation AI'
+            }, { upsert: true });
+        }
+        res.json({ success: true, message: 'Simulasi berhasil' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+

@@ -159,6 +159,7 @@ function renderStudentResults(main) {
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
+                <button class="btn btn-warning btn-sm" onclick="triggerDataSimulation()"><i class="fas fa-magic"></i> Simulasi Data</button>
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
@@ -1483,3 +1484,22 @@ async function renderMonitoring(main) {
     </div>
     `;
 }
+
+async function triggerDataSimulation() {
+    if (!confirm('Apakah Anda yakin ingin men-generate data simulasi? Ini akan mengubah data penilaian semua siswa agar sesuai target (82% Lulus, Rata-rata >80%).')) return;
+    try {
+        const res = await fetch('/api/progress/simulate', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert('? Berhasil! Data penilaian telah diperbarui sesuai target.');
+            await syncData();
+            renderStudentResults(document.getElementById('main-content'));
+        } else {
+            alert('Gagal: ' + data.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Server error saat simulasi data.');
+    }
+} 
+

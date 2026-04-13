@@ -97,6 +97,7 @@ app.post('/api/progress/result', progressController.saveResult);
 app.post('/api/progress/approval', progressController.saveApproval);
 app.post('/api/progress/settings', progressController.saveSettings);
 app.post('/api/progress/reset', progressController.resetProgress);
+app.post('/api/progress/simulate', progressController.simulateData);
 
 // Materials
 app.get('/api/materials', materialController.getMaterials);
