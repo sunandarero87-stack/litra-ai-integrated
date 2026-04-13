@@ -68,21 +68,29 @@ async function initApp() {
     // Check session
     const session = localStorage.getItem('currentSession');
     if (session) {
-        await syncData(); // Sinkronkan user & progres dari DB
+        try {
+            const userData = JSON.parse(session);
+            currentUser = userData; // Gunakan data dari sesi langsung agar cepat
+            
+            // Sinkronkan data pendukung di background agar data terbaru
+            syncData().then(() => {
+                if (currentUser) {
+                    const latestUsers = getUsers();
+                    const updatedUser = latestUsers.find(u => u.username === currentUser.username);
+                    if (updatedUser) currentUser = updatedUser;
+                }
+            });
 
-        const userData = JSON.parse(session);
-        const users = getUsers();
-        const user = users.find(u => u.username === userData.username);
-        if (user) {
-            currentUser = user;
-            if (user.mustChangePassword) {
+            if (currentUser.mustChangePassword) {
                 showPage('page-change-password');
             } else {
+                const lastPage = localStorage.getItem('lastVisitedPage') || 'dashboard';
                 showAppShell();
+                navigateTo(lastPage);
             }
             return;
-        } else {
-            // Sesi kedaluwarsa atau user dihapus di DB
+        } catch (e) {
+            console.error('Session restore failed', e);
             localStorage.removeItem('currentSession');
         }
     }
@@ -174,7 +182,6 @@ function showAppShell() {
     showPage('app-shell');
     updateSidebar();
     updateTopbar();
-    navigateTo('dashboard');
 }
 
 function toggleSidebar() {
@@ -221,7 +228,7 @@ async function handleLogin(e) {
 
         const user = data.user;
         currentUser = user;
-        localStorage.setItem('currentSession', JSON.stringify({ username: user.username }));
+        localStorage.setItem('currentSession', JSON.stringify(user));
 
         // Sync all data right after successful login
         await syncData();
@@ -357,6 +364,7 @@ function updateAvatar(elemId, user) {
 // ---- NAVIGATION ----
 function navigateTo(page) {
     currentPage = page;
+    localStorage.setItem('lastVisitedPage', page);
     const titles = {
         'dashboard': 'Dashboard',
         'profile': 'Profil Saya',
