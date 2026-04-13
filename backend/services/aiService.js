@@ -9,18 +9,21 @@ const API_URL = process.env.AI_BASE_URL || "https://openrouter.ai/api/v1/chat/co
 // Daftar fallback model jika model utama gagal atau rate-limited
 const FALLBACK_MODELS = [
     AI_MODEL,
-    "google/gemma-4-31b-it:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "openrouter/free"
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
 ];
 
 function getHeaders() {
-    return {
+    const headers = {
         "Authorization": `Bearer ${AI_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://litra-ai.railway.app",
-        "X-Title": "Litra-AI"
     };
+    // Header tambahan khusus OpenRouter (diabaikan oleh Google AI Studio)
+    if (API_URL.includes('openrouter')) {
+        headers["HTTP-Referer"] = "https://litra-ai.railway.app";
+        headers["X-Title"] = "Litra-AI";
+    }
+    return headers;
 }
 
 // Helper: request dengan fallback model otomatis
