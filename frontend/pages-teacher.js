@@ -178,20 +178,40 @@ function renderStudentResults(main) {
         const r = results[s.username];
         const p = progressData[s.username] || {};
 
-        const tahap2Score = p.tahap2Score ? parseFloat(p.tahap2Score).toFixed(2) : '-';
-        const tahap4Score = p.tahap4Score ? parseFloat(p.tahap4Score).toFixed(2) : '-';
-        let assesmentScore = '-';
+        // ---- Tahap 2: Nilai Refleksi ----
+        let tahap2Display = '<span class="text-muted" style="font-size:0.8rem">Belum Refleksi</span>';
+        if (p.tahap2Score !== undefined && p.tahap2Score !== null) {
+            const sc2 = parseFloat(p.tahap2Score);
+            const sc2Str = sc2.toFixed(1);
+            const color2 = sc2 >= 70 ? 'var(--success)' : sc2 >= 50 ? 'var(--warning)' : 'var(--danger)';
+            tahap2Display = `<strong style="color:${color2}">${sc2Str}</strong><br><small class="text-muted">/ 100</small>`;
+        } else if (p.tahap2Complete) {
+            tahap2Display = '<span class="badge badge-warning">Selesai (skor lama)</span>';
+        }
 
+        // ---- Tahap 3: Nilai Asesmen ----
+        let assessmentDisplay = '<span class="text-muted" style="font-size:0.8rem">Belum Asesmen</span>';
         if (r) {
-            assesmentScore = ((r.score / r.total) * 100).toFixed(2);
+            const sc3 = ((r.score / r.total) * 100);
+            const sc3Str = sc3.toFixed(1);
+            const color3 = sc3 >= 70 ? 'var(--success)' : sc3 >= 50 ? 'var(--warning)' : 'var(--danger)';
+            assessmentDisplay = `<strong style="color:${color3}">${sc3Str}</strong><br><small class="text-muted">/ 100 &bull; ${r.pass ? '✅ Lulus' : '❌ Tidak Lulus'}</small>`;
+        }
+
+        // ---- Tahap 4: Nilai 7 Kebiasaan ----
+        let tahap4Display = '<span class="text-muted" style="font-size:0.8rem">Belum</span>';
+        if (p.tahap4Score !== undefined && p.tahap4Score !== null) {
+            const sc4 = parseFloat(p.tahap4Score);
+            const color4 = sc4 >= 70 ? 'var(--success)' : sc4 >= 50 ? 'var(--warning)' : 'var(--danger)';
+            tahap4Display = `<strong style="color:${color4}">${sc4.toFixed(1)}</strong><br><small class="text-muted">/ 100</small>`;
         }
 
         return `<tr>
             <td>${s.name}</td>
             <td>${s.kelas || '-'}</td>
-            <td><strong>${tahap2Score}</strong></td>
-            <td><strong>${assesmentScore}</strong></td>
-            <td><strong>${tahap4Score}</strong></td>
+            <td>${tahap2Display}</td>
+            <td>${assessmentDisplay}</td>
+            <td>${tahap4Display}</td>
         </tr>`;
     }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada data</td></tr>'}
                 </tbody>

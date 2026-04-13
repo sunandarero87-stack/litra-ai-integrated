@@ -508,6 +508,7 @@ async function renderTahap2(main) {
             progress.tahap2Complete = true;
             progress.aiReadiness = analysisData.analysis.analysis;
             progress.isReady = analysisData.analysis.ready;
+            progress.tahap2Score = analysisData.analysis.score ?? null; // Simpan nilai refleksi Tahap 2
             progress.reflectionAnswers = answers; // Save raw answers for later generation
             updateProgress(currentUser.username, progress);
 

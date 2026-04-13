@@ -220,14 +220,14 @@ async function analyzeReadiness(username, reflectionAnswers) {
         const payload = {
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis evaluasi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
-                { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
+                { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, score: number, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
             ]
         };
         const response = await requestWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Readiness Gen Error:", e.message);
-        return { ready: true, analysis: "Gagal analisis", recommendation: "Cek manual" };
+        return { ready: true, score: 70, analysis: "Gagal analisis", recommendation: "Cek manual" };
     }
 }
 
