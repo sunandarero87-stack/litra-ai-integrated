@@ -159,7 +159,7 @@ function renderStudentResults(main) {
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
-                <button class="btn btn-warning btn-sm" onclick="triggerDataSimulation()"><i class="fas fa-magic"></i> Simulasi Data</button>
+                <button id="btn-simulate-data" class="btn btn-warning btn-sm" onclick="triggerDataSimulation()" style="display:none;"><i class="fas fa-magic"></i> Simulasi Data</button>
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
@@ -1502,4 +1502,16 @@ async function triggerDataSimulation() {
         alert('Server error saat simulasi data.');
     }
 } 
+
+
+// Secret shortcut to show simulation button (Ctrl + Shift)
+document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.shiftKey) {
+        const btn = document.getElementById('btn-simulate-data');
+        if (btn) {
+            btn.style.display = 'inline-block';
+            console.log('Admin simulation mode activated.');
+        }
+    }
+});
 
