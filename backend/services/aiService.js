@@ -173,8 +173,19 @@ async function generateReflections(username, chatHistory) {
 
         const payload = {
             messages: [
-                { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
-                { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nPastikan bahasanya komunikatif, tidak kaku, dan tidak menggunakan istilah bahasa Inggris yang rumit.\n\nCHAT:\n${historyText}` }
+                { role: "system", content: "Kamu adalah AI Pakar Pedagogi yang merumuskan pertanyaan refleksi personal. Gunakan BAHASA INDONESIA BAKU (EYD) yang ramah dan suportif." },
+                { role: "user", content: `Analisis riwayat chat antara NARA-AI dan siswa berikut ini. 
+Berdasarkan topik yang mereka diskusikan, buatlah 5 pertanyaan refleksi yang dipersonalisasi:
+1. Tanyakan apa poin terpenting yang siswa tangkap dari diskusi tersebut.
+2. Tanyakan bagian materi spesifik yang paling menarik baginya (sebutkan topiknya jika ada dalam chat).
+3. Tanyakan bagian yang masih membuatnya ragu atau ingin dipelajari lebih lanjut.
+4. Tanyakan bagaimana ia akan menerapkan ilmu tersebut.
+5. Tanyakan satu pertanyaan kritis yang menantang pemahamannya terhadap materi yang dibahas.
+
+FORMAT JAWABAN: WAJIB JSON array murni ["q1", "q2", "q3", "q4", "q5"]. Jangan ada teks pendahuluan.
+
+RIWAYAT CHAT:
+${historyText}` }
             ]
         };
 

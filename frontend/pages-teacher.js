@@ -160,6 +160,7 @@ function renderStudentResults(main) {
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
                 <button id="btn-simulate-data" class="btn btn-warning btn-sm" onclick="triggerDataSimulation()" style="display:none;"><i class="fas fa-magic"></i> Simulasi Data</button>
+                <button class="btn btn-danger btn-sm" onclick="triggerResetStage2()"><i class="fas fa-redo"></i> Reset Tahap 2</button>
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
             </div>
         </div>
@@ -1514,4 +1515,23 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+
+async function triggerResetStage2() {
+    if (!confirm('Apakah Anda yakin ingin mereset Tahap 2 (Refleksi) untuk seluruh siswa? Ini akan menghapus jawaban refleksi yang sudah ada agar AI bisa membangkitkan pertanyaan baru yang lebih relevan dengan chat terbaru mereka.')) return;
+    try {
+        const res = await fetch('/api/progress/reset-stage2', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            alert('? Berhasil mereset Tahap 2 untuk seluruh siswa!');
+            await syncData();
+            renderStudentResults(document.getElementById('main-content'));
+        } else {
+            alert('Gagal: ' + data.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Server error saat mereset Tahap 2.');
+    }
+} 
 

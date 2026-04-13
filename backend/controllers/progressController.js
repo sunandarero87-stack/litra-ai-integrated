@@ -205,3 +205,19 @@ exports.simulateData = async (req, res) => {
     }
 };
 
+exports.resetStage2All = async (req, res) => {
+    try {
+        const result = await Progress.updateMany({}, {
+            $set: {
+                tahap2Complete: false,
+                reflectionAnswers: [],
+                tahap2Score: 0,
+                isReady: false,
+                aiReadiness: ''
+            }
+        });
+        res.json({ success: true, message: 'Berhasil mereset Tahap 2 untuk ' + result.modifiedCount + ' siswa' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
