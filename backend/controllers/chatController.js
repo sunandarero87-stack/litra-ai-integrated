@@ -55,7 +55,7 @@ exports.handleChat = async (req, res) => {
 exports.handleReflections = async (req, res) => {
     try {
         const { username } = req.body;
-        const historyLogs = await ChatLog.find({ username }).sort({ timestamp: -1 }).limit(10);
+        const historyLogs = await ChatLog.find({ username }).sort({ timestamp: -1 }).limit(20);
         const history = historyLogs.reverse().map(log => ({
             role: log.role,
             content: log.content

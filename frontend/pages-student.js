@@ -404,6 +404,12 @@ let reflectionAnswers = {};
 let reflectionLoading = false;
 
 async function renderTahap2(main) {
+    // Reset local cache agar selalu mengambil yang terbaru dari server berdasarkan chat terakhir
+    if (typeof lastRenderedTahap === 'undefined' || lastRenderedTahap !== 'tahap2') {
+        reflectionQuestions = [];
+        window.lastRenderedTahap = 'tahap2';
+    }
+
     const progress = getProgress(currentUser.username);
     if (progress.tahap2Complete) {
         main.innerHTML = `
