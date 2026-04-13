@@ -385,9 +385,11 @@ function sendFloatingChat() {
 function formatMessageLocal(text) {
     if (!text) return '';
     if (typeof marked !== 'undefined') {
-        return marked.parse(text);
+        // breaks: true membuat single newline jadi <br>
+        return marked.parse(text, { breaks: true });
     }
-    return text.replace(/\\n/g, '<br>').replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');
+    // Fallback jika library belum load: ganti \n dengan <br> dan **teks** dengan bold
+    return text.toString().replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
 
 function completeTahap1() {
