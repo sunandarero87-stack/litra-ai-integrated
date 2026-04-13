@@ -3,14 +3,15 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-const AI_MODEL = process.env.AI_MODEL || "google/gemma-3-27b-it:free";
-const API_URL = process.env.AI_BASE_URL || "https://openrouter.ai/api/v1/chat/completions";
+const AI_MODEL = process.env.AI_MODEL || "llama-3.3-70b-versatile";
+const API_URL = process.env.AI_BASE_URL || "https://api.groq.com/openai/v1/chat/completions";
 
 // Daftar fallback model jika model utama gagal atau rate-limited
 const FALLBACK_MODELS = [
     AI_MODEL,
-    "gemini-1.5-flash",
-    "gemini-1.5-pro",
+    "llama-3.1-8b-instant",
+    "gemma2-9b-it",
+    "mixtral-8x7b-32768"
 ];
 
 function getHeaders() {
