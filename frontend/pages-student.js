@@ -62,7 +62,7 @@ function renderStudentDashboard(main) {
             ${t3Status === 'completed' ? '<i class="fas fa-check-circle lock-icon" style="color:var(--success)"></i>' : ''}
             <div class="tahap-icon exam"><i class="fas fa-file-alt"></i></div>
             <h3>Tahap 3</h3>
-            <p>Asesmen Utama (10 soal ANBK)</p>
+            <p>Asesmen Utama (10 soal AKM)</p>
             <p class="tahap-status" style="color:${t3Status === 'completed' ? 'var(--success)' : t3Status === 'locked' ? 'var(--text-muted)' : 'var(--danger)'}">
                 ${t3Status === 'completed' ? '✅ Selesai' : t3Status === 'locked' ? '🔒 Terkunci' : '🎯 Mulai Asesmen'}
             </p>
