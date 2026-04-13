@@ -3,17 +3,43 @@ const ChatLog = require('../models/ChatLog');
 
 // Configuration
 const AI_API_KEY = (process.env.AI_API_KEY || "").replace(/\s/g, "");
-// Default fallback to openrouter if not specified in .env
-const AI_MODEL = process.env.AI_MODEL || "openrouter/free";
+const AI_MODEL = process.env.AI_MODEL || "google/gemma-3-27b-it:free";
 const API_URL = process.env.AI_BASE_URL || "https://openrouter.ai/api/v1/chat/completions";
+
+// Daftar fallback model jika model utama gagal atau rate-limited
+const FALLBACK_MODELS = [
+    AI_MODEL,
+    "google/gemma-4-31b-it:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "openrouter/free"
+];
 
 function getHeaders() {
     return {
         "Authorization": `Bearer ${AI_API_KEY}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://litra-ai.railway.app", // Opsional, diperlukan OpenRouter
-        "X-Title": "Litra-AI" // Opsional, diperlukan OpenRouter
+        "HTTP-Referer": "https://litra-ai.railway.app",
+        "X-Title": "Litra-AI"
     };
+}
+
+// Helper: request dengan fallback model otomatis
+async function requestWithFallback(payload, retryDelay = 3000) {
+    let lastError;
+    for (const model of FALLBACK_MODELS) {
+        try {
+            const res = await axios.post(API_URL, { ...payload, model }, { headers: getHeaders(), timeout: 30000 });
+            if (res.data.choices && res.data.choices[0]) return res;
+        } catch (e) {
+            const status = e.response?.status;
+            const errMsg = e.response?.data ? JSON.stringify(e.response.data) : e.message;
+            console.warn(`[AI] Model "${model}" gagal (${status || e.code}): ${errMsg}`);
+            lastError = e;
+            // Jika rate limit, tunggu sebentar sebelum coba model berikutnya
+            if (status === 429) await new Promise(r => setTimeout(r, retryDelay));
+        }
+    }
+    throw lastError || new Error("Semua model AI tidak dapat dijangkau.");
 }
 
 /**
@@ -53,19 +79,12 @@ TAHAP: ${stage}`;
         });
 
         const payload = {
-            model: AI_MODEL,
             messages: messages,
             temperature: 0.7,
             max_tokens: 1024,
         };
 
-        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
-
-        // Validasi response path
-        if (!response.data.choices || !response.data.choices[0]) {
-            throw new Error("AI tidak memberikan jawaban.");
-        }
-
+        const response = await requestWithFallback(payload);
         const aiReply = response.data.choices[0].message.content;
 
         // Logging (Tetap sama)
@@ -143,14 +162,13 @@ async function generateReflections(username, chatHistory) {
         const historyText = chatHistory.map(m => `${m.role}: ${m.content || m.text}`).join('\n');
 
         const payload = {
-            model: AI_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah AI yang merumuskan pertanyaan refleksi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
                 { role: "user", content: `Buat 5 pertanyaan refleksi berdasarkan chat ini dalam format JSON array: ["q1", "q2", "q3", "q4", "q5"].\n\nPastikan bahasanya komunikatif, tidak kaku, dan tidak menggunakan istilah bahasa Inggris yang rumit.\n\nCHAT:\n${historyText}` }
             ]
         };
 
-        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+        const response = await requestWithFallback(payload);
         const text = response.data.choices[0].message.content;
         return JSON.parse(cleanJson(text));
     } catch (error) {
@@ -176,7 +194,7 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
 
     while (retries > 0) {
         try {
-            const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+            const response = await requestWithFallback(payload);
             return JSON.parse(cleanJson(response.data.choices[0].message.content));
         } catch (e) {
             if (e.response && e.response.status === 429 && retries > 1) {
@@ -195,13 +213,12 @@ async function generateAssessment(username, reflectionAnswers, materialContext) 
 async function analyzeReadiness(username, reflectionAnswers) {
     try {
         const payload = {
-            model: AI_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis evaluasi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
                 { role: "user", content: `Analisislah kesiapan siswa (hanya return format JSON object murni {ready: boolean, analysis: string, recommendation: string}): ${JSON.stringify(reflectionAnswers)}` }
             ]
         };
-        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+        const response = await requestWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Readiness Gen Error:", e.message);
@@ -212,13 +229,12 @@ async function analyzeReadiness(username, reflectionAnswers) {
 async function analyzeHabits(username, habitAnswers) {
     try {
         const payload = {
-            model: AI_MODEL,
             messages: [
                 { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
                 { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
             ]
         };
-        const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+        const response = await requestWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Habit Analysis Error:", e.message);
@@ -229,7 +245,6 @@ async function analyzeHabits(username, habitAnswers) {
 async function generateBankSoal(objectivesArray, amount = 10, indicatorType = '', indicatorValue = '') {
     const indicatorContext = indicatorType && indicatorValue ? `\n\nSyarat Tambahan Soal:\n- Fokus Tipe Soal adalah ${indicatorType.toUpperCase()}\n- WAJIB menerapkan Indikator Soal: ${indicatorValue}` : '';
     const payload = {
-        model: AI_MODEL,
         messages: [
             { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda). OUTPUT WAJIB BERUPA TEKS DENGAN DELIMITER ||| (TIGA GARIS LURUS). JANGAN GUNAKAN JSON ATAU MARKDOWN TABLE.\nWAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
             { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda berdasarkan daftar Tujuan Pembelajaran berikut ini:\n\n${JSON.stringify(objectivesArray)}${indicatorContext}\n\nFormat output WAJIB berupa teks biasa, di mana SETIAP BARIS menyajikan tepat SATU soal utuh beserta 8 bagiannya yang dipisahkan oleh ||| seperti format berikut:\n[PERTANYAAN STIMULUS] Spasi [PERTANYAAN UTAMA] ||| Opsi A ||| Opsi B ||| Opsi C ||| Opsi D ||| Kunci_Jawaban (Hanya huruf A, B, C, atau D) ||| Pembahasan ||| Tipe (literasi atau numerasi)\n\nATURAN KETAT DAN MUTLAK:\n1. JUMLAH SOAL HARUS TEPAT ${amount} BARIS TEKS. Jika jumlah Tujuan Pembelajaran yang diberikan lebih sedikit dari ${amount}, kamu WAJIB MENDISTRIBUSIKAN PEMBUATAN SOAL sehingga total hasil akhir tetap berjumlah persis ${amount} soal! Jangan pernah menghasilkan kurang dari ${amount} soal.\n2. PENTING: Setiap soal WAJIB diawali dengan "Pertanyaan Stimulus" BERUPA STUDI KASUS SEDERHANA (seperti cerita pendek aplikatif, masalah kehidupan nyata sederhana, atau fakta pendukung). "Pertanyaan Stimulus" INI HARUS DIGABUNG DAN BERADA DI DALAM KOLOM SOAL YANG SAMA DENGAN PERTANYAAN UTAMA (sebelum tanda ||| pertama).\n3. Jangan gunakan enter/garis baru di dalam kalimat soal atau di dalam kalimat pembahasan. Satu baris mewakili 1 nomor soal secara penuh! Gunakan spasi untuk memisahkan stimulus dengan pertanyaan utama.\n4. Jangan tulis kata pengantar, header tulisan apapun, atau format tabel markdown. Output harus 100% langsung dimulai dari baris soal ke-1 yang dipisahkan |||.\n5. Kunci_Jawaban WAJIB HANYA 1 HURUF KAPITAL tanpa tanda baca: A, B, C, atau D.` }
@@ -243,7 +258,7 @@ async function generateBankSoal(objectivesArray, amount = 10, indicatorType = ''
 
     while (retries > 0) {
         try {
-            const response = await axios.post(API_URL, payload, { headers: getHeaders() });
+            const response = await requestWithFallback(payload);
             const resultText = response.data.choices[0].message.content;
 
             const lines = resultText.split('\n').map(l => l.trim()).filter(l => l.length > 10 && l.includes('|||'));
