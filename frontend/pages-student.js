@@ -146,7 +146,10 @@ function renderTahap1(main) {
                     <h3 style="font-size:0.95rem; margin:0">NARA-AI Asisten ${teacher.name}</h3>
                     <p style="font-size:0.75rem; color: rgba(255,255,255,0.8); margin:0">Membahas Materi</p>
                 </div>
-                <button style="background:none;border:none;color:white;cursor:pointer;font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
+                <div class="chat-header-actions" style="display:flex; gap:0.5rem;">
+                    <button style="background:none; border:none; color:white; cursor:pointer; font-size:1rem; opacity:0.8;" onclick="clearChatHistory()" title="Bersihkan Riwayat Chat"><i class="fas fa-trash-alt"></i></button>
+                    <button style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);"></div>
             <div class="chat-input" style="padding:1rem;border-top:1px solid var(--border-color);display:flex;gap:0.5rem;background:var(--bg-sidebar);">
@@ -1014,4 +1017,26 @@ async function submitHabitReflections(e) {
         btn.innerHTML = 'Kirim Refleksi ke AI';
     }
 }
+
+
+async function clearChatHistory() {
+    if (!confirm('Apakah kamu yakin ingin menghapus semua riwayat chat dengan NARA-AI? Halaman refleksi mungkin akan kosong jika kamu belum chat kembali.')) return;
+    try {
+        const res = await fetch('/api/chat/' + currentUser.username, { method: 'DELETE' });
+        if (res.ok) {
+            // Clear local storage
+            const histories = getChatHistories();
+            histories[currentUser.username] = [];
+            saveChatHistories(histories);
+
+            // Clear UI
+            document.getElementById('floating-chat-messages').innerHTML = '';
+            alert('Riwayat chat berhasil dibersihkan!');
+            toggleChatbot();
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Gagal menghapus riwayat chat.');
+    }
+} 
 

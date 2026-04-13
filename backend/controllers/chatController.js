@@ -115,3 +115,14 @@ exports.handleHabitAnalysis = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+exports.clearHistory = async (req, res) => {
+    try {
+        const { username } = req.params;
+        await ChatLog.deleteMany({ username });
+        res.json({ success: true, message: 'Riwayat chat dihapus' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
