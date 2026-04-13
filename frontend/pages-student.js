@@ -384,6 +384,9 @@ function sendFloatingChat() {
 
 function formatMessageLocal(text) {
     if (!text) return '';
+    if (typeof marked !== 'undefined') {
+        return marked.parse(text);
+    }
     return text.replace(/\\n/g, '<br>').replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');
 }
 
