@@ -1916,3 +1916,11 @@ tr:hover td {
 .message strong { font-weight: 700; }
 .message em { font-style: italic; }
 
+
+/* Enhanced Chat Content UI */
+.message blockquote { border-left: 4px solid var(--primary-light); padding-left: 1rem; margin: 1rem 0; color: var(--text-secondary); font-style: italic; }
+.message hr { border: 0; border-top: 1px solid var(--border-color); margin: 1.5rem 0; }
+.message table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.85rem; }
+.message th, .message td { border: 1px solid var(--border-color); padding: 8px; text-align: left; }
+.message th { background: rgba(255,255,255,0.05); }
+
