@@ -207,7 +207,10 @@ exports.simulateData = async (req, res) => {
 
 exports.resetStage2All = async (req, res) => {
     try {
-        const result = await Progress.updateMany({}, {
+        const { usernames } = req.body;
+        const query = usernames && Array.isArray(usernames) ? { username: { $in: usernames } } : {};
+        
+        const result = await Progress.updateMany(query, {
             $set: {
                 tahap2Complete: false,
                 reflectionAnswers: [],

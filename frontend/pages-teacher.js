@@ -168,11 +168,11 @@ function renderStudentResults(main) {
             <table id="table-student-results">
                 <thead>
                     <tr>
-                        <th onclick="sortTable('table-student-results', 0)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama Siswa <i class="fas fa-sort text-muted"></i></th>
-                        <th onclick="sortTable('table-student-results', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
-                        <th onclick="sortTable('table-student-results', 2)" style="cursor:pointer; color:var(--info)" title="Klik untuk mengurutkan">Nilai Refleksi <br><small>(Tahap 2)</small> <i class="fas fa-sort text-muted"></i></th>
-                        <th onclick="sortTable('table-student-results', 3)" style="cursor:pointer; color:var(--success)" title="Klik untuk mengurutkan">Nilai Asesmen <br><small>(Tahap 3)</small> <i class="fas fa-sort text-muted"></i></th>
-                        <th onclick="sortTable('table-student-results', 4)" style="cursor:pointer; color:var(--primary)" title="Klik untuk mengurutkan">Nilai 7 Kebiasaan <br><small>(Tahap 4)</small> <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama Siswa <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 2)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 3)" style="cursor:pointer; color:var(--info)" title="Klik untuk mengurutkan">Nilai Refleksi <br><small>(Tahap 2)</small> <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 4)" style="cursor:pointer; color:var(--success)" title="Klik untuk mengurutkan">Nilai Asesmen <br><small>(Tahap 3)</small> <i class="fas fa-sort text-muted"></i></th>
+                        <th onclick="sortTable('table-student-results', 5)" style="cursor:pointer; color:var(--primary)" title="Klik untuk mengurutkan">Nilai 7 Kebiasaan <br><small>(Tahap 4)</small> <i class="fas fa-sort text-muted"></i></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1518,9 +1518,17 @@ document.addEventListener('keydown', (e) => {
 
 
 async function triggerResetStage2() {
-    if (!confirm('Apakah Anda yakin ingin mereset Tahap 2 (Refleksi) untuk seluruh siswa? Ini akan menghapus jawaban refleksi yang sudah ada agar AI bisa membangkitkan pertanyaan baru yang lebih relevan dengan chat terbaru mereka.')) return;
+    const selected = Array.from(document.querySelectorAll('.student-select:checked')).map(cb => cb.value);
+    const mode = selected.length > 0 ? 'siswa yang dipilih' : 'seluruh siswa';
+    
+    if (!confirm(`Apakah Anda yakin ingin mereset Tahap 2 (Refleksi) untuk ${mode}? Ini akan menghapus jawaban refleksi yang sudah ada agar AI bisa membangkitkan pertanyaan baru yang lebih relevan dengan chat terbaru mereka.`)) return;
+    
     try {
-        const res = await fetch('/api/progress/reset-stage2', { method: 'POST' });
+        const res = await fetch('/api/progress/reset-stage2', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames: selected.length > 0 ? selected : null })
+        });
         const data = await res.json();
         if (res.ok) {
             alert('? Berhasil mereset Tahap 2 untuk seluruh siswa!');
@@ -1535,3 +1543,9 @@ async function triggerResetStage2() {
     }
 } 
 
+
+function toggleAllResults() {
+    const mainCb = document.getElementById('select-all-results');
+    const cbs = document.querySelectorAll('.student-select');
+    cbs.forEach(cb => cb.checked = mainCb.checked);
+}
