@@ -128,7 +128,7 @@ function renderTahap1(main) {
                 </div>
             </div>
             <div class="chat-complete-btn mt-2" style="text-align: right;">
-                <button class="btn btn-success" onclick="completeTahap1()">
+                <button id="btn-lanjut-tahap2" class="btn btn-success" style="display:none;" onclick="completeTahap1()">
                     <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
                 </button>
             </div>
@@ -152,7 +152,11 @@ function renderTahap1(main) {
                 </div>
             </div>
             <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);"></div>
-            <div class="chat-input" style="padding:1rem;border-top:1px solid var(--border-color);display:flex;gap:0.5rem;background:var(--bg-sidebar);">
+            <div id="quick-replies" style="padding:0.5rem 1rem; background:var(--bg-card); display:flex; gap:0.5rem; justify-content:flex-end; border-top:1px solid var(--border-color);">
+                <button class="btn btn-outline btn-sm" onclick="sendFloatingChat('Saya belum paham, tolong jelaskan kembali dengan analogi yang mudah dipahami.')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🤔 Belum Paham</button>
+                <button class="btn btn-success btn-sm" onclick="sendFloatingChat('Saya sudah paham, tolong berikan pertanyaan untuk mengukur pemahaman saya.')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">💡 Sudah Paham</button>
+            </div>
+            <div class="chat-input" style="padding:1rem;display:flex;gap:0.5rem;background:var(--bg-sidebar);">
                 <input type="text" id="floating-chat-input" placeholder="Ketik pertanyaanmu..." style="flex:1;padding:0.7rem 1rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;" onkeypress="if(event.key==='Enter')sendFloatingChat()">
                 <button onclick="sendFloatingChat()" class="btn btn-primary" style="padding:0.7rem 1.2rem;"><i class="fas fa-paper-plane"></i></button>
             </div>
@@ -308,9 +312,12 @@ function appendFloatingMessage(role, html, teacherPhoto) {
     }
 }
 
-function sendFloatingChat() {
+function sendFloatingChat(quickMsg) {
     const input = document.getElementById('floating-chat-input');
-    const msg = input.value.trim();
+    let msg = input.value.trim();
+    if (typeof quickMsg === 'string') {
+        msg = quickMsg;
+    }
     if (!msg) return;
 
     const users = getUsers();
@@ -324,7 +331,9 @@ function sendFloatingChat() {
     if (!histories[currentUser.username]) histories[currentUser.username] = [];
     histories[currentUser.username].push({ role: 'user', text: msg, time: new Date().toISOString() });
 
-    input.value = '';
+    if (typeof quickMsg !== 'string') {
+        input.value = '';
+    }
     input.disabled = true;
 
     const typing = document.createElement('div');
@@ -366,8 +375,21 @@ function sendFloatingChat() {
         .then(data => {
             document.getElementById('floating-typing-indicator')?.remove();
             if (data.success) {
-                appendFloatingMessage('bot', formatMessageLocal(data.reply), teacherPhoto);
-                histories[currentUser.username].push({ role: 'bot', text: data.reply, time: new Date().toISOString() });
+                let aiReply = data.reply;
+                const scoreMatch = aiReply.match(/\[SKOR:\s*(\d+)\]/i);
+                if (scoreMatch) {
+                    const score = parseInt(scoreMatch[1]);
+                    aiReply = aiReply.replace(/\[SKOR:\s*\d+\]/gi, '').trim();
+                    if (score > 70) {
+                        const btnLanjut = document.getElementById('btn-lanjut-tahap2');
+                        if (btnLanjut) btnLanjut.style.display = 'inline-block';
+                        aiReply += '<br><br><span style="color:var(--success);"><i class="fas fa-star"></i> <strong>Selamat! Pemahamanmu dinilai ' + score + '%. Tombol Lanjut ke Tahap 2 telah terbuka di bagian atas materi.</strong></span>';
+                    } else {
+                        aiReply += '<br><br><span style="color:var(--danger);"><i class="fas fa-exclamation-circle"></i> <strong>Pemahamanmu dinilai ' + score + '%. Silakan pelajari lagi bagian yang belum dipahami agar nilaimu bisa di atas 70%.</strong></span>';
+                    }
+                }
+                appendFloatingMessage('bot', formatMessageLocal(aiReply), teacherPhoto);
+                histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
                 saveChatHistories(histories);
             } else {
                 throw new Error(data.error);
