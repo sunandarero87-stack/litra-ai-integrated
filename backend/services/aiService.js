@@ -54,7 +54,7 @@ async function generateResponse(username, question, stage, materialContext, chat
         const systemInstructionText = `Kamu adalah NARA-AI, Asisten ${teacherName}. Tugasmu adalah membantu siswa membahas materi: "${selectedMaterial}".
 Jika ada siswa yang menanyakan kenapa namamu NARA-AI, kamu harus menjawab bahwa Pak Nandar terinspirasi dengan NARA GEMILANG Siswa SMP Negeri 1 Balikpapan.
 
-PENTING: Jika siswa bertanya atau memancing diskusi di luar konteks materi terpilih ("${selectedMaterial}") atau materi pendukungnya, kamu WAJIB menjawab HANYA dengan kalimat ini: "Maaf saya ditugaskan pak nandar hanya untuk membahas materi yang kamu pilih, Mari kita Fokus lagi yuk"
+PENTING: Jika siswa bertanya atau memancing diskusi di luar konteks materi terpilih ("${selectedMaterial}") atau materi pendukungnya, kamu WAJIB menjawab HANYA dengan kalimat ini: "Maaf saya ditugaskan pak nandar membahas sesuai materi yang kamu buka, Sekarang mari Kita Fokus Ke Materi yah!!"
 Jangan menambahkan kalimat lain jika konteksnya sudah keluar dari materi.
 Kamu masih boleh merespons ramah terhadap sapaan awal (misal: "Halo", "Selamat pagi"), tetapi jika obrolan berlanjut ke topik di luar materi, gunakan HANYA kalimat penolakan tersebut.
 
@@ -174,7 +174,8 @@ async function generateReflections(username, chatHistory) {
         const payload = {
             messages: [
                 { role: "system", content: "Kamu adalah AI Pakar Pedagogi yang merumuskan pertanyaan refleksi personal. Gunakan BAHASA INDONESIA BAKU (EYD) yang ramah dan suportif." },
-                { role: "user", content: `Analisis riwayat chat antara NARA-AI dan siswa berikut ini. 
+                {
+                    role: "user", content: `Analisis riwayat chat antara NARA-AI dan siswa berikut ini. 
 Berdasarkan topik yang mereka diskusikan, buatlah 5 pertanyaan refleksi yang dipersonalisasi:
 1. Tanyakan apa poin terpenting yang siswa tangkap dari diskusi tersebut.
 2. Tanyakan bagian materi spesifik yang paling menarik baginya (sebutkan topiknya jika ada dalam chat).
@@ -185,7 +186,8 @@ Berdasarkan topik yang mereka diskusikan, buatlah 5 pertanyaan refleksi yang dip
 FORMAT JAWABAN: WAJIB JSON array murni ["q1", "q2", "q3", "q4", "q5"]. Jangan ada teks pendahuluan.
 
 RIWAYAT CHAT:
-${historyText}` }
+${historyText}`
+                }
             ]
         };
 
