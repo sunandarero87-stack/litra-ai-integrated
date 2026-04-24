@@ -16,8 +16,20 @@ exports.handleChat = async (req, res) => {
             student = await Student.create({ username, stage: 1 });
         }
 
-        const materials = await Material.find({ active: true });
-        const materialContext = materials.map(m => m.content).join('\n\n');
+        let materialContext = "";
+        if (selectedMaterial) {
+            const mat = await Material.findOne({ name: selectedMaterial });
+            if (mat && mat.content) {
+                materialContext = `Materi Utama: ${mat.name}\n${mat.content}`;
+            } else if (mat) {
+                materialContext = `Materi Utama: ${mat.name}`;
+            }
+        }
+
+        if (!materialContext) {
+            const materials = await Material.find();
+            materialContext = materials.map(m => m.content || "").join('\n\n');
+        }
 
         const historyLogs = await ChatLog.find({ username })
             .sort({ timestamp: -1 })

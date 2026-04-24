@@ -1,4 +1,6 @@
+global.DOMMatrix = class {};
 const Material = require('../models/Material');
+const pdf = require('pdf-parse');
 
 exports.getMaterials = async (req, res) => {
     try {
@@ -46,7 +48,25 @@ exports.getMaterialContent = async (req, res) => {
 
 exports.addMaterial = async (req, res) => {
     try {
-        const newMaterial = new Material(req.body);
+        const materialData = req.body;
+        
+        // Extract text content if it's a PDF
+        if (materialData.type === 'pdf' && materialData.contentDataUrl) {
+            try {
+                const base64Data = materialData.contentDataUrl.split(',')[1];
+                if (base64Data) {
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const data = await pdf(buffer);
+                    materialData.content = data.text;
+                    console.log(`[Material] Extracted ${data.numpages} pages from ${materialData.name}`);
+                }
+            } catch (parseErr) {
+                console.warn(`[Material] Failed to parse PDF text for ${materialData.name}:`, parseErr.message);
+                // Continue saving even if parsing fails, but Nara-AI won't have context
+            }
+        }
+
+        const newMaterial = new Material(materialData);
         await newMaterial.save();
         res.json({ success: true, material: newMaterial });
     } catch (err) {
