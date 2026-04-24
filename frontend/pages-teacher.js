@@ -633,10 +633,16 @@ let _bankSoalCache = [];
 async function renderBankSoal(main) {
     main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat Bank Soal...</p></div>';
 
+    let materials = [];
     try {
-        const res = await fetch('/api/question-bank');
+        const [res, resMat] = await Promise.all([
+            fetch('/api/question-bank'),
+            fetch('/api/materials')
+        ]);
         const data = await res.json();
+        const dataMat = await resMat.json();
         _bankSoalCache = data.questions || [];
+        materials = dataMat.materials || [];
     } catch (err) {
         console.error(err);
         _bankSoalCache = [];
@@ -734,6 +740,20 @@ async function renderBankSoal(main) {
                         <input type="text" class="form-control ai-objective-input" placeholder="Tujuan Pembelajaran 1..." required>
                     </div>
                     <button class="btn btn-success w-100" id="btn-generate-ai" onclick="generateBankSoalAI()"><i class="fas fa-magic"></i> Buat Soal Otomatis</button>
+
+                    <hr style="margin: 2rem 0;">
+                    
+                    <h4>📄 Buat Soal dari Materi</h4>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan membaca materi yang telah Anda upload dan membuat 10 soal berdasarkan isi materi tersebut.</p>
+                    <div class="form-group mb-2">
+                        <label>Pilih Materi</label>
+                        <select id="ai-material-id" class="form-control">
+                            <option value="">-- Pilih Materi --</option>
+                            ${materials.map(m => `<option value="${m._id}">${m.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button class="btn btn-primary w-100" id="btn-generate-material" onclick="generateBankSoalFromMaterial()"><i class="fas fa-file-alt"></i> Buat Soal dari Materi</button>
+
                 </div>
                 <div>
                     <h4>➕ Tambah Manual (1 Soal)</h4>
@@ -836,6 +856,71 @@ async function generateBankSoalAI() {
         btn.innerHTML = '<i class="fas fa-magic"></i> Buat Soal Otomatis';
     }
 }
+
+async function generateBankSoalFromMaterial() {
+    const materialId = document.getElementById('ai-material-id').value;
+    if (!materialId) {
+        alert('Harap pilih materi terlebih dahulu.');
+        return;
+    }
+
+    const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
+    const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
+
+    const btn = document.getElementById('btn-generate-material');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang Membaca Materi & Membuat Soal... (1-2 menit)';
+
+    try {
+        const res = await fetch('/api/question-bank/generate-from-material', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ materialId, amount: 10, indicatorType, indicatorValue })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            alert(data.message || 'Soal berhasil dibuat dari materi!');
+
+            if (data.excelData) {
+                try {
+                    const byteCharacters = atob(data.excelData);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'Soal_Materi_Generated.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } catch (e) {
+                    console.error("Gagal mendownload otomatis Excel:", e);
+                }
+            }
+
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal membuat soal dari materi.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    } catch (err) {
+        console.error('Error in generateBankSoalFromMaterial:', err);
+        alert('Server error saat membuat soal dari materi.');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
 
 function initBankSoalTab(tabName) {
     document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));

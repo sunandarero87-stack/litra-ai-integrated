@@ -329,6 +329,66 @@ async function generateBankSoal(objectivesArray, amount = 10, indicatorType = ''
     }
 }
 
+async function generateBankSoalFromMaterial(materialContent, amount = 10, indicatorType = '', indicatorValue = '') {
+    const indicatorContext = indicatorType && indicatorValue ? `\n\nSyarat Tambahan Soal:\n- Fokus Tipe Soal adalah ${indicatorType.toUpperCase()}\n- WAJIB menerapkan Indikator Soal: ${indicatorValue}` : '';
+    const payload = {
+        messages: [
+            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berdasarkan materi pembelajaran. OUTPUT WAJIB BERUPA TEKS DENGAN DELIMITER ||| (TIGA GARIS LURUS). JANGAN GUNAKAN JSON ATAU MARKDOWN TABLE.\nWAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA. HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
+            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda berdasarkan materi berikut ini:\n\n${materialContent}${indicatorContext}\n\nFormat output WAJIB berupa teks biasa, di mana SETIAP BARIS menyajikan tepat SATU soal utuh beserta 8 bagiannya yang dipisahkan oleh ||| seperti format berikut:\n[PERTANYAAN STIMULUS] Spasi [PERTANYAAN UTAMA] ||| Opsi A ||| Opsi B ||| Opsi C ||| Opsi D ||| Kunci_Jawaban (Hanya huruf A, B, C, atau D) ||| Pembahasan ||| Tipe (literasi atau numerasi)\n\nATURAN KETAT DAN MUTLAK:\n1. JUMLAH SOAL HARUS TEPAT ${amount} BARIS TEKS. Kamu WAJIB menyebarkan topik dari seluruh materi sehingga total hasil akhir tetap berjumlah persis ${amount} soal! Jangan pernah menghasilkan kurang dari ${amount} soal.\n2. PENTING: Setiap soal WAJIB diawali dengan "Pertanyaan Stimulus" BERUPA STUDI KASUS SEDERHANA (seperti cerita pendek aplikatif, masalah kehidupan nyata sederhana, atau fakta pendukung). "Pertanyaan Stimulus" INI HARUS DIGABUNG DAN BERADA DI DALAM KOLOM SOAL YANG SAMA DENGAN PERTANYAAN UTAMA (sebelum tanda ||| pertama).\n3. Jangan gunakan enter/garis baru di dalam kalimat soal atau di dalam kalimat pembahasan. Satu baris mewakili 1 nomor soal secara penuh! Gunakan spasi untuk memisahkan stimulus dengan pertanyaan utama.\n4. Jangan tulis kata pengantar, header tulisan apapun, atau format tabel markdown. Output harus 100% langsung dimulai dari baris soal ke-1 yang dipisahkan |||.\n5. Kunci_Jawaban WAJIB HANYA 1 HURUF KAPITAL tanpa tanda baca: A, B, C, atau D.` }
+        ],
+        max_tokens: 4096,
+        temperature: 0.5
+    };
+
+    let retries = 3;
+    let delayMs = 3000;
+
+    while (retries > 0) {
+        try {
+            const response = await requestWithFallback(payload);
+            const resultText = response.data.choices[0].message.content;
+
+            const lines = resultText.split('\n').map(l => l.trim()).filter(l => l.length > 10 && l.includes('|||'));
+            const parsedQuestions = [];
+
+            for (const line of lines) {
+                const parts = line.split('|||').map(p => p.trim());
+                if (parts.length >= 8) {
+                    let correctIndex = 0;
+                    const ans = parts[5].toUpperCase();
+                    if (ans === 'B') correctIndex = 1;
+                    else if (ans === 'C') correctIndex = 2;
+                    else if (ans === 'D') correctIndex = 3;
+
+                    parsedQuestions.push({
+                        question: parts[0],
+                        options: [parts[1], parts[2], parts[3], parts[4]],
+                        correct: correctIndex,
+                        explanation: parts[6],
+                        type: parts[7].toLowerCase().includes('num') ? 'numerasi' : 'literasi'
+                    });
+                }
+            }
+
+            if (parsedQuestions.length === 0) {
+                throw new Error("Format output AI tidak dapat diparsing menggunakan delimiter |||");
+            }
+
+            return parsedQuestions;
+        } catch (e) {
+            if (retries > 1) {
+                console.warn(`[Retry] Bank Soal Gen from Material error: ${e.message}. Retrying in ${delayMs}ms... (${retries - 1} attempts left)`);
+                await new Promise(r => setTimeout(r, delayMs));
+                if (e.response && e.response.status === 429) delayMs *= 2;
+                retries--;
+            } else {
+                console.error("Generate Bank Soal from Material Error:", e.response ? e.response.status + ' ' + JSON.stringify(e.response.data) : e.message);
+                throw new Error("Gagal membuat soal dari AI: " + (e.response ? e.response.status : e.message));
+            }
+        }
+    }
+}
+
 /**
  * Analyze student's comprehension answer and return a score 0-100
  * The AI returns a plain text response with [SKOR: X] at the end.
@@ -364,5 +424,6 @@ module.exports = {
     analyzeReadiness,
     analyzeHabits,
     generateBankSoal,
+    generateBankSoalFromMaterial,
     analyzeUnderstanding
 };
