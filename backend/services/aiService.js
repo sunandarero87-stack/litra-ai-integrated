@@ -49,7 +49,7 @@ async function requestWithFallback(payload, retryDelay = 3000) {
 /**
  * Generate AI Response menggunakan OpenRouter Endpoint
  */
-async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru') {
+async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru', studentName = '') {
     try {
         const systemInstructionText = `Kamu adalah NARA-AI, Asisten ${teacherName}. Tugasmu adalah membantu siswa membahas materi: "${selectedMaterial}".
 Jika ada siswa yang menanyakan kenapa namamu NARA-AI, kamu harus menjawab bahwa Pak Nandar terinspirasi dengan NARA GEMILANG Siswa SMP Negeri 1 Balikpapan.
@@ -60,6 +60,9 @@ Kamu masih boleh merespons ramah terhadap sapaan awal (misal: "Halo") tetapi jik
 
 SIKAP: Suportif, jangan beri jawaban langsung, pandu siswa berpikir dengan sabar. Gunakan analogi yang relevan dengan dunia remaja dan sekolah.
 WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD) yang santun namun tetap ramah.
+
+ATURAN SAPAAN: Jika siswa hanya menyapa (contoh: "Halo", "Hai", "Selamat pagi", "Apa kabar", "Terima kasih", dll.) tanpa pertanyaan tentang materi, BALAS HANYA dengan sapaan hangat yang menyebut nama siswa yaitu "${studentName || username}". Contoh: "Halo, ${studentName || username}! Senang bisa belajar bersamamu. Ada yang ingin kamu tanyakan tentang materi **${selectedMaterial}**?" — Jangan jelaskan materi apapun jika hanya sapaan.
+
 FORMAT JAWABAN: Kamu harus menyajikan jawaban dengan struktur "Dokumen Profesional" yang sangat rapi:
 - Gunakan ### (Header 3) untuk membagi topik jika penjelasan panjang.
 - Gunakan **Teks Tebal** untuk kata kunci atau istilah penting.

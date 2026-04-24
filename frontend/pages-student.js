@@ -151,7 +151,7 @@ function renderTahap1(main) {
                     <button style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);"></div>
+            <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);user-select:none;-webkit-user-select:none;" oncopy="return false;" oncontextmenu="return false;"></div>
             <div id="quick-replies" style="padding:0.5rem 1rem; background:var(--bg-card); display:none; gap:0.5rem; justify-content:center; border-top:1px solid var(--border-color); flex-wrap: wrap;"></div>
             <div class="chat-input" style="padding:1rem;display:flex;gap:0.5rem;background:var(--bg-sidebar);">
                 <input type="text" id="floating-chat-input" placeholder="Ketik pertanyaanmu..." style="flex:1;padding:0.7rem 1rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;" onkeypress="if(event.key==='Enter')sendFloatingChat()">
@@ -312,6 +312,30 @@ function appendFloatingMessage(role, html, teacherPhoto) {
 // ---- State untuk alur Cek Pemahaman ----
 let lastAiExplanation = '';
 let waitingForUnderstandingAnswer = false;
+let lastUserMessage = ''; // Simpan pesan terakhir siswa untuk deteksi sapaan
+
+/**
+ * Deteksi apakah pesan siswa hanya sapaan (bukan pertanyaan)
+ * Jika ya, tombol Paham/Belum Paham tidak perlu ditampilkan
+ */
+function isGreetingMessage(msg) {
+    if (!msg) return true;
+    const cleaned = msg.trim().toLowerCase();
+    const greetingPatterns = [
+        /^(halo|hai|hi|hello|hey|hei|assalamualaikum|assalam|wa'alaikumsalam|waalaikumsalam)(\s|!|$)/,
+        /^selamat\s+(pagi|siang|sore|malam|datang)/,
+        /^(good\s+(morning|afternoon|evening|night))/,
+        /^(apa kabar|apa khabar|gimana kabar|bagaimana kabar)/,
+        /^(terima kasih|makasih|thanks|thank you|thx)(\s|!|$)/,
+        /^(ok|oke|iya|ya|siap|baik|mantap|sip|otw)(\s|!|$)/,
+    ];
+    // Cek apakah pesan singkat (≤5 kata) dan cocok dengan pola sapaan
+    const wordCount = cleaned.split(/\s+/).length;
+    if (wordCount <= 5) {
+        return greetingPatterns.some(pattern => pattern.test(cleaned));
+    }
+    return false;
+}
 
 /**
  * Tampilkan atau sembunyikan tombol Paham/Belum Paham
@@ -427,6 +451,11 @@ function sendFloatingChat(quickMsg) {
     let msg = (typeof quickMsg === 'string') ? quickMsg : input.value.trim();
     if (!msg) return;
 
+    // Simpan pesan asli siswa (bukan quick message sistem) untuk deteksi sapaan
+    if (typeof quickMsg !== 'string') {
+        lastUserMessage = msg;
+    }
+
     const users = getUsers();
     const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
     const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
@@ -480,6 +509,7 @@ function sendFloatingChat(quickMsg) {
         body: JSON.stringify({
             message: msg,
             username: currentUser.username,
+            studentName: currentUser.name || currentUser.username,
             selectedMaterial: materialName,
             teacherName: teacher.name
         })
@@ -497,10 +527,10 @@ function sendFloatingChat(quickMsg) {
                 histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
                 saveChatHistories(histories);
 
-                // Tampilkan tombol Paham/Belum Paham setelah SEMUA respons AI
-                // (penjelasan biasa, penjelasan ulang, maupun analogi)
-                // Kecuali saat AI baru saja memberi soal uji pemahaman (menunggu jawaban siswa)
-                if (!waitingForUnderstandingAnswer) {
+                // Tampilkan tombol Paham/Belum Paham hanya jika:
+                // 1. Tidak sedang menunggu jawaban uji pemahaman
+                // 2. Pesan siswa bukan sapaan (sapaan tidak butuh tombol paham/belum paham)
+                if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage)) {
                     showPahamButtons();
                 }
             } else {
