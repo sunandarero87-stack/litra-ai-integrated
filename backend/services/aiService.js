@@ -325,11 +325,40 @@ async function generateBankSoal(objectivesArray, amount = 10, indicatorType = ''
     }
 }
 
+/**
+ * Analyze student's comprehension answer and return a score 0-100
+ * The AI returns a plain text response with [SKOR: X] at the end.
+ */
+async function analyzeUnderstanding(username, originalExplanation, studentAnswer) {
+    try {
+        const payload = {
+            messages: [
+                {
+                    role: "system",
+                    content: "Kamu adalah evaluator pemahaman siswa yang adil dan teliti. Tugasmu hanya menilai jawaban siswa terhadap pertanyaan uji pemahaman. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD) yang ramah dan suportif."
+                },
+                {
+                    role: "user",
+                    content: `Konteks penjelasan sebelumnya dari NARA-AI:\n"${originalExplanation}"\n\nJawaban siswa atas pertanyaan uji pemahaman:\n"${studentAnswer}"\n\nBerikan feedback singkat yang suportif (2-3 kalimat) terhadap jawaban siswa tersebut, lalu nilai pemahamannya dari 0 hingga 100. Akhiri responmu HANYA dengan satu baris berformat tepat: [SKOR: X] (ganti X dengan angka).`
+                }
+            ],
+            temperature: 0.3,
+            max_tokens: 512
+        };
+        const response = await requestWithFallback(payload);
+        return response.data.choices[0].message.content;
+    } catch (e) {
+        console.error("analyzeUnderstanding Error:", e.message);
+        return "Terima kasih atas jawabanmu! Terus semangat belajar ya. [SKOR: 50]";
+    }
+}
+
 module.exports = {
     generateResponse,
     generateReflections,
     generateAssessment,
     analyzeReadiness,
     analyzeHabits,
-    generateBankSoal
+    generateBankSoal,
+    analyzeUnderstanding
 };

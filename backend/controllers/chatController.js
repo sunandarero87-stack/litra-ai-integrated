@@ -116,6 +116,19 @@ exports.handleHabitAnalysis = async (req, res) => {
     }
 };
 
+exports.handleAnalyzeUnderstanding = async (req, res) => {
+    try {
+        const { username, originalExplanation, studentAnswer } = req.body;
+        if (!username || !studentAnswer) {
+            return res.status(400).json({ error: 'username dan studentAnswer wajib diisi' });
+        }
+        const result = await aiService.analyzeUnderstanding(username, originalExplanation || '', studentAnswer);
+        res.json({ success: true, result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 exports.clearHistory = async (req, res) => {
     try {
         const { username } = req.params;
@@ -125,4 +138,3 @@ exports.clearHistory = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-

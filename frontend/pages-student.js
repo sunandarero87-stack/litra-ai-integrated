@@ -152,10 +152,7 @@ function renderTahap1(main) {
                 </div>
             </div>
             <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);"></div>
-            <div id="quick-replies" style="padding:0.5rem 1rem; background:var(--bg-card); display:flex; gap:0.5rem; justify-content:flex-end; border-top:1px solid var(--border-color);">
-                <button class="btn btn-outline btn-sm" onclick="sendFloatingChat('Saya belum paham, tolong jelaskan kembali dengan analogi yang mudah dipahami.')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">🤔 Belum Paham</button>
-                <button class="btn btn-success btn-sm" onclick="sendFloatingChat('Saya sudah paham, tolong berikan pertanyaan untuk mengukur pemahaman saya.')" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">💡 Sudah Paham</button>
-            </div>
+            <div id="quick-replies" style="padding:0.5rem 1rem; background:var(--bg-card); display:none; gap:0.5rem; justify-content:center; border-top:1px solid var(--border-color); flex-wrap: wrap;"></div>
             <div class="chat-input" style="padding:1rem;display:flex;gap:0.5rem;background:var(--bg-sidebar);">
                 <input type="text" id="floating-chat-input" placeholder="Ketik pertanyaanmu..." style="flex:1;padding:0.7rem 1rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;" onkeypress="if(event.key==='Enter')sendFloatingChat()">
                 <button onclick="sendFloatingChat()" class="btn btn-primary" style="padding:0.7rem 1.2rem;"><i class="fas fa-paper-plane"></i></button>
@@ -312,12 +309,122 @@ function appendFloatingMessage(role, html, teacherPhoto) {
     }
 }
 
+// ---- State untuk alur Cek Pemahaman ----
+let lastAiExplanation = '';
+let waitingForUnderstandingAnswer = false;
+
+/**
+ * Tampilkan atau sembunyikan tombol Paham/Belum Paham
+ */
+function showPahamButtons() {
+    const qr = document.getElementById('quick-replies');
+    if (!qr) return;
+    qr.style.display = 'flex';
+    qr.innerHTML = `
+        <span style="font-size:0.82rem;color:var(--text-muted);align-self:center;margin-right:0.25rem;">Apakah kamu sudah paham?</span>
+        <button id="btn-belum-paham" class="btn btn-outline btn-sm" onclick="onBelumPaham()"
+            style="padding:0.4rem 0.9rem;font-size:0.85rem;border-color:var(--danger);color:var(--danger);">🤔 Belum Paham</button>
+        <button id="btn-paham" class="btn btn-success btn-sm" onclick="onPaham()"
+            style="padding:0.4rem 0.9rem;font-size:0.85rem;">💡 Sudah Paham</button>
+    `;
+}
+
+function hidePahamButtons() {
+    const qr = document.getElementById('quick-replies');
+    if (qr) { qr.style.display = 'none'; qr.innerHTML = ''; }
+}
+
+/** Siswa klik "Belum Paham" */
+function onBelumPaham() {
+    hidePahamButtons();
+    sendFloatingChat('Saya belum paham. Tolong jelaskan lagi dengan cara yang lebih sederhana atau dengan analogi yang mudah dipahami.');
+}
+
+/** Siswa klik "Sudah Paham" — minta NARA-AI buat pertanyaan uji */
+function onPaham() {
+    hidePahamButtons();
+    waitingForUnderstandingAnswer = true;
+    sendFloatingChat('Saya sudah paham. Tolong berikan SATU pertanyaan singkat untuk mengukur pemahamanku terhadap penjelasan tadi.');
+}
+
+/**
+ * Kirim jawaban uji pemahaman ke endpoint /api/chat/analyze-understanding
+ * dipanggil ketika waitingForUnderstandingAnswer = true dan siswa mengirim pesan
+ */
+async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
+    waitingForUnderstandingAnswer = false;
+    hidePahamButtons();
+
+    const chatBox = document.getElementById('floating-chat-messages');
+    // Tampilkan indikator typing
+    const typing = document.createElement('div');
+    typing.id = 'floating-typing-indicator';
+    typing.style.cssText = 'display:flex;gap:0.75rem;align-self:flex-start;';
+    typing.innerHTML = `
+        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">${teacherPhoto}</div>
+        <div style="padding:0.75rem 1rem;font-size:0.9rem;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
+            <div style="display:flex;gap:4px;padding:0.5rem 0;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
+            </div>
+        </div>`;
+    chatBox.appendChild(typing);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    try {
+        const res = await fetch('/api/chat/analyze-understanding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: currentUser.username,
+                originalExplanation: lastAiExplanation,
+                studentAnswer: studentAnswer
+            })
+        });
+        const data = await res.json();
+        document.getElementById('floating-typing-indicator')?.remove();
+
+        if (data.success) {
+            let feedbackText = data.result;
+            const scoreMatch = feedbackText.match(/\[SKOR:\s*(\d+)\]/i);
+            const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
+
+            // Hapus tag [SKOR: X] dari teks yang ditampilkan
+            feedbackText = feedbackText.replace(/\[SKOR:\s*\d+\]/gi, '').trim();
+
+            if (score >= 75) {
+                // Tunjukkan tombol Lanjut ke Tahap 2
+                const btnLanjut = document.getElementById('btn-lanjut-tahap2');
+                if (btnLanjut) btnLanjut.style.display = 'inline-block';
+                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#1a7a4a,#22c55e);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
+                    <i class="fas fa-star" style="font-size:1.4rem;"></i>
+                    <div style="font-size:1rem;font-weight:700;margin-top:0.3rem;">Luar Biasa! Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Tombol <strong>Lanjut ke Tahap 2</strong> sudah terbuka di atas! 🎉</div>
+                </div>`;
+            } else {
+                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
+                    <i class="fas fa-redo" style="font-size:1.2rem;"></i>
+                    <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}% — Belum Mencapai 75%</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Yuk, pelajari lagi bagian yang belum dipahami dan coba diskusikan ulang dengan NARA-AI!</div>
+                </div>`;
+            }
+            appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
+
+            const histories = getChatHistories();
+            if (!histories[currentUser.username]) histories[currentUser.username] = [];
+            histories[currentUser.username].push({ role: 'bot', text: feedbackText, time: new Date().toISOString() });
+            saveChatHistories(histories);
+        }
+    } catch (err) {
+        document.getElementById('floating-typing-indicator')?.remove();
+        appendFloatingMessage('bot', 'Maaf, gagal menganalisis jawabanmu. Silakan coba lagi.', teacherPhoto);
+    }
+}
+
 function sendFloatingChat(quickMsg) {
     const input = document.getElementById('floating-chat-input');
-    let msg = input.value.trim();
-    if (typeof quickMsg === 'string') {
-        msg = quickMsg;
-    }
+    let msg = (typeof quickMsg === 'string') ? quickMsg : input.value.trim();
     if (!msg) return;
 
     const users = getUsers();
@@ -331,10 +438,17 @@ function sendFloatingChat(quickMsg) {
     if (!histories[currentUser.username]) histories[currentUser.username] = [];
     histories[currentUser.username].push({ role: 'user', text: msg, time: new Date().toISOString() });
 
-    if (typeof quickMsg !== 'string') {
-        input.value = '';
-    }
+    if (typeof quickMsg !== 'string') input.value = '';
     input.disabled = true;
+    hidePahamButtons();
+
+    // Jika sedang menunggu jawaban uji pemahaman, proses khusus
+    if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
+        input.disabled = false;
+        input.focus();
+        sendUnderstandingAnswer(msg, teacherPhoto);
+        return;
+    }
 
     const typing = document.createElement('div');
     typing.className = 'message bot';
@@ -360,7 +474,6 @@ function sendFloatingChat(quickMsg) {
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
 
-    // Send to API Route
     fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -376,21 +489,19 @@ function sendFloatingChat(quickMsg) {
             document.getElementById('floating-typing-indicator')?.remove();
             if (data.success) {
                 let aiReply = data.reply;
-                const scoreMatch = aiReply.match(/\[SKOR:\s*(\d+)\]/i);
-                if (scoreMatch) {
-                    const score = parseInt(scoreMatch[1]);
-                    aiReply = aiReply.replace(/\[SKOR:\s*\d+\]/gi, '').trim();
-                    if (score > 70) {
-                        const btnLanjut = document.getElementById('btn-lanjut-tahap2');
-                        if (btnLanjut) btnLanjut.style.display = 'inline-block';
-                        aiReply += '<br><br><span style="color:var(--success);"><i class="fas fa-star"></i> <strong>Selamat! Pemahamanmu dinilai ' + score + '%. Tombol Lanjut ke Tahap 2 telah terbuka di bagian atas materi.</strong></span>';
-                    } else {
-                        aiReply += '<br><br><span style="color:var(--danger);"><i class="fas fa-exclamation-circle"></i> <strong>Pemahamanmu dinilai ' + score + '%. Silakan pelajari lagi bagian yang belum dipahami agar nilaimu bisa di atas 70%.</strong></span>';
-                    }
-                }
+
+                // Simpan penjelasan AI sebagai konteks untuk uji pemahaman nanti
+                lastAiExplanation = aiReply;
+
                 appendFloatingMessage('bot', formatMessageLocal(aiReply), teacherPhoto);
                 histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
                 saveChatHistories(histories);
+
+                // Selalu tampilkan tombol Paham/Belum Paham setelah respons AI biasa
+                // (tidak ditampilkan saat quickMsg karena itu pesan sistem dari tombol itu sendiri)
+                if (typeof quickMsg !== 'string') {
+                    showPahamButtons();
+                }
             } else {
                 throw new Error(data.error);
             }
@@ -398,8 +509,7 @@ function sendFloatingChat(quickMsg) {
         .catch(err => {
             console.error(err);
             document.getElementById('floating-typing-indicator')?.remove();
-            const fallback = "Maaf, saat ini sedang terjadi gangguan jaringan. Silakan coba lagi.";
-            appendFloatingMessage('bot', fallback, teacherPhoto);
+            appendFloatingMessage('bot', 'Maaf, saat ini sedang terjadi gangguan jaringan. Silakan coba lagi.', teacherPhoto);
         })
         .finally(() => {
             input.disabled = false;

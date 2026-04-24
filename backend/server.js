@@ -62,6 +62,7 @@ mongoose.connect(MONGODB_URI, mongooseOptions)
 // ---- API Routes ----
 
 app.post('/api/chat', chatController.handleChat);
+app.post('/api/chat/analyze-understanding', chatController.handleAnalyzeUnderstanding);
 app.delete('/api/chat/:username', chatController.clearHistory);
 
 // New Routes for Stage 2 & 3
