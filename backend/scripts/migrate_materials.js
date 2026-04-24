@@ -1,4 +1,6 @@
-global.DOMMatrix = class {};
+global.DOMMatrix = class {}; // Mocks for pdf-parse in Node.js
+global.DOMPoint = class {};
+global.DOMRect = class {};
 const mongoose = require('mongoose');
 const Material = require('../models/Material');
 const pdf = require('pdf-parse');
