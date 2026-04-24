@@ -1,6 +1,6 @@
-global.DOMMatrix = class {};
 const Material = require('../models/Material');
 const pdf = require('pdf-parse');
+const mammoth = require('mammoth');
 
 exports.getMaterials = async (req, res) => {
     try {
@@ -58,11 +58,24 @@ exports.addMaterial = async (req, res) => {
                     const buffer = Buffer.from(base64Data, 'base64');
                     const data = await pdf(buffer);
                     materialData.content = data.text;
-                    console.log(`[Material] Extracted ${data.numpages} pages from ${materialData.name}`);
+                    console.log(`[Material] Extracted text from PDF: ${materialData.name} (${data.numpages} pages)`);
                 }
             } catch (parseErr) {
                 console.warn(`[Material] Failed to parse PDF text for ${materialData.name}:`, parseErr.message);
-                // Continue saving even if parsing fails, but Nara-AI won't have context
+            }
+        } 
+        // Extract text content if it's a DOCX
+        else if (materialData.type === 'docx' && materialData.contentDataUrl) {
+            try {
+                const base64Data = materialData.contentDataUrl.split(',')[1];
+                if (base64Data) {
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const result = await mammoth.extractRawText({ buffer: buffer });
+                    materialData.content = result.value;
+                    console.log(`[Material] Extracted text from DOCX: ${materialData.name}`);
+                }
+            } catch (parseErr) {
+                console.warn(`[Material] Failed to parse DOCX text for ${materialData.name}:`, parseErr.message);
             }
         }
 

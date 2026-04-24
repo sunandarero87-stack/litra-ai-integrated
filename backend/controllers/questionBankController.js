@@ -308,7 +308,8 @@ exports.generateFromMaterial = async (req, res) => {
 
         const material = await Material.findById(materialId);
         if (!material || !material.content) {
-            return res.status(404).json({ error: 'Materi tidak ditemukan atau tidak memiliki teks konten. Pastikan materi sudah diproses/diupload ulang.' });
+            const reason = !material ? 'Materi tidak ditemukan di database.' : 'Teks konten materi kosong. Silakan upload ulang file materi (PDF/DOCX) agar Nara-AI dapat membacanya.';
+            return res.status(404).json({ error: reason });
         }
 
         const questionAmount = amount ? parseInt(amount) : 10;
