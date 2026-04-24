@@ -497,9 +497,10 @@ function sendFloatingChat(quickMsg) {
                 histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
                 saveChatHistories(histories);
 
-                // Selalu tampilkan tombol Paham/Belum Paham setelah respons AI biasa
-                // (tidak ditampilkan saat quickMsg karena itu pesan sistem dari tombol itu sendiri)
-                if (typeof quickMsg !== 'string') {
+                // Tampilkan tombol Paham/Belum Paham setelah SEMUA respons AI
+                // (penjelasan biasa, penjelasan ulang, maupun analogi)
+                // Kecuali saat AI baru saja memberi soal uji pemahaman (menunggu jawaban siswa)
+                if (!waitingForUnderstandingAnswer) {
                     showPahamButtons();
                 }
             } else {
