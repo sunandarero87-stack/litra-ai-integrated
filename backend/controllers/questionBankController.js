@@ -385,3 +385,26 @@ exports.generateFromMaterial = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.getQuestionById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const question = await QuestionBank.findById(id);
+        if (!question) return res.status(404).json({ error: 'Soal tidak ditemukan' });
+        res.json({ success: true, question });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.updateQuestion = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+        const updatedQ = await QuestionBank.findByIdAndUpdate(id, updateData, { new: true });
+        if (!updatedQ) return res.status(404).json({ error: 'Soal tidak ditemukan' });
+        res.json({ success: true, question: updatedQ });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};

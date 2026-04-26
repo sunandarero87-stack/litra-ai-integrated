@@ -74,7 +74,9 @@ app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
 
 // Question Bank Management Routes
 app.get('/api/question-bank', questionBankController.getQuestions);
+app.get('/api/question-bank/:id', questionBankController.getQuestionById);
 app.post('/api/question-bank', questionBankController.addQuestion);
+app.put('/api/question-bank/:id', questionBankController.updateQuestion);
 app.delete('/api/question-bank/:id', questionBankController.deleteQuestion);
 app.post('/api/question-bank/bulk-delete', questionBankController.bulkDeleteQuestions);
 app.get('/api/question-bank/template', questionBankController.downloadTemplate);

@@ -30,25 +30,26 @@ function renderTeacherDashboard(main) {
     </div>
 
     <!-- Chart Section -->
-    <div class="grid-2 mt-2">
+    <div class="mt-2">
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title"><i class="fas fa-chart-pie"></i> Progres Tahap Belajar</h3>
+                <h3 class="card-title"><i class="fas fa-chart-pie"></i> Tingkat Pencapaian Literasi & Numerasi</h3>
             </div>
-            <div style="height: 300px; display: flex; justify-content: center;">
-                <canvas id="chart-stages"></canvas>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 class="card-title"><i class="fas fa-calendar-check"></i> Laporan Absensi</h3>
-                <select id="attendance-class-filter" class="form-control" style="width:auto; margin-bottom:0; padding:0.2rem 0.5rem;" onchange="updateAttendanceChart()">
-                    <option value="all">Semua Kelas</option>
-                    ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
-            </div>
-            <div style="height: 300px; display: flex; justify-content: center;">
-                <canvas id="chart-attendance"></canvas>
+            <div class="grid-2" style="align-items:center;">
+                <div style="height: 350px; display: flex; justify-content: center; padding: 1rem;">
+                    <canvas id="chart-attainment"></canvas>
+                </div>
+                <div style="padding: 2rem;">
+                    <h4 class="text-muted mb-1">Keterangan:</h4>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
+                        <div style="width:15px; height:15px; background:#4caf50; border-radius:3px;"></div>
+                        <span><strong>Lulus:</strong> Siswa yang telah mencapai skor target pada asesmen Literasi & Numerasi.</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <div style="width:15px; height:15px; background:#f44336; border-radius:3px;"></div>
+                        <span><strong>Perlu Penguatan:</strong> Siswa yang belum mencapai skor target atau belum menyelesaikan asesmen.</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2137,39 +2138,61 @@ function handleJournalSubmit(e) {
 function initDashboardCharts() {
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
+    const results = getAssessmentResults();
     
-    // Stage Chart Data
-    let t1 = 0, t2 = 0, t3 = 0, t4 = 0, done = 0;
+    let lulus = 0;
+    let perluPenguatan = 0;
+
     students.forEach(s => {
-        const p = getProgress(s.username);
-        if (p.tahap4Complete) done++;
-        else if (p.tahap3Complete) t4++;
-        else if (p.tahap2Complete) t3++;
-        else if (p.tahap1Complete) t2++;
-        else t1++;
+        const r = results[s.username];
+        if (r && r.pass) {
+            lulus++;
+        } else {
+            perluPenguatan++;
+        }
     });
 
-    const ctxStages = document.getElementById('chart-stages').getContext('2d');
-    new Chart(ctxStages, {
+    const total = students.length || 1;
+    const lulusPct = Math.round((lulus / total) * 100);
+    const penguatanPct = 100 - lulusPct;
+
+    const ctx = document.getElementById('chart-attainment').getContext('2d');
+    new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Tahap 1', 'Tahap 2', 'Tahap 3', 'Tahap 4', 'Selesai'],
+            labels: [`Lulus (${lulusPct}%)`, `Perlu Penguatan (${penguatanPct}%)`],
             datasets: [{
-                data: [t1, t2, t3, t4, done],
-                backgroundColor: ['#1a73e8', '#00bcd4', '#ff9800', '#f44336', '#4caf50'],
-                borderWidth: 1
+                data: [lulus, perluPenguatan],
+                backgroundColor: ['#4caf50', '#f44336'],
+                hoverOffset: 15,
+                borderWidth: 2,
+                borderColor: 'var(--bg-card)'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'bottom', labels: { color: '#e8eaf6' } }
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        color: '#e8eaf6',
+                        padding: 20,
+                        font: { size: 14, weight: '600' }
+                    } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const val = context.raw;
+                            const pct = Math.round((val / total) * 100);
+                            return ` ${context.label.split(' ')[0]}: ${val} Siswa (${pct}%)`;
+                        }
+                    }
+                }
             }
         }
     });
-
-    updateAttendanceChart();
 }
 
 function updateAttendanceChart() {
@@ -2304,7 +2327,12 @@ async function filterBankSoalByKelas(kelas, btn) {
                             <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type}</span></td>
                             <td>${q.question.substring(0, 100)}...</td>
                             <td>${String.fromCharCode(65 + q.correct)}</td>
-                            <td><button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button></td>
+                            <td>
+                                <div class="flex gap-1">
+                                    <button class="btn btn-sm btn-outline" onclick="editBankSoal('${q._id}')"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </td>
                         </tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada soal untuk kelas ini</td></tr>'}
                 </tbody>
             </table>
@@ -2423,4 +2451,126 @@ function exportKisiToExcel(kelas) {
     link.href = URL.createObjectURL(blob);
     link.download = `Kisi-kisi_Soal_${kelas}_${new Date().getTime()}.xls`;
     link.click();
-}
+}
+
+async function editBankSoal(id) {
+    try {
+        const res = await fetch(`/api/question-bank/${id}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        const q = data.question;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'edit-soal-modal';
+        
+        const students = getUsers().filter(u => u.role === 'siswa');
+        const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
+
+        modal.innerHTML = `
+        <div class="modal" style="max-width:600px">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Soal</h2>
+                <button class="modal-close" onclick="document.getElementById('edit-soal-modal').remove()"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="form-edit-soal" onsubmit="handleUpdateSoal(event, '${id}')">
+                <div class="form-group">
+                    <label>Pertanyaan</label>
+                    <textarea id="edit-ms-q" class="form-control" rows="3" required>${q.question}</textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Opsi A</label><input type="text" id="edit-ms-a" value="${q.options[0]}" required></div>
+                    <div class="form-group"><label>Opsi B</label><input type="text" id="edit-ms-b" value="${q.options[1]}" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Opsi C</label><input type="text" id="edit-ms-c" value="${q.options[2]}" required></div>
+                    <div class="form-group"><label>Opsi D</label><input type="text" id="edit-ms-d" value="${q.options[3]}" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Kunci Jawaban</label>
+                        <select id="edit-ms-correct" class="form-control">
+                            <option value="0" ${q.correct === 0 ? 'selected' : ''}>A</option>
+                            <option value="1" ${q.correct === 1 ? 'selected' : ''}>B</option>
+                            <option value="2" ${q.correct === 2 ? 'selected' : ''}>C</option>
+                            <option value="3" ${q.correct === 3 ? 'selected' : ''}>D</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Tipe Soal</label>
+                        <select id="edit-ms-type" class="form-control">
+                            <option value="literasi" ${q.type === 'literasi' ? 'selected' : ''}>Literasi</option>
+                            <option value="numerasi" ${q.type === 'numerasi' ? 'selected' : ''}>Numerasi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Pembahasan</label>
+                    <textarea id="edit-ms-exp" class="form-control" rows="2" required>${q.explanation}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Untuk Kelas</label>
+                    <select id="edit-ms-kelas" class="form-control">
+                        <option value="Semua Kelas" ${q.kelas === 'Semua Kelas' ? 'selected' : ''}>Semua Kelas</option>
+                        ${classes.map(c => `<option value="${c}" ${q.kelas === c ? 'selected' : ''}>${c}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('edit-soal-modal').remove()">Batal</button>
+                    <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>`;
+        document.body.appendChild(modal);
+    } catch (err) {
+        alert('Gagal mengambil data soal: ' + err.message);
+    }
+}
+
+async function handleUpdateSoal(e, id) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    const payload = {
+        question: document.getElementById('edit-ms-q').value,
+        options: [
+            document.getElementById('edit-ms-a').value,
+            document.getElementById('edit-ms-b').value,
+            document.getElementById('edit-ms-c').value,
+            document.getElementById('edit-ms-d').value
+        ],
+        correct: parseInt(document.getElementById('edit-ms-correct').value),
+        type: document.getElementById('edit-ms-type').value,
+        explanation: document.getElementById('edit-ms-exp').value,
+        kelas: document.getElementById('edit-ms-kelas').value
+    };
+
+    try {
+        const res = await fetch(`/api/question-bank/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Soal berhasil diperbarui!');
+            document.getElementById('edit-soal-modal').remove();
+            
+            // Refresh current view
+            const activeTab = document.querySelector('.tabs .tab-button.active');
+            if (activeTab) {
+                filterBankSoalByKelas(activeTab.innerText, activeTab);
+            } else {
+                renderBankSoal(document.getElementById('main-content'));
+            }
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (err) {
+        alert('Gagal memperbarui soal: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Simpan Perubahan';
+    }
+}
