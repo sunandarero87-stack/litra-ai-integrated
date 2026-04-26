@@ -1952,8 +1952,10 @@ tr:hover td {
 .message th { background: rgba(255,255,255,0.05); }
 
 
- 
- / *   T a b   C o n t e n t   * / 
- . t a b - c o n t e n t   {   d i s p l a y :   n o n e ;   } 
- . t a b - c o n t e n t . a c t i v e   {   d i s p l a y :   b l o c k ;   }  
- 
+ /* Tab Content */
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
