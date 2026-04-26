@@ -106,6 +106,7 @@ app.post('/api/progress/simulate', progressController.simulateData);
 app.post('/api/progress/reset-stage2', progressController.resetStage2All);
 app.post('/api/violations', progressController.recordViolation);
 app.get('/api/violations', progressController.getViolations);
+app.delete('/api/violations/all', progressController.clearViolations);
 
 // Materials
 app.get('/api/materials', materialController.getMaterials);

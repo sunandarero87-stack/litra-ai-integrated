@@ -1643,9 +1643,12 @@ async function renderMonitoring(main) {
 
     <div id="monitoring-violations-tab" class="tab-content">
         <div class="card">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
                 <h3 class="card-title"><i class="fas fa-exclamation-triangle text-danger"></i> Daftar Pelanggaran Siswa</h3>
-                <button class="btn btn-outline btn-sm" onclick="exportViolationsToExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn btn-danger btn-sm" onclick="clearAllViolations()"><i class="fas fa-trash-alt"></i> Hapus Semua Data</button>
+                    <button class="btn btn-outline btn-sm" onclick="exportViolationsToExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+                </div>
             </div>
             <div class="table-container" id="violations-table-container">
                 <div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Memuat data pelanggaran...</div>
@@ -1713,6 +1716,23 @@ function exportViolationsToExcel() {
     link.href = URL.createObjectURL(blob);
     link.download = `Laporan_Kecurangan_Siswa_${new Date().getTime()}.xls`;
     link.click();
+}
+
+async function clearAllViolations() {
+    if (!confirm('Apakah Anda yakin ingin menghapus SEMUA data pelanggaran? Tindakan ini tidak dapat dibatalkan.')) return;
+    
+    try {
+        const res = await fetch('/api/violations/all', { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Semua data pelanggaran berhasil dihapus.');
+            loadViolationsReport();
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (err) {
+        alert('Gagal menghapus data: ' + err.message);
+    }
 }
 
 async function triggerDataSimulation() {

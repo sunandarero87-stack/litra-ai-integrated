@@ -246,3 +246,13 @@ exports.getViolations = async (req, res) => {
     }
 };
 
+
+ e x p o r t s . c l e a r V i o l a t i o n s   =   a s y n c   ( r e q ,   r e s )   = >   { 
+         t r y   { 
+                 a w a i t   V i o l a t i o n . d e l e t e M a n y ( { } ) ; 
+                 r e s . j s o n ( {   s u c c e s s :   t r u e ,   m e s s a g e :   ' S e m u a   d a t a   p e l a n g g a r a n   b e r h a s i l   d i h a p u s '   } ) ; 
+         }   c a t c h   ( e r r )   { 
+                 r e s . s t a t u s ( 5 0 0 ) . j s o n ( {   e r r o r :   e r r . m e s s a g e   } ) ; 
+         } 
+ } ;  
+ 
