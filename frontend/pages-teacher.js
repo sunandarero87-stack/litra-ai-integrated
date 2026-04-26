@@ -850,6 +850,7 @@ async function renderBankSoal(main) {
                         <p>Klik untuk memilih file Word (.docx)</p>
                         <input type="file" id="bank-soal-word-upload" accept=".docx" style="display:none" onchange="handleBankSoalWordUpload(event)">
                     </div>
+                    <button class="btn btn-secondary mt-2 w-100" onclick="window.location.href='/api/question-bank/template-word'"><i class="fas fa-download"></i> Download Template Word</button>
 
                     <hr style="margin: 2rem 0;">
                     

@@ -1,5 +1,6 @@
 const xlsx = require('xlsx');
 const mammoth = require('mammoth');
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, NumberingLevel } = require('docx');
 const path = require('path');
 const QuestionBank = require('../models/QuestionBank');
 
@@ -514,5 +515,111 @@ exports.uploadWord = async (req, res) => {
     } catch (err) {
         console.error("Word Upload Error:", err);
         res.status(500).json({ error: 'Gagal memproses file Word: ' + err.message });
+    }
+};
+
+exports.downloadWordTemplate = async (req, res) => {
+    try {
+        // Contoh soal untuk template
+        const contohSoal = [
+            {
+                nomor: 1,
+                soal: 'Pendekatan yang menggabungkan logika dan sistematis untuk memecahkan masalah dengan cara yang efisien dan terstruktur disebut...',
+                a: 'Algoritma',
+                b: 'Dekomposisi',
+                c: 'Berpikir Komputasional',
+                d: 'Unplugged',
+                kunci: 'C'
+            },
+            {
+                nomor: 2,
+                soal: 'Aktivitas pembelajaran informatika yang dilakukan secara manual tanpa menggunakan perangkat komputer disebut metode...',
+                a: 'Unplugged',
+                b: 'Plugged',
+                c: 'Abstraksi',
+                d: 'Pengenalan Pola',
+                kunci: 'A'
+            },
+            {
+                nomor: 3,
+                soal: 'Proses memecah masalah besar menjadi bagian-bagian kecil yang lebih mudah diselesaikan disebut...',
+                a: 'Algoritma',
+                b: 'Dekomposisi',
+                c: 'Abstraksi',
+                d: 'Pengenalan Pola',
+                kunci: 'B'
+            }
+        ];
+
+        const children = [];
+
+        // Judul
+        children.push(
+            new Paragraph({
+                text: 'TEMPLATE UPLOAD SOAL - BANK SOAL NARA-AI',
+                heading: HeadingLevel.HEADING_1,
+                alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: 'Format: Nomor soal diikuti titik, lalu teks soal. Pilihan diawali A. B. C. D.', italics: true, color: '555555' })],
+                spacing: { after: 200 }
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: 'Kelas: Silakan isi kelas target di kolom Kelas saat sudah masuk di Bank Soal (gunakan tombol Edit).', italics: true, color: '555555' })],
+                spacing: { after: 400 }
+            })
+        );
+
+        // Tambahkan setiap soal
+        for (const s of contohSoal) {
+            children.push(
+                new Paragraph({
+                    children: [new TextRun({ text: `${s.nomor}. ${s.soal}`, bold: false })],
+                    spacing: { before: 300, after: 100 }
+                }),
+                new Paragraph({ children: [new TextRun({ text: `A. ${s.a}` })] }),
+                new Paragraph({ children: [new TextRun({ text: `B. ${s.b}` })] }),
+                new Paragraph({ children: [new TextRun({ text: `C. ${s.c}` })] }),
+                new Paragraph({
+                    children: [new TextRun({ text: `D. ${s.d}` })],
+                    spacing: { after: 50 }
+                }),
+                new Paragraph({
+                    children: [new TextRun({ text: `Kunci Jawaban: ${s.kunci}`, bold: true, color: '1a7a3a' })],
+                    spacing: { after: 200 }
+                })
+            );
+        }
+
+        // Catatan tambahan di akhir
+        children.push(
+            new Paragraph({
+                children: [new TextRun({ text: '--- Lanjutkan menambahkan soal dengan format yang sama di bawah ini ---', italics: true, color: '888888' })],
+                spacing: { before: 400 }
+            }),
+            new Paragraph({
+                children: [new TextRun({ text: 'CATATAN PENTING:', bold: true })],
+                spacing: { before: 300 }
+            }),
+            new Paragraph({ children: [new TextRun({ text: '- Setiap soal harus diawali nomor urut diikuti titik (1. 2. 3. dst)' })] }),
+            new Paragraph({ children: [new TextRun({ text: '- Setiap pilihan jawaban diawali huruf kapital dan titik (A. B. C. D.)' })] }),
+            new Paragraph({ children: [new TextRun({ text: '- Kunci jawaban akan diatur ke A secara default, edit soal setelah upload untuk mengubahnya' })] }),
+            new Paragraph({ children: [new TextRun({ text: '- File harus disimpan dalam format .docx (Word 2007 ke atas)' })] }),
+            new Paragraph({ children: [new TextRun({ text: '- Tidak ada batasan jumlah soal dalam satu file' })] })
+        );
+
+        const doc = new Document({
+            sections: [{ properties: {}, children }]
+        });
+
+        const buffer = await Packer.toBuffer(doc);
+
+        res.setHeader('Content-Disposition', 'attachment; filename="Template_Upload_Soal_Word.docx"');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.send(buffer);
+
+    } catch (err) {
+        console.error('downloadWordTemplate error:', err);
+        res.status(500).json({ error: 'Gagal membuat template Word: ' + err.message });
     }
 };
