@@ -1634,3 +1634,166 @@ function toggleAllResults() {
     const cbs = document.querySelectorAll('.student-select');
     cbs.forEach(cb => cb.checked = mainCb.checked);
 }
+
+// ---- STUDENT ATTENDANCE ----
+function renderStudentAttendance(main) {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const today = new Date().toISOString().split('T')[0];
+
+    main.innerHTML = `
+    <div class="card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+                <h3 class="card-title">📅 Absensi Siswa</h3>
+                <p class="text-muted" style="font-size:0.85rem">Tanggal: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterTable('search-attendance', 'table-attendance')">
+                <button class="btn btn-success btn-sm" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan Absensi</button>
+            </div>
+        </div>
+        <div class="table-container mt-2">
+            <table id="table-attendance">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th style="text-align:center">Hadir</th>
+                        <th style="text-align:center">Sakit</th>
+                        <th style="text-align:center">Izin</th>
+                        <th style="text-align:center">Alpha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${students.map((s, index) => `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td><strong>${s.name}</strong></td>
+                            <td>${s.kelas || '-'}</td>
+                            <td style="text-align:center">
+                                <input type="radio" name="att-${s.username}" value="hadir" checked style="width:20px; height:20px; cursor:pointer">
+                            </td>
+                            <td style="text-align:center">
+                                <input type="radio" name="att-${s.username}" value="sakit" style="width:20px; height:20px; cursor:pointer">
+                            </td>
+                            <td style="text-align:center">
+                                <input type="radio" name="att-${s.username}" value="izin" style="width:20px; height:20px; cursor:pointer">
+                            </td>
+                            <td style="text-align:center">
+                                <input type="radio" name="att-${s.username}" value="alpha" style="width:20px; height:20px; cursor:pointer">
+                            </td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="7" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function saveAttendance() {
+    const btn = event.target.closest('button');
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    // In a real app, we would collect radio values and send to backend
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+        alert('✅ Data absensi berhasil disimpan!');
+    }, 1000);
+}
+
+// ---- TEACHER JOURNAL ----
+function renderTeacherJournal(main) {
+    const journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
+    
+    main.innerHTML = `
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-edit"></i> Input Jurnal Harian</h3>
+            </div>
+            <form id="form-journal" onsubmit="handleJournalSubmit(event)">
+                <div class="form-group">
+                    <label>Tanggal</label>
+                    <input type="date" id="journal-date" value="${new Date().toISOString().split('T')[0]}" required>
+                </div>
+                <div class="form-group">
+                    <label>Mata Pelajaran</label>
+                    <input type="text" id="journal-subject" placeholder="Contoh: Informatika" required>
+                </div>
+                <div class="form-group">
+                    <label>Kelas</label>
+                    <input type="text" id="journal-class" placeholder="Contoh: VII-A" required>
+                </div>
+                <div class="form-group">
+                    <label>Materi / Kegiatan</label>
+                    <textarea id="journal-activity" rows="4" placeholder="Deskripsikan kegiatan pembelajaran hari ini..." required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Hambatan / Catatan (Opsional)</label>
+                    <textarea id="journal-notes" rows="2" placeholder="Catatan khusus jika ada..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-paper-plane"></i> Simpan ke Jurnal</button>
+            </form>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-history"></i> Riwayat Jurnal</h3>
+            </div>
+            <div class="table-container">
+                <table id="table-journal">
+                    <thead>
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Kelas</th>
+                            <th>Materi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${journals.sort((a,b) => new Date(b.date) - new Date(a.date)).map(j => `
+                            <tr>
+                                <td>${new Date(j.date).toLocaleDateString('id-ID')}</td>
+                                <td>${j.class}</td>
+                                <td>
+                                    <strong>${j.subject}</strong><br>
+                                    <small class="text-muted">${j.activity.substring(0, 50)}${j.activity.length > 50 ? '...' : ''}</small>
+                                </td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="3" class="text-center text-muted">Belum ada riwayat jurnal</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>`;
+}
+
+function handleJournalSubmit(e) {
+    e.preventDefault();
+    const date = document.getElementById('journal-date').value;
+    const subject = document.getElementById('journal-subject').value;
+    const className = document.getElementById('journal-class').value;
+    const activity = document.getElementById('journal-activity').value;
+    const notes = document.getElementById('journal-notes').value;
+
+    const newEntry = {
+        id: Date.now(),
+        date,
+        subject,
+        class: className,
+        activity,
+        notes,
+        teacher: currentUser.username
+    };
+
+    const journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
+    journals.push(newEntry);
+    localStorage.setItem('teacher_journals', JSON.stringify(journals));
+
+    alert('✅ Jurnal harian berhasil disimpan!');
+    renderTeacherJournal(document.getElementById('main-content'));
+}

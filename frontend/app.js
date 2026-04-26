@@ -320,6 +320,8 @@ function updateSidebar() {
         items = `
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button class="nav-item" onclick="navigateTo('student-attendance')"><i class="fas fa-calendar-check"></i> Absen Siswa</button>
+            <button class="nav-item" onclick="navigateTo('teacher-journal')"><i class="fas fa-journal-whills"></i> Jurnal Harian</button>
             <button class="nav-item" onclick="navigateTo('student-results')"><i class="fas fa-poll"></i> Hasil Penilaian</button>
             <div class="nav-section">Manajemen</div>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
@@ -334,6 +336,8 @@ function updateSidebar() {
         items = `
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button class="nav-item" onclick="navigateTo('student-attendance')"><i class="fas fa-calendar-check"></i> Absen Siswa</button>
+            <button class="nav-item" onclick="navigateTo('teacher-journal')"><i class="fas fa-journal-whills"></i> Jurnal Harian</button>
             <button class="nav-item" onclick="navigateTo('student-results')"><i class="fas fa-poll"></i> Hasil Penilaian</button>
             <div class="nav-section">Manajemen</div>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
@@ -378,7 +382,9 @@ function navigateTo(page) {
         'banksoal': 'Bank Soal (HOTS)',
         'student-accounts': 'Manajemen Akun Siswa',
         'chat-history': 'Riwayat Chat Siswa',
-        'monitoring': 'Monitoring Status Siswa'
+        'monitoring': 'Status Siswa',
+        'student-attendance': 'Absensi Siswa',
+        'teacher-journal': 'Jurnal Harian Guru'
     };
     document.getElementById('topbar-title').textContent = titles[page] || 'Dashboard';
 
@@ -440,6 +446,12 @@ function renderPage(page) {
             break;
         case 'monitoring':
             renderMonitoring(main);
+            break;
+        case 'student-attendance':
+            renderStudentAttendance(main);
+            break;
+        case 'teacher-journal':
+            renderTeacherJournal(main);
             break;
         default:
             main.innerHTML = '<p>Halaman tidak ditemukan.</p>';
