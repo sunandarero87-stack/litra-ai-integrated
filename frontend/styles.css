@@ -632,6 +632,33 @@ tr:hover td {
     background: var(--gradient-danger);
 }
 
+/* Sidebar Submenu */
+.nav-item-dropdown {
+    width: 100%;
+}
+.nav-item-dropdown .nav-submenu {
+    display: none;
+    background: rgba(0, 0, 0, 0.2);
+    padding-left: 1rem;
+    margin-bottom: 0.5rem;
+}
+.nav-item-dropdown.open .nav-submenu {
+    display: block;
+}
+.ml-auto {
+    margin-left: auto;
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.pulse {
+    animation: pulse 1s infinite;
+}
+
 /* ============= LOGIN PAGE ============= */
 .page {
     display: none;

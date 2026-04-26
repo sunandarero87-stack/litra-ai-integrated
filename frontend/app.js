@@ -10,6 +10,14 @@ let assessmentTimer = null;
 let assessmentTimeLeft = 0;
 let tabViolationCount = 0;
 
+// Stage Timer Config (in seconds)
+const STAGE_DURATION = {
+    'tahap1': 20 * 60,
+    'tahap2': 20 * 60,
+    'tahap3': 30 * 60,
+    'tahap4': 20 * 60
+};
+
 async function syncUsers() {
     try {
         const usersRes = await fetch('/api/users');
@@ -199,6 +207,109 @@ setInterval(() => {
     }
 }, 30000);
 
+// ---- ANTI-CHEAT & TIMER GLOBAL ----
+function startStageTimer(page) {
+    if (assessmentTimer) {
+        clearInterval(assessmentTimer);
+        assessmentTimer = null;
+    }
+
+    if (!STAGE_DURATION[page] || currentUser.role !== 'siswa') {
+        hideTimerDisplay();
+        return;
+    }
+
+    // Check if stage is already completed
+    const progress = getProgress(currentUser.username);
+    const completeKey = `${page}Complete`;
+    if (progress[completeKey]) {
+        hideTimerDisplay();
+        return;
+    }
+
+    assessmentTimeLeft = STAGE_DURATION[page];
+    showTimerDisplay();
+    updateTimerDisplay();
+
+    assessmentTimer = setInterval(() => {
+        assessmentTimeLeft--;
+        updateTimerDisplay();
+
+        if (assessmentTimeLeft <= 0) {
+            clearInterval(assessmentTimer);
+            assessmentTimer = null;
+            handleStageTimeout(page);
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay() {
+    const timerElem = document.getElementById('global-timer');
+    if (!timerElem) return;
+
+    const mins = Math.floor(assessmentTimeLeft / 60);
+    const secs = assessmentTimeLeft % 60;
+    timerElem.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    
+    if (assessmentTimeLeft < 60) {
+        timerElem.style.color = 'var(--danger)';
+        timerElem.classList.add('pulse');
+    } else {
+        timerElem.style.color = 'white';
+        timerElem.classList.remove('pulse');
+    }
+}
+
+function showTimerDisplay() {
+    let container = document.getElementById('timer-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'timer-container';
+        container.style.cssText = 'background:var(--gradient-danger); color:white; padding:0.4rem 1rem; border-radius:20px; display:flex; align-items:center; gap:0.5rem; font-weight:700; font-family:monospace; font-size:1.1rem; box-shadow:var(--shadow-sm);';
+        container.innerHTML = '<i class="fas fa-clock"></i> <span id="global-timer">00:00</span>';
+        document.querySelector('.topbar-actions').prepend(container);
+    }
+    container.style.display = 'flex';
+}
+
+function hideTimerDisplay() {
+    const container = document.getElementById('timer-container');
+    if (container) container.style.display = 'none';
+}
+
+function handleStageTimeout(page) {
+    alert('Waktu pengerjaan Tahap ini telah habis!');
+    if (page === 'tahap3') {
+        if (typeof submitAssessment === 'function') submitAssessment();
+    } else {
+        navigateTo('dashboard');
+    }
+}
+
+// Anti-Cheat Listener
+window.addEventListener('blur', () => {
+    if (currentUser && currentUser.role === 'siswa' && STAGE_DURATION[currentPage]) {
+        const progress = getProgress(currentUser.username);
+        if (!progress[`${currentPage}Complete`]) {
+            tabViolationCount++;
+            console.warn(`Tab Switch Detected! Violation #${tabViolationCount}`);
+            // We don't stop the timer, as per request "timer tetap berjalan"
+            alert('PERINGATAN: Anda dilarang membuka tab lain selama pengerjaan! Pelanggaran ini tercatat di sistem.');
+        }
+    }
+});
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        if (currentUser && currentUser.role === 'siswa' && STAGE_DURATION[currentPage]) {
+             const progress = getProgress(currentUser.username);
+             if (!progress[`${currentPage}Complete`]) {
+                console.log('User left the tab, timer continues...');
+             }
+        }
+    }
+});
+
 // ---- AUTH ----
 async function handleLogin(e) {
     e.preventDefault();
@@ -316,36 +427,35 @@ function updateSidebar() {
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-home"></i> Dashboard</button>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user"></i> Profil</button>`;
-    } else if (role === 'guru') {
-        items = `
-            <div class="nav-section">Menu Utama</div>
-            <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
-            <button class="nav-item" onclick="navigateTo('student-attendance')"><i class="fas fa-calendar-check"></i> Absen Siswa</button>
-            <button class="nav-item" onclick="navigateTo('teacher-journal')"><i class="fas fa-journal-whills"></i> Jurnal Harian</button>
-            <button class="nav-item" onclick="navigateTo('student-results')"><i class="fas fa-poll"></i> Hasil Penilaian</button>
-            <div class="nav-section">Manajemen</div>
-            <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
-            <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
-            <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
-            <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
-            <div class="nav-section">Monitoring</div>
-            <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Siswa</button>
-            <div class="nav-section">Profil</div>
-            <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
     } else {
+        // Admin & Guru have the same management menus
         items = `
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
             <button class="nav-item" onclick="navigateTo('student-attendance')"><i class="fas fa-calendar-check"></i> Absen Siswa</button>
             <button class="nav-item" onclick="navigateTo('teacher-journal')"><i class="fas fa-journal-whills"></i> Jurnal Harian</button>
             <button class="nav-item" onclick="navigateTo('student-results')"><i class="fas fa-poll"></i> Hasil Penilaian</button>
+            
             <div class="nav-section">Manajemen</div>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
-            <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
+            
+            <div class="nav-item-dropdown">
+                <button class="nav-item" onclick="this.parentElement.classList.toggle('open')">
+                    <i class="fas fa-database"></i> Bank Soal <i class="fas fa-chevron-down ml-auto" style="font-size:0.7rem"></i>
+                </button>
+                <div class="nav-submenu">
+                    <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-list"></i> Semua Soal</button>
+                    <button class="nav-item" onclick="navigateTo('banksoal-kelas')"><i class="fas fa-layer-group"></i> Per Kelas</button>
+                </div>
+            </div>
+            <button class="nav-item" onclick="navigateTo('kisi-kisi')"><i class="fas fa-file-signature"></i> Kisi-kisi Soal</button>
+            
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
+            
             <div class="nav-section">Monitoring</div>
             <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Siswa</button>
+            
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
     }
@@ -383,8 +493,9 @@ function navigateTo(page) {
         'student-accounts': 'Manajemen Akun Siswa',
         'chat-history': 'Riwayat Chat Siswa',
         'monitoring': 'Status Siswa',
-        'student-attendance': 'Absensi Siswa',
-        'teacher-journal': 'Jurnal Harian Guru'
+        'teacher-journal': 'Jurnal Harian Guru',
+        'banksoal-kelas': 'Bank Soal Per Kelas',
+        'kisi-kisi': 'Pembuatan Kisi-kisi Soal'
     };
     document.getElementById('topbar-title').textContent = titles[page] || 'Dashboard';
 
@@ -399,6 +510,9 @@ function navigateTo(page) {
 
     // Close sidebar on mobile
     document.getElementById('sidebar').classList.remove('open');
+
+    // Start Stage Timer if applicable
+    startStageTimer(page);
 
     renderPage(page);
 }
@@ -452,6 +566,12 @@ function renderPage(page) {
             break;
         case 'teacher-journal':
             renderTeacherJournal(main);
+            break;
+        case 'banksoal-kelas':
+            renderBankSoalKelas(main);
+            break;
+        case 'kisi-kisi':
+            renderKisiKisiSoal(main);
             break;
         default:
             main.innerHTML = '<p>Halaman tidak ditemukan.</p>';

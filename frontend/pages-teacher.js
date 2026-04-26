@@ -778,7 +778,10 @@ async function renderBankSoal(main) {
                         </div>
                     <div class="form-group mb-2">
                         <label>Untuk Kelas</label>
-                        <input type="text" id="ai-kelas" class="form-control" placeholder="Contoh: 7A, 7B, atau Semua Kelas" value="Semua Kelas">
+                        <select id="ai-kelas" class="form-control">
+                            <option value="Semua Kelas">Semua Kelas</option>
+                            ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
@@ -795,7 +798,10 @@ async function renderBankSoal(main) {
                     <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan membaca materi yang telah Anda upload dan membuat 10 soal berdasarkan isi materi tersebut.</p>
                     <div class="form-group mb-2">
                         <label>Untuk Kelas</label>
-                        <input type="text" id="ai-material-kelas" class="form-control" placeholder="Contoh: 7A, 7B, atau Semua Kelas" value="Semua Kelas">
+                        <select id="ai-material-kelas" class="form-control">
+                            <option value="Semua Kelas">Semua Kelas</option>
+                            ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
                     </div>
                     <div class="form-group mb-2">
                         <label>Pilih Materi</label>
@@ -818,7 +824,12 @@ async function renderBankSoal(main) {
                         <div class="form-group"><label>Opsi D</label><input type="text" id="ms-d" required></div>
                         <div class="form-group"><label>Kunci Jawaban</label><select id="ms-correct"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></div>
                         <div class="form-group"><label>Pembahasan</label><textarea id="ms-exp" required rows="2"></textarea></div>
-                        <div class="form-group"><label>Untuk Kelas</label><input type="text" id="ms-kelas" class="form-control" placeholder="Contoh: 7A, atau Semua Kelas" value="Semua Kelas"></div>
+                        <div class="form-group"><label>Untuk Kelas</label>
+                            <select id="ms-kelas" class="form-control">
+                                <option value="Semua Kelas">Semua Kelas</option>
+                                ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                            </select>
+                        </div>
                         <button type="submit" class="btn btn-success w-100"><i class="fas fa-save"></i> Simpan Soal</button>
                     </form>
                 </div>
@@ -1997,3 +2008,174 @@ function renderJournalSummary() {
         </div>
     `;
 }
+
+// ---- BANK SOAL PER KELAS ----
+async function renderBankSoalKelas(main) {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const classes = ['Semua Kelas', ...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
+
+    main.innerHTML = `
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📂 Bank Soal Per Kelas</h3>
+        </div>
+        <div class="tabs">
+            ${classes.map((c, i) => `<button class="tab-button ${i === 0 ? 'active' : ''}" onclick="filterBankSoalByKelas('${c}', this)">${c}</button>`).join('')}
+        </div>
+        <div id="bank-soal-kelas-content">
+            <div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Memuat Soal...</div>
+        </div>
+    </div>`;
+
+    // Load initial class
+    filterBankSoalByKelas(classes[0]);
+}
+
+async function filterBankSoalByKelas(kelas, btn) {
+    if (btn) {
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    const content = document.getElementById('bank-soal-kelas-content');
+    content.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Memuat Soal...</div>';
+
+    try {
+        const res = await fetch(`/api/question-bank?kelas=${encodeURIComponent(kelas)}`);
+        const data = await res.json();
+        const questions = data.questions || [];
+
+        content.innerHTML = `
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>No.</th><th>Tipe</th><th>Pertanyaan</th><th>Jawaban</th><th>Aksi</th></tr>
+                </thead>
+                <tbody>
+                    ${questions.map((q, i) => `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type}</span></td>
+                            <td>${q.question.substring(0, 100)}...</td>
+                            <td>${String.fromCharCode(65 + q.correct)}</td>
+                            <td><button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button></td>
+                        </tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada soal untuk kelas ini</td></tr>'}
+                </tbody>
+            </table>
+        </div>`;
+    } catch (err) {
+        content.innerHTML = '<div class="error-msg">Gagal memuat data soal.</div>';
+    }
+}
+
+// ---- KISI-KISI SOAL ----
+function renderKisiKisiSoal(main) {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const classes = ['Semua Kelas', ...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
+
+    main.innerHTML = `
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📝 Pembuatan Kisi-kisi Soal</h3>
+        </div>
+        <div class="form-group">
+            <label>Pilih Kelas</label>
+            <select id="kisi-kelas-selector" class="form-control" style="max-width:300px" onchange="generateKisiKisiView(this.value)">
+                <option value="">-- Pilih Kelas --</option>
+                ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+        </div>
+        <div id="kisi-kisi-content">
+            <p class="text-muted text-center py-3">Pilih kelas untuk melihat kisi-kisi soal yang tersedia.</p>
+        </div>
+    </div>`;
+}
+
+async function generateKisiKisiView(kelas) {
+    if (!kelas) return;
+    const content = document.getElementById('kisi-kisi-content');
+    content.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Menganalisis Bank Soal...</div>';
+
+    try {
+        const res = await fetch(`/api/question-bank?kelas=${encodeURIComponent(kelas)}`);
+        const data = await res.json();
+        const questions = data.questions || [];
+
+        if (questions.length === 0) {
+            content.innerHTML = '<div class="text-center py-3 text-muted">Tidak ada soal ditemukan untuk kelas ini di Bank Soal.</div>';
+            return;
+        }
+
+        // Aggregate by topic/type
+        const stats = { literasi: 0, numerasi: 0, total: questions.length, topics: {} };
+        questions.forEach(q => {
+            stats[q.type]++;
+            const topic = q.topic || 'Umum';
+            if (!stats.topics[topic]) stats.topics[topic] = { count: 0, types: { literasi: 0, numerasi: 0 } };
+            stats.topics[topic].count++;
+            stats.topics[topic].types[q.type]++;
+        });
+
+        content.innerHTML = `
+        <div class="alert alert-info mt-2" style="background:rgba(26,115,232,0.1); border-left:4px solid var(--primary); padding:1rem; border-radius:8px;">
+            <h4 style="color:var(--primary); margin-bottom:0.5rem">Ringkasan Kisi-kisi: ${kelas}</h4>
+            <div class="grid-3">
+                <div class="stat-mini"><strong>Total Soal:</strong> ${stats.total}</div>
+                <div class="stat-mini"><strong>Literasi:</strong> ${stats.literasi}</div>
+                <div class="stat-mini"><strong>Numerasi:</strong> ${stats.numerasi}</div>
+            </div>
+        </div>
+        
+        <div class="table-container mt-2">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Materi/Topik</th>
+                        <th>Literasi</th>
+                        <th>Numerasi</th>
+                        <th>Total Soal</th>
+                        <th>Distribusi (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Object.keys(stats.topics).map(topic => {
+            const t = stats.topics[topic];
+            const pct = ((t.count / stats.total) * 100).toFixed(1);
+            return `
+                        <tr>
+                            <td><strong>${topic}</strong></td>
+                            <td>${t.types.literasi}</td>
+                            <td>${t.types.numerasi}</td>
+                            <td>${t.count}</td>
+                            <td>
+                                <div class="progress-bar" style="height:6px; width:80px">
+                                    <div class="progress-fill" style="width:${pct}%"></div>
+                                </div>
+                                <small>${pct}%</small>
+                            </td>
+                        </tr>`;
+        }).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="flex justify-between mt-2">
+            <button class="btn btn-outline" onclick="exportKisiToExcel('${kelas}')"><i class="fas fa-file-excel"></i> Download Kisi-kisi (Excel)</button>
+            <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Cetak Laporan</button>
+        </div>`;
+    } catch (err) {
+        content.innerHTML = '<div class="error-msg">Gagal memproses kisi-kisi.</div>';
+    }
+}
+
+function exportKisiToExcel(kelas) {
+    const table = document.querySelector('#kisi-kisi-content table');
+    if (!table) return;
+    const html = table.outerHTML;
+    const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Kisi-kisi_Soal_${kelas}_${new Date().getTime()}.xls`;
+    link.click();
+}

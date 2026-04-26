@@ -530,7 +530,8 @@ function sendFloatingChat(quickMsg) {
                 // Tampilkan tombol Paham/Belum Paham hanya jika:
                 // 1. Tidak sedang menunggu jawaban uji pemahaman
                 // 2. Pesan siswa bukan sapaan (sapaan tidak butuh tombol paham/belum paham)
-                if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage)) {
+                // 3. SEDANG MEMBAHAS MATERI (currentMaterial tidak null)
+                if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage) && currentMaterial) {
                     showPahamButtons();
                 }
             } else {
@@ -764,25 +765,7 @@ function startAssessment() {
     assessmentCurrentQ = 0;
     assessmentActive = true;
     tabViolationCount = 0;
-    const settings = getAssessmentSettings();
-    assessmentTimeLeft = settings.duration * 60;
-
-    // Start timer
-    assessmentTimer = setInterval(() => {
-        assessmentTimeLeft--;
-        updateTimerDisplay();
-
-        // Anti-bubble continuous check (detect if foreground app loses UI focus but not completely hidden)
-        if (document.hasFocus && !document.hasFocus()) {
-            handleTabSwitch({ type: 'blur' });
-        }
-
-        if (assessmentTimeLeft <= 0) {
-            clearInterval(assessmentTimer);
-            assessmentTimer = null;
-            submitAssessment();
-        }
-    }, 1000);
+    // Timer handled globally by app.js startStageTimer triggered via navigateTo
 
     // Advanced Anti-Cheat Listeners
     // 1. Fullscreen Enforcement
