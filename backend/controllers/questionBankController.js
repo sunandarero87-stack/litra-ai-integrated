@@ -1,4 +1,5 @@
 const xlsx = require('xlsx');
+const mammoth = require('mammoth');
 const path = require('path');
 const QuestionBank = require('../models/QuestionBank');
 
@@ -410,5 +411,108 @@ exports.updateQuestion = async (req, res) => {
         res.json({ success: true, question: updatedQ });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+};
+
+exports.uploadWord = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'Tidak ada file Word yang diunggah.' });
+        }
+
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        let text = result.value;
+
+        // Pisahkan teks berdasarkan pola nomor urut, misal "1. ", "2. ", dst.
+        const blocks = text.split(/(?=\n\s*\d+\.\s+)|(?=^\s*\d+\.\s+)/m);
+        
+        const questionsToInsert = [];
+        let errorCount = 0;
+
+        for (let block of blocks) {
+            block = block.trim();
+            if (!/^\d+\.\s+/.test(block)) continue; // skip non-question blocks
+            
+            // Clean up the block
+            const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            if (lines.length < 5) {
+                errorCount++;
+                continue;
+            }
+
+            let questionLines = [];
+            let options = [];
+            
+            let i = 0;
+            // Dapatkan pertanyaan sampai ketemu baris yang diawali "A."
+            while (i < lines.length) {
+                if (/^[A-E]\./i.test(lines[i])) break;
+                questionLines.push(lines[i]);
+                i++;
+            }
+            
+            // Dapatkan opsi jawaban
+            while (i < lines.length) {
+                if (/^[A-E]\./i.test(lines[i])) {
+                    options.push(lines[i].replace(/^[A-E]\.\s*/i, '').trim());
+                }
+                i++;
+            }
+
+            if (options.length < 4) {
+                // Coba ambil jika opsi dalam satu baris (A. ... B. ... C. ... D. ...)
+                const allText = block.replace(/\n/g, ' ');
+                const matchA = allText.indexOf('A.');
+                const matchB = allText.indexOf('B.');
+                const matchC = allText.indexOf('C.');
+                const matchD = allText.indexOf('D.');
+                if (matchA > -1 && matchB > -1 && matchC > -1 && matchD > -1) {
+                    options = [
+                        allText.substring(matchA + 2, matchB).trim(),
+                        allText.substring(matchB + 2, matchC).trim(),
+                        allText.substring(matchC + 2, matchD).trim(),
+                        allText.substring(matchD + 2).trim()
+                    ];
+                    const qTextMatch = allText.substring(0, matchA).replace(/^\d+\.\s*/, '').trim();
+                    questionLines = [qTextMatch];
+                } else {
+                    errorCount++;
+                    continue;
+                }
+            }
+
+            let questionText = questionLines.join('\n').replace(/^\d+\.\s*/, '').trim();
+            
+            // Cek jika jawaban ditandai (misal ada teks "Jawaban:" di akhir opsi)
+            let correctIndex = 0; // Default ke A
+            let explanationText = "Pembahasan belum tersedia. Silakan edit soal ini.";
+
+            questionsToInsert.push({
+                question: questionText,
+                options: options.slice(0, 4), // Ambil 4 opsi pertama
+                correct: correctIndex,
+                explanation: explanationText,
+                type: 'literasi',
+                topic: 'Hasil Upload Word',
+                grade: '7 SMP',
+                curriculum: 'Fase D',
+                difficulty: 'MOTS',
+                kelas: 'Semua Kelas'
+            });
+        }
+
+        if (questionsToInsert.length > 0) {
+            await QuestionBank.insertMany(questionsToInsert);
+        }
+
+        res.json({
+            success: true,
+            count: questionsToInsert.length,
+            message: `Berhasil mengimpor ${questionsToInsert.length} soal dari file Word. Jawaban benar secara default diatur ke opsi A, harap edit soal untuk menyesuaikan kunci jawaban.`
+        });
+
+    } catch (err) {
+        console.error("Word Upload Error:", err);
+        res.status(500).json({ error: 'Gagal memproses file Word: ' + err.message });
     }
 };

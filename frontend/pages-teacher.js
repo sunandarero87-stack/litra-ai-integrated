@@ -841,6 +841,16 @@ async function renderBankSoal(main) {
                     </div>
                     <button class="btn btn-primary mt-2 w-100" onclick="downloadBankSoalTemplate()"><i class="fas fa-download"></i> Download Template Excel</button>
                     
+                    <hr style="margin: 1rem 0;">
+
+                    <h4>📝 Upload dari Microsoft Word</h4>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Upload soal berformat .docx dengan penomoran standar dan abjad untuk pilihan ganda.</p>
+                    <div class="upload-zone" onclick="document.getElementById('bank-soal-word-upload').click()">
+                        <i class="fas fa-file-word" style="color: #2b579a; font-size: 2rem;"></i>
+                        <p>Klik untuk memilih file Word (.docx)</p>
+                        <input type="file" id="bank-soal-word-upload" accept=".docx" style="display:none" onchange="handleBankSoalWordUpload(event)">
+                    </div>
+
                     <hr style="margin: 2rem 0;">
                     
                     <h4>🤖 Buat Soal Otomatis (AI)</h4>
@@ -1136,6 +1146,42 @@ async function handleBankSoalUpload(event) {
         }
     } catch (err) {
         alert('Server error saat upload excel.');
+        renderBankSoal(document.getElementById('main-content'));
+    }
+}
+
+async function handleBankSoalWordUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.docx')) {
+        alert('Format file harus .docx!');
+        event.target.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const main = document.getElementById('main-content');
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memproses file Word (.docx), mohon tunggu...</p></div>';
+
+    try {
+        const res = await fetch('/api/question-bank/upload-word', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(`Soal berhasil diimpor! Total: ${data.count} soal.`);
+            renderBankSoal(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal upload soal dari Word.');
+            renderBankSoal(document.getElementById('main-content'));
+        }
+    } catch (err) {
+        alert('Server error saat upload word.');
         renderBankSoal(document.getElementById('main-content'));
     }
 }

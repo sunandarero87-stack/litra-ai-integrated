@@ -81,6 +81,7 @@ app.delete('/api/question-bank/:id', questionBankController.deleteQuestion);
 app.post('/api/question-bank/bulk-delete', questionBankController.bulkDeleteQuestions);
 app.get('/api/question-bank/template', questionBankController.downloadTemplate);
 app.post('/api/question-bank/upload', upload.single('file'), questionBankController.uploadExcel);
+app.post('/api/question-bank/upload-word', upload.single('file'), questionBankController.uploadWord);
 app.post('/api/question-bank/generate-ai', questionBankController.generateFromAI);
 app.post('/api/question-bank/generate-from-material', questionBankController.generateFromMaterial);
 
