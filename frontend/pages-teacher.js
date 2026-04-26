@@ -2594,3 +2594,74 @@ async function handleUpdateSoal(e, id) {
         btn.innerHTML = 'Simpan Perubahan';
     }
 }
+
+// ---- DATA PELANGGARAN KHUSUS ----
+async function renderViolationData(main) {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
+
+    main.innerHTML = `
+    <div class="card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title"><i class="fas fa-exclamation-triangle text-danger"></i> Data Pelanggaran Siswa</h3>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-danger btn-sm" onclick="clearAllViolations()"><i class="fas fa-trash-alt"></i> Hapus Semua</button>
+                <button class="btn btn-outline btn-sm" onclick="exportViolationsToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+            </div>
+        </div>
+        <div class="form-group mt-2" style="max-width:300px">
+            <label>Filter Kelas</label>
+            <select id="violation-class-filter" class="form-control" onchange="loadViolationData(this.value)">
+                <option value="all">Semua Kelas</option>
+                ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+        </div>
+        <div class="table-container mt-2" id="violation-data-container">
+            <div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+        </div>
+    </div>`;
+
+    loadViolationData('all');
+}
+
+async function loadViolationData(kelas) {
+    const container = document.getElementById('violation-data-container');
+    try {
+        const res = await fetch('/api/violations');
+        const data = await res.json();
+        
+        if (data.success) {
+            let v = data.violations;
+            if (kelas !== 'all') {
+                v = v.filter(r => (r.kelas || 'Tanpa Kelas') === kelas);
+            }
+
+            container.innerHTML = `
+            <table id="table-violations">
+                <thead>
+                    <tr>
+                        <th>Waktu</th>
+                        <th>Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th>Tahap</th>
+                        <th>Detail Pelanggaran</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${v.map(r => `
+                        <tr>
+                            <td>${new Date(r.timestamp).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                            <td><strong>${r.name || r.username}</strong></td>
+                            <td>${r.kelas || '-'}</td>
+                            <td><span class="badge badge-info">${r.stage || '-'}</span></td>
+                            <td><span class="text-danger">${r.details}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="5" class="text-center text-muted">Tidak ada data pelanggaran ditemukan.</td></tr>'}
+                </tbody>
+            </table>`;
+        }
+    } catch (err) {
+        container.innerHTML = '<div class="error-msg">Gagal memuat data pelanggaran.</div>';
+    }
+}
