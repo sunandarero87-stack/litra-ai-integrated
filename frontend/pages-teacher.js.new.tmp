@@ -1,0 +1,98 @@
+// ============================================
+// PAGES - Teacher/Admin Dashboard, Results, Management
+// ============================================
+
+function renderTeacherDashboard(main) {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const results = getAssessmentResults();
+    let passed = 0, failed = 0, total = 0, readyForAssessment = 0;
+
+    students.forEach(s => {
+        const r = results[s.username];
+        if (r) { total++; r.pass ? passed++ : failed++; }
+        const p = getProgress(s.username);
+        if (p.tahap2Complete && p.isReady) readyForAssessment++;
+    });
+
+    const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
+
+    main.innerHTML = `
+    <div style="margin-bottom:1.5rem">
+        <h2 style="font-size:1.3rem;font-weight:800">Dashboard ${currentUser.role === 'admin' ? 'Administrator' : 'Guru'} 📊</h2>
+        <p class="text-muted">SMP Negeri 1 Balikpapan - Informatika</p>
+    </div>
+    <div class="grid-4">
+        <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-info"><h3>${students.length}</h3><p>Total Siswa</p></div></div>
+        <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div class="stat-info"><h3>${passed}</h3><p>Lulus Asesmen</p></div></div>
+        <div class="stat-card"><div class="stat-icon orange"><i class="fas fa-robot"></i></div><div class="stat-info"><h3>${readyForAssessment}</h3><p>Rekomendasi AI</p></div></div>
+        <div class="stat-card"><div class="stat-icon red"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>${students.length - total}</h3><p>Belum Asesmen</p></div></div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="grid-2 mt-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-chart-pie"></i> Progres Tahap Belajar</h3>
+            </div>
+            <div style="height: 300px; display: flex; justify-content: center;">
+                <canvas id="chart-stages"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="card-title"><i class="fas fa-calendar-check"></i> Laporan Absensi</h3>
+                <select id="attendance-class-filter" class="form-control" style="width:auto; margin-bottom:0; padding:0.2rem 0.5rem;" onchange="updateAttendanceChart()">
+                    <option value="all">Semua Kelas</option>
+                    ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            </div>
+            <div style="height: 300px; display: flex; justify-content: center;">
+                <canvas id="chart-attendance"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-header">
+            <h3 class="card-title"><i class="fas fa-journal-whills"></i> Ringkasan Jurnal Harian</h3>
+        </div>
+        <div id="journal-summary-content">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title">📋 Status Progres Siswa</h3>
+            <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset Pembelajaran (<span id="count-reset-selected">0</span>)</button>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr>
+                    <th><input type="checkbox" id="check-all-progress" onchange="toggleAllProgress(this)"></th>
+                    <th>Nama</th><th>Kelas</th><th>Tahap</th><th>Rekomendasi AI</th><th>Status Hasil</th>
+                </tr></thead>
+                <tbody>
+                    ${students.map(s => {
+        const p = getProgress(s.username);
+        const r = results[s.username];
+        const stage = p.tahap4Complete ? 'Selesai' : p.tahap3Complete ? 'Tahap 4' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
+        const badge = r ? (r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>') : '<span class="badge badge-warning">Proses</span>';
+        const aiRec = p.tahap2Complete ? (p.isReady ? '<span class="text-success"><i class="fas fa-check-circle"></i> SIAP</span>' : '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> PERLU BIMBINGAN</span>') : '<span class="text-muted">-</span>';
+        return `<tr>
+                    <td><input type="checkbox" class="check-progress" value="${s.username}" onchange="updateResetBtn()"></td>
+                    <td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${aiRec}</td><td>${badge}</td>
+                </tr>`;
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+
+    // Initialize Charts after rendering
+    setTimeout(() => {
+        initDashboardCharts();
+        renderJournalSummary();
+    }, 100);
+}
