@@ -73,18 +73,20 @@ app.post('/api/assessment/analyze', chatController.handleAnalysis);
 app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
 
 // Question Bank Management Routes
+// PENTING: Route statis harus didaftarkan SEBELUM route /:id (wildcard)
 app.get('/api/question-bank', questionBankController.getQuestions);
+app.get('/api/question-bank/template', questionBankController.downloadTemplate);
+app.get('/api/question-bank/template-word', questionBankController.downloadWordTemplate);
+app.post('/api/question-bank/bulk-delete', questionBankController.bulkDeleteQuestions);
+app.post('/api/question-bank/upload', upload.single('file'), questionBankController.uploadExcel);
+app.post('/api/question-bank/upload-word', upload.single('file'), questionBankController.uploadWord);
+app.post('/api/question-bank/generate-ai', questionBankController.generateFromAI);
+app.post('/api/question-bank/generate-from-material', questionBankController.generateFromMaterial);
+// Route dengan :id harus di BAWAH route statis
 app.get('/api/question-bank/:id', questionBankController.getQuestionById);
 app.post('/api/question-bank', questionBankController.addQuestion);
 app.put('/api/question-bank/:id', questionBankController.updateQuestion);
 app.delete('/api/question-bank/:id', questionBankController.deleteQuestion);
-app.post('/api/question-bank/bulk-delete', questionBankController.bulkDeleteQuestions);
-app.get('/api/question-bank/template', questionBankController.downloadTemplate);
-app.post('/api/question-bank/upload', upload.single('file'), questionBankController.uploadExcel);
-app.post('/api/question-bank/upload-word', upload.single('file'), questionBankController.uploadWord);
-app.get('/api/question-bank/template-word', questionBankController.downloadWordTemplate);
-app.post('/api/question-bank/generate-ai', questionBankController.generateFromAI);
-app.post('/api/question-bank/generate-from-material', questionBankController.generateFromMaterial);
 
 // Auth & Users
 app.post('/api/auth/login', authController.login);
