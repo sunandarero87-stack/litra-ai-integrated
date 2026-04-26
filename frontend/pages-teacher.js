@@ -225,10 +225,14 @@ function renderStudentResults(main) {
                 <p class="text-muted" style="font-size:0.85rem; margin-top:0.2rem"><em><i class="fas fa-robot text-primary"></i> Semua Nilai Dianalisis AI</em></p>
             </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Nama/Kelas..." onkeyup="filterTable('search-student-results', 'table-student-results')">
+                <select id="results-class-filter" class="form-control" style="margin-bottom:0; width:auto; padding:0.4rem;" onchange="filterResultsByClass()">
+                    <option value="all">Semua Kelas</option>
+                    ${[...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+                <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:180px; padding:0.4rem;" placeholder="Cari Nama..." onkeyup="filterResultsByClass()">
                 <button id="btn-simulate-data" class="btn btn-warning btn-sm" onclick="triggerDataSimulation()" style="display:none;"><i class="fas fa-magic"></i> Simulasi Data</button>
                 <button class="btn btn-danger btn-sm" onclick="triggerResetStage2()"><i class="fas fa-redo"></i> Reset Tahap 2</button>
-                <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Download Laporan Keseluruhan (Excel)</button>
+                <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
             </div>
         </div>
         <div class="table-container">
@@ -288,6 +292,27 @@ function renderStudentResults(main) {
         </div>
     </div>`;
 }
+
+function filterResultsByClass() {
+    const classFilter = document.getElementById('results-class-filter').value.toLowerCase();
+    const searchFilter = document.getElementById('search-student-results').value.toLowerCase();
+    const rows = document.querySelectorAll('#table-student-results tbody tr');
+
+    rows.forEach(row => {
+        const studentName = row.cells[0].innerText.toLowerCase();
+        const studentClass = row.cells[1].innerText.toLowerCase();
+        
+        const matchClass = (classFilter === 'all' || studentClass === classFilter);
+        const matchSearch = studentName.includes(searchFilter);
+
+        if (matchClass && matchSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
 
 // ---- EXPORT FUNCTIONS ----
 function exportAllStagesToExcel() {
