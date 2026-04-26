@@ -32,8 +32,12 @@ function renderTeacherDashboard(main) {
     <!-- Chart Section -->
     <div class="mt-2">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                 <h3 class="card-title"><i class="fas fa-chart-pie"></i> Tingkat Pencapaian Literasi & Numerasi</h3>
+                <select id="chart-class-filter" class="form-control" style="width:auto; margin-bottom:0; padding:0.2rem 0.5rem;" onchange="initDashboardCharts()">
+                    <option value="all">Semua Kelas</option>
+                    ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
             </div>
             <div class="grid-2" style="align-items:center;">
                 <div style="height: 350px; display: flex; justify-content: center; padding: 1rem;">
@@ -1824,7 +1828,11 @@ function renderStudentAttendance(main) {
                     <input type="date" id="attendance-date-input" value="${today}" class="form-control" style="width:auto; display:inline-block; margin-top:0.5rem;" onchange="loadAttendanceForDate(this.value)">
                 </div>
                 <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterTable('search-attendance', 'table-attendance')">
+                    <select id="attendance-class-filter-input" class="form-control" style="margin-bottom:0; width:auto;" onchange="filterAttendanceInput()">
+                        <option value="all">Semua Kelas</option>
+                        ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                    <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:180px; padding:0.4rem;" placeholder="Cari Nama..." onkeyup="filterAttendanceInput()">
                     <button class="btn btn-success" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan Absensi</button>
                 </div>
             </div>
@@ -1951,6 +1959,27 @@ async function loadAttendanceForDate(date) {
         console.error('Gagal memuat absensi:', err);
     }
 }
+
+function filterAttendanceInput() {
+    const classFilter = document.getElementById('attendance-class-filter-input').value.toLowerCase();
+    const searchFilter = document.getElementById('search-attendance').value.toLowerCase();
+    const rows = document.querySelectorAll('#table-attendance tbody tr');
+
+    rows.forEach(row => {
+        const studentName = row.cells[1].innerText.toLowerCase();
+        const studentClass = row.cells[2].innerText.toLowerCase();
+        
+        const matchClass = (classFilter === 'all' || studentClass === classFilter);
+        const matchSearch = studentName.includes(searchFilter);
+
+        if (matchClass && matchSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
 
 async function saveAttendance() {
     const date = document.getElementById('attendance-date-input').value;
@@ -2156,6 +2185,7 @@ function handleJournalSubmit(e) {
 }
 
 function initDashboardCharts() {
+    const classFilter = document.getElementById('chart-class-filter') ? document.getElementById('chart-class-filter').value : 'all';
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
     const results = getAssessmentResults();
@@ -2164,6 +2194,8 @@ function initDashboardCharts() {
     let perluPenguatan = 0;
 
     students.forEach(s => {
+        if (classFilter !== 'all' && (s.kelas || 'Tanpa Kelas') !== classFilter) return;
+        
         const r = results[s.username];
         if (r && r.pass) {
             lulus++;
@@ -2172,12 +2204,15 @@ function initDashboardCharts() {
         }
     });
 
-    const total = students.length || 1;
-    const lulusPct = Math.round((lulus / total) * 100);
+    const currentTotal = lulus + perluPenguatan || 1;
+    const lulusPct = Math.round((lulus / currentTotal) * 100);
     const penguatanPct = 100 - lulusPct;
 
     const ctx = document.getElementById('chart-attainment').getContext('2d');
-    new Chart(ctx, {
+    
+    if (window.attainmentChart) window.attainmentChart.destroy();
+
+    window.attainmentChart = new Chart(ctx, {
         type: 'pie',
         data: {
             labels: [`Lulus (${lulusPct}%)`, `Perlu Penguatan (${penguatanPct}%)`],
