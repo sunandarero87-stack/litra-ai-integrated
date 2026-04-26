@@ -1299,7 +1299,10 @@ function renderStudentAccounts(main) {
                         <td>${s.username}</td><td>${s.name}</td><td>${s.kelas || '-'}</td>
                         <td>${new Date(s.createdAt).toLocaleDateString('id-ID')}</td>
                         <td>
-                            ${currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${s.username}')"><i class="fas fa-trash"></i></button>` : '<span class="text-muted">-</span>'}
+                            <div class="flex gap-1">
+                                <button class="btn btn-sm btn-warning" onclick="resetStudentPassword('${s.username}')" title="Reset Password"><i class="fas fa-key"></i></button>
+                                ${currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${s.username}')"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
                         </td>
                     </tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada siswa</td></tr>'}
                 </tbody>
@@ -1388,6 +1391,35 @@ async function deleteUser(username) {
         renderStudentAccounts(document.getElementById('main-content'));
     } catch (err) {
         alert('Gagal menghapus akun.');
+    }
+}
+
+async function resetStudentPassword(username) {
+    const newPassword = prompt(`Masukkan password baru untuk siswa ${username}:`, "siswa123");
+    if (!newPassword) return;
+    if (newPassword.length < 4) {
+        alert("Password terlalu pendek! Minimal 4 karakter.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, newPassword })
+        });
+
+        if (res.ok) {
+            alert(`✅ Password untuk ${username} berhasil direset! Siswa akan diminta mengganti password saat login berikutnya.`);
+            await syncUsers();
+            renderStudentAccounts(document.getElementById('main-content'));
+        } else {
+            const data = await res.json();
+            alert(`❌ Gagal reset password: ${data.error}`);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Terjadi kesalahan server saat reset password.');
     }
 }
 

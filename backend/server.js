@@ -87,6 +87,7 @@ app.post('/api/question-bank/generate-from-material', questionBankController.gen
 // Auth & Users
 app.post('/api/auth/login', authController.login);
 app.post('/api/auth/change-password', authController.changePassword);
+app.post('/api/auth/reset-password', authController.resetUserPassword);
 app.post('/api/auth/heartbeat', authController.heartbeat);
 app.get('/api/users', authController.getUsers);
 app.post('/api/users', authController.createUsers);

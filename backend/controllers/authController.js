@@ -56,6 +56,22 @@ const changePassword = async (req, res) => {
     }
 };
 
+const resetUserPassword = async (req, res) => {
+    try {
+        const { username, newPassword } = req.body;
+        const user = await User.findOneAndUpdate(
+            { username },
+            { password: newPassword, mustChangePassword: true }, // Reset forces change on login
+            { returnDocument: 'after' }
+        );
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: 'Password reset successfully', user });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+
 const updateProfile = async (req, res) => {
     try {
         const { username, name, photo } = req.body;
@@ -217,5 +233,6 @@ module.exports = {
     deleteUser,
     uploadExcel,
     bulkDeleteUsers,
-    heartbeat
+    heartbeat,
+    resetUserPassword
 };
