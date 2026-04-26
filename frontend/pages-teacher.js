@@ -232,6 +232,7 @@ function renderStudentResults(main) {
                 <input type="text" id="search-student-results" class="form-control" style="margin-bottom:0; width:180px; padding:0.4rem;" placeholder="Cari Nama..." onkeyup="filterResultsByClass()">
                 <button id="btn-simulate-data" class="btn btn-warning btn-sm" onclick="triggerDataSimulation()" style="display:none;"><i class="fas fa-magic"></i> Simulasi Data</button>
                 <button class="btn btn-danger btn-sm" onclick="triggerResetStage2()"><i class="fas fa-redo"></i> Reset Tahap 2</button>
+                <button class="btn btn-warning btn-sm" id="btn-reset-stage3" style="display:none;" onclick="resetStage3Selected()"><i class="fas fa-undo"></i> Reset Tahap 3 (<span id="count-reset-stage3">0</span>)</button>
                 <button class="btn btn-outline btn-sm" onclick="exportAllStagesToExcel()"><i class="fas fa-file-excel"></i> Excel</button>
             </div>
         </div>
@@ -239,6 +240,7 @@ function renderStudentResults(main) {
             <table id="table-student-results">
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="check-all-results" onchange="toggleAllResults(this)"></th>
                         <th onclick="sortTable('table-student-results', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama Siswa <i class="fas fa-sort text-muted"></i></th>
                         <th onclick="sortTable('table-student-results', 2)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
                         <th onclick="sortTable('table-student-results', 3)" style="cursor:pointer; color:var(--info)" title="Klik untuk mengurutkan">Nilai Refleksi <br><small>(Tahap 2)</small> <i class="fas fa-sort text-muted"></i></th>
@@ -280,13 +282,14 @@ function renderStudentResults(main) {
         }
 
         return `<tr>
+            <td><input type="checkbox" class="check-result" value="${s.username}" onchange="updateResultsResetBtn()"></td>
             <td>${s.name}</td>
             <td>${s.kelas || '-'}</td>
             <td>${tahap2Display}</td>
             <td>${assessmentDisplay}</td>
             <td>${tahap4Display}</td>
         </tr>`;
-    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada data</td></tr>'}
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada data</td></tr>'}
                 </tbody>
             </table>
         </div>
@@ -299,8 +302,10 @@ function filterResultsByClass() {
     const rows = document.querySelectorAll('#table-student-results tbody tr');
 
     rows.forEach(row => {
-        const studentName = row.cells[0].innerText.toLowerCase();
-        const studentClass = row.cells[1].innerText.toLowerCase();
+        if (row.cells.length < 3) return;
+        // index 0 = checkbox, 1 = nama, 2 = kelas
+        const studentName = row.cells[1].innerText.toLowerCase();
+        const studentClass = row.cells[2].innerText.toLowerCase();
         
         const matchClass = (classFilter === 'all' || studentClass === classFilter);
         const matchSearch = studentName.includes(searchFilter);
@@ -311,6 +316,62 @@ function filterResultsByClass() {
             row.style.display = 'none';
         }
     });
+}
+
+function toggleAllResults(source) {
+    const checkboxes = document.querySelectorAll('.check-result');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateResultsResetBtn();
+}
+
+function updateResultsResetBtn() {
+    const checkedBoxes = document.querySelectorAll('.check-result:checked');
+    const btn = document.getElementById('btn-reset-stage3');
+    const countSpan = document.getElementById('count-reset-stage3');
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.innerText = checkedBoxes.length;
+    } else {
+        btn.style.display = 'none';
+        const checkAll = document.getElementById('check-all-results');
+        if (checkAll) checkAll.checked = false;
+    }
+}
+
+async function resetStage3Selected() {
+    const checkedBoxes = document.querySelectorAll('.check-result:checked');
+    const usernames = Array.from(checkedBoxes).map(cb => cb.value);
+    if (usernames.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin mereset Tahap 3 (Asesmen) untuk ${usernames.length} siswa terpilih?\nNilai asesmen dan persetujuan akan dihapus, siswa dapat mengikuti asesmen ulang.`)) return;
+
+    const btn = document.getElementById('btn-reset-stage3');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mereset...';
+
+    try {
+        const res = await fetch('/api/progress/reset-stage3', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message || 'Berhasil mereset Tahap 3.');
+            await syncData();
+            renderStudentResults(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Terjadi kesalahan saat mereset.');
+        }
+    } catch (err) {
+        console.error('Error resetting stage 3:', err);
+        alert('Server error saat mereset Tahap 3.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
 }
 
 

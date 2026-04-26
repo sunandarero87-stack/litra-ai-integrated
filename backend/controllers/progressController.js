@@ -206,6 +206,29 @@ exports.simulateData = async (req, res) => {
     }
 };
 
+exports.resetStage3Selected = async (req, res) => {
+    try {
+        const { usernames } = req.body;
+        const query = usernames && Array.isArray(usernames) && usernames.length > 0
+            ? { username: { $in: usernames } }
+            : {};
+
+        const result = await Progress.updateMany(query, {
+            $set: {
+                tahap3Complete: false,
+                assessmentResult: null,
+                approvedForAssessment: false,
+                approvedBy: null,
+                approvalDate: null,
+                generatedAssessment: []
+            }
+        });
+        res.json({ success: true, message: `Berhasil mereset Tahap 3 untuk ${result.modifiedCount} siswa` });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 exports.resetStage2All = async (req, res) => {
     try {
         const { usernames } = req.body;

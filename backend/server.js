@@ -109,6 +109,7 @@ app.post('/api/progress/settings', progressController.saveSettings);
 app.post('/api/progress/reset', progressController.resetProgress);
 app.post('/api/progress/simulate', progressController.simulateData);
 app.post('/api/progress/reset-stage2', progressController.resetStage2All);
+app.post('/api/progress/reset-stage3', progressController.resetStage3Selected);
 app.post('/api/violations', progressController.recordViolation);
 app.get('/api/violations', progressController.getViolations);
 app.delete('/api/violations/all', progressController.clearViolations);
