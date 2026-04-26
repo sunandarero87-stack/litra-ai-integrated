@@ -13,13 +13,17 @@ exports.getQuestions = async (req, res) => {
 
 exports.addQuestion = async (req, res) => {
     try {
-        const { question, options, correct, explanation, type, topic, grade, curriculum, difficulty, kelas } = req.body;
+        const { question, options, correct, explanation, type, topic, grade, curriculum, difficulty, kelas, image } = req.body;
 
         if (!question || !options || options.length !== 4 || correct === undefined || !explanation) {
             return res.status(400).json({ error: 'Data soal tidak lengkap. Pastikan soal, 4 opsi, kunci jawaban, dan pembahasan terisi.' });
         }
 
-        const newQ = new QuestionBank({ question, options, correct, explanation, type, topic, grade, curriculum, difficulty, kelas: kelas || 'Semua Kelas' });
+        const newQ = new QuestionBank({ 
+            question, options, correct, explanation, type, topic, grade, curriculum, difficulty, 
+            kelas: kelas || 'Semua Kelas',
+            image: image || null
+        });
         await newQ.save();
 
         res.json({ success: true, question: newQ });

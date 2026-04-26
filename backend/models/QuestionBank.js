@@ -45,6 +45,10 @@ const questionBankSchema = new mongoose.Schema({
         type: String,
         enum: ['LOTS', 'MOTS', 'HOTS'],
         default: 'HOTS'
+    },
+    image: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

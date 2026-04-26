@@ -2380,7 +2380,10 @@ async function filterBankSoalByKelas(kelas, btn) {
                         <tr>
                             <td>${i + 1}</td>
                             <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type}</span></td>
-                            <td>${q.question.substring(0, 100)}...</td>
+                            <td>
+                                ${q.image ? `<img src="${q.image}" style="height:30px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="viewFullImage('${q.image}')">` : ''}
+                                ${q.question.substring(0, 80)}...
+                            </td>
                             <td>${String.fromCharCode(65 + q.correct)}</td>
                             <td>
                                 <div class="flex gap-1">
@@ -2564,6 +2567,16 @@ async function editBankSoal(id) {
                     <textarea id="edit-ms-exp" class="form-control" rows="2" required>${q.explanation}</textarea>
                 </div>
                 <div class="form-group">
+                    <label>Gambar Soal (Opsional)</label>
+                    <input type="file" id="edit-ms-image-input" accept="image/*" onchange="previewEditImage(this)" class="form-control">
+                    <div id="edit-ms-image-preview" class="mt-1">
+                        ${q.image ? `<div style="position:relative; display:inline-block;">
+                            <img src="${q.image}" style="max-height:150px; border-radius:8px; border:1px solid var(--border-color);">
+                            <button type="button" class="btn btn-sm btn-danger" style="position:absolute; top:-10px; right:-10px; border-radius:50%; width:24px; height:24px; padding:0;" onclick="removeEditImage()">×</button>
+                        </div>` : ''}
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>Untuk Kelas</label>
                     <select id="edit-ms-kelas" class="form-control">
                         <option value="Semua Kelas" ${q.kelas === 'Semua Kelas' ? 'selected' : ''}>Semua Kelas</option>
@@ -2599,7 +2612,8 @@ async function handleUpdateSoal(e, id) {
         correct: parseInt(document.getElementById('edit-ms-correct').value),
         type: document.getElementById('edit-ms-type').value,
         explanation: document.getElementById('edit-ms-exp').value,
-        kelas: document.getElementById('edit-ms-kelas').value
+        kelas: document.getElementById('edit-ms-kelas').value,
+        image: window.tempEditImage || (document.querySelector('#edit-ms-image-preview img') ? document.querySelector('#edit-ms-image-preview img').src : null)
     };
 
     try {
@@ -2629,6 +2643,45 @@ async function handleUpdateSoal(e, id) {
         btn.innerHTML = 'Simpan Perubahan';
     }
 }
+
+window.tempEditImage = null;
+function previewEditImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        window.tempEditImage = e.target.result;
+        const preview = document.getElementById('edit-ms-image-preview');
+        preview.innerHTML = `
+            <div style="position:relative; display:inline-block;">
+                <img src="${e.target.result}" style="max-height:150px; border-radius:8px; border:1px solid var(--border-color);">
+                <button type="button" class="btn btn-sm btn-danger" style="position:absolute; top:-10px; right:-10px; border-radius:50%; width:24px; height:24px; padding:0;" onclick="removeEditImage()">×</button>
+            </div>`;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeEditImage() {
+    window.tempEditImage = null;
+    document.getElementById('edit-ms-image-preview').innerHTML = '';
+    const input = document.getElementById('edit-ms-image-input');
+    if (input) input.value = '';
+}
+
+function viewFullImage(src) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.zIndex = '9999';
+    modal.innerHTML = `
+        <div class="modal" style="max-width:90vw; background:transparent; box-shadow:none;">
+            <img src="${src}" style="width:100%; border-radius:8px;">
+            <button class="btn btn-outline mt-1" style="color:white; border-color:white;" onclick="this.closest('.modal-overlay').remove()">Tutup</button>
+        </div>`;
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    document.body.appendChild(modal);
+}
+
 
 // ---- DATA PELANGGARAN KHUSUS ----
 async function renderViolationData(main) {
