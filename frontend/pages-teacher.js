@@ -834,6 +834,14 @@ async function renderBankSoal(main) {
                 <div>
                     <h4>📥 Upload Massal (Excel)</h4>
                     <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Gunakan format Excel standar untuk mengupload ratusan soal sekaligus.</p>
+                    <div class="form-group mb-2">
+                        <label><i class="fas fa-school"></i> Tujuan Kelas (Excel)</label>
+                        <select id="excel-upload-kelas" class="form-control">
+                            <option value="Semua Kelas">Semua Kelas</option>
+                            ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                        <small class="text-muted">Soal yang diupload akan ditetapkan untuk kelas ini. Kolom "Kelas" di Excel (jika ada) akan diabaikan dan diganti dengan pilihan di atas.</small>
+                    </div>
                     <div class="upload-zone" onclick="document.getElementById('bank-soal-upload').click()">
                         <i class="fas fa-file-excel" style="color: #217346"></i>
                         <p>Klik untuk memilih file Excel (.xlsx)</p>
@@ -845,6 +853,14 @@ async function renderBankSoal(main) {
 
                     <h4>📝 Upload dari Microsoft Word</h4>
                     <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Upload soal berformat .docx dengan penomoran standar dan abjad untuk pilihan ganda.</p>
+                    <div class="form-group mb-2">
+                        <label><i class="fas fa-school"></i> Tujuan Kelas (Word)</label>
+                        <select id="word-upload-kelas" class="form-control">
+                            <option value="Semua Kelas">Semua Kelas</option>
+                            ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                        <small class="text-muted">Semua soal dari file Word ini akan ditetapkan untuk kelas yang dipilih.</small>
+                    </div>
                     <div class="upload-zone" onclick="document.getElementById('bank-soal-word-upload').click()">
                         <i class="fas fa-file-word" style="color: #2b579a; font-size: 2rem;"></i>
                         <p>Klik untuk memilih file Word (.docx)</p>
@@ -1133,11 +1149,15 @@ async function handleBankSoalUpload(event) {
         return;
     }
 
+    const kelasEl = document.getElementById('excel-upload-kelas');
+    const kelas = kelasEl ? kelasEl.value : 'Semua Kelas';
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('kelas', kelas);
 
     const main = document.getElementById('main-content');
-    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Mengupload dan memproses file Excel, mohon tunggu...</p></div>';
+    main.innerHTML = `<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Mengupload dan memproses file Excel untuk kelas <strong>${kelas}</strong>, mohon tunggu...</p></div>`;
 
     try {
         const res = await fetch('/api/question-bank/upload', {
@@ -1169,11 +1189,15 @@ async function handleBankSoalWordUpload(event) {
         return;
     }
 
+    const kelasEl = document.getElementById('word-upload-kelas');
+    const kelas = kelasEl ? kelasEl.value : 'Semua Kelas';
+
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('kelas', kelas);
 
     const main = document.getElementById('main-content');
-    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memproses file Word (.docx), mohon tunggu...</p></div>';
+    main.innerHTML = `<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memproses file Word (.docx) untuk kelas <strong>${kelas}</strong>, mohon tunggu...</p></div>`;
 
     try {
         const res = await fetch('/api/question-bank/upload-word', {
@@ -1183,7 +1207,7 @@ async function handleBankSoalWordUpload(event) {
 
         const data = await res.json();
         if (res.ok) {
-            alert(`Soal berhasil diimpor! Total: ${data.count} soal.`);
+            alert(`Soal berhasil diimpor untuk kelas ${kelas}! Total: ${data.count} soal.`);
             renderBankSoal(document.getElementById('main-content'));
         } else {
             alert(data.error || 'Gagal upload soal dari Word.');

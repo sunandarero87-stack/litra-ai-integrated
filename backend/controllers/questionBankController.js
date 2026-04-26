@@ -74,6 +74,9 @@ exports.uploadExcel = async (req, res) => {
             return res.status(400).json({ error: 'File Excel kosong atau format tidak sesuai.' });
         }
 
+        // Kelas override dari form field (dipilih guru sebelum upload)
+        const kelasOverride = req.body.kelas || null;
+
         const questionsToInsert = [];
         let errorCount = 0;
         const errorDetails = [];
@@ -142,6 +145,9 @@ exports.uploadExcel = async (req, res) => {
                 return;
             }
 
+            // Kelas: gunakan override dari filter guru, jika tidak ada pakai kolom di Excel
+            const finalKelas = kelasOverride || kelasVal || 'Semua Kelas';
+
             questionsToInsert.push({
                 question: String(questionText).trim(),
                 options: [String(optA).trim(), String(optB).trim(), String(optC).trim(), String(optD).trim()],
@@ -152,7 +158,7 @@ exports.uploadExcel = async (req, res) => {
                 grade: '7 SMP',
                 curriculum: 'Fase D',
                 difficulty: 'HOTS',
-                kelas: kelasVal || 'Semua Kelas'
+                kelas: finalKelas
             });
         });
 
@@ -498,7 +504,7 @@ exports.uploadWord = async (req, res) => {
                 grade: '7 SMP',
                 curriculum: 'Fase D',
                 difficulty: 'MOTS',
-                kelas: 'Semua Kelas'
+                kelas: req.body.kelas || 'Semua Kelas'
             });
         }
 
