@@ -779,7 +779,13 @@ async function renderBankSoal(main) {
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <h3 class="card-title" style="margin-bottom:0;">📚 Bank Soal</h3>
-            <input type="text" id="search-bank-soal" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari Pertanyaan/Tipe..." onkeyup="filterTable('search-bank-soal', 'table-bank-soal')">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                <select id="bank-soal-class-filter" class="form-control" style="margin-bottom:0; width:auto; padding:0.4rem;" onchange="filterBankSoalTable()">
+                    <option value="all">Semua Kelas</option>
+                    ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+                <input type="text" id="search-bank-soal" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari Pertanyaan/Tipe..." onkeyup="filterBankSoalTable()">
+            </div>
         </div>
         <div class="tabs">
             <button class="tab-button active" onclick="initBankSoalTab('list')">Daftar Soal (${_bankSoalCache.length})</button>
@@ -1192,6 +1198,32 @@ async function deleteBankSoal(id) {
         console.error(err);
         alert('Server error.');
     }
+}
+
+function filterBankSoalTable() {
+    const classFilter = document.getElementById('bank-soal-class-filter').value.toLowerCase();
+    const searchFilter = document.getElementById('search-bank-soal').value.toLowerCase();
+    const rows = document.querySelectorAll('#table-bank-soal tbody tr');
+
+    rows.forEach(row => {
+        if (row.cells.length < 5) return; // Skip empty message rows
+        const rowClass = row.cells[4].innerText.toLowerCase();
+        let matchClass = (classFilter === 'all' || rowClass === classFilter || rowClass === 'semua kelas');
+
+        let matchSearch = false;
+        for (let j = 0; j < row.cells.length; j++) {
+            if (row.cells[j].innerText.toLowerCase().includes(searchFilter)) {
+                matchSearch = true;
+                break;
+            }
+        }
+
+        if (matchClass && matchSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
 function toggleAllBankSoal(source) {
@@ -2492,14 +2524,21 @@ async function filterBankSoalByKelas(kelas, btn) {
         const questions = data.questions || [];
 
         content.innerHTML = `
+        <div style="margin-bottom: 0.5rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-danger btn-sm" id="btn-bulk-delete-soal-kelas" style="display:none;" onclick="bulkDeleteBankSoalKelas('${kelas}')"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected-soal-kelas">0</span>)</button>
+        </div>
         <div class="table-container">
             <table>
                 <thead>
-                    <tr><th>No.</th><th>Tipe</th><th>Pertanyaan</th><th>Jawaban</th><th>Aksi</th></tr>
+                    <tr>
+                        <th><input type="checkbox" id="check-all-bank-soal-kelas" onchange="toggleAllBankSoalKelas(this)"></th>
+                        <th>No.</th><th>Tipe</th><th>Pertanyaan</th><th>Jawaban</th><th>Aksi</th>
+                    </tr>
                 </thead>
                 <tbody>
                     ${questions.map((q, i) => `
                         <tr>
+                            <td><input type="checkbox" class="check-bank-soal-kelas" value="${q._id}" onchange="updateBankSoalKelasDeleteBtn()"></td>
                             <td>${i + 1}</td>
                             <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type}</span></td>
                             <td>
@@ -2513,12 +2552,71 @@ async function filterBankSoalByKelas(kelas, btn) {
                                     <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
-                        </tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada soal untuk kelas ini</td></tr>'}
+                        </tr>`).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada soal untuk kelas ini</td></tr>'}
                 </tbody>
             </table>
         </div>`;
     } catch (err) {
         content.innerHTML = '<div class="error-msg">Gagal memuat data soal.</div>';
+    }
+}
+
+function toggleAllBankSoalKelas(source) {
+    const checkboxes = document.querySelectorAll('.check-bank-soal-kelas');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateBankSoalKelasDeleteBtn();
+}
+
+function updateBankSoalKelasDeleteBtn() {
+    const checkedBoxes = document.querySelectorAll('.check-bank-soal-kelas:checked');
+    const btn = document.getElementById('btn-bulk-delete-soal-kelas');
+    const countSpan = document.getElementById('count-selected-soal-kelas');
+
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.innerText = checkedBoxes.length;
+    } else {
+        btn.style.display = 'none';
+        const checkAll = document.getElementById('check-all-bank-soal-kelas');
+        if (checkAll) checkAll.checked = false;
+    }
+}
+
+async function bulkDeleteBankSoalKelas(kelas) {
+    const checkedBoxes = document.querySelectorAll('.check-bank-soal-kelas:checked');
+    const ids = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (ids.length === 0) return;
+    if (!confirm(`Hapus permanen ${ids.length} soal terpilih dari Bank Soal?`)) return;
+
+    const btn = document.getElementById('btn-bulk-delete-soal-kelas');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus...';
+
+    try {
+        const res = await fetch('/api/question-bank/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            alert(`Berhasil menghapus ${data.count} soal.`);
+            const activeTab = Array.from(document.querySelectorAll('.tab-button')).find(btn => btn.classList.contains('active') && btn.innerText === kelas);
+            filterBankSoalByKelas(kelas, activeTab);
+        } else {
+            alert(data.error || 'Gagal menghapus soal terpilih.');
+        }
+    } catch (err) {
+        console.error('Error bulk deleting question bank:', err);
+        alert('Server error saat menghapus soal.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
     }
 }
 
