@@ -854,7 +854,11 @@ async function renderBankSoal(main) {
                     <hr style="margin: 2rem 0;">
                     
                     <h4>🤖 Buat Soal Otomatis (AI)</h4>
-                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat otomatis 10 soal berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan mencoba membuat soal secara otomatis berdasarkan Tujuan Pembelajaran yang Anda berikan.</p>
+                    <div class="form-group mb-2">
+                        <label>Jumlah Soal (Maks: 100)</label>
+                        <input type="number" id="ai-question-amount" class="form-control" min="1" max="100" value="10">
+                    </div>
                     <div class="form-group mb-2">
                             <label>Pilih Tipe Soal</label>
                             <select id="ai-indicator-type" class="form-control" onchange="const type = this.value; document.getElementById('group-literasi-indicator').style.display = type === 'literasi' ? 'block' : 'none'; document.getElementById('group-numerasi-indicator').style.display = type === 'numerasi' ? 'block' : 'none';">
@@ -899,7 +903,11 @@ async function renderBankSoal(main) {
                     <hr style="margin: 2rem 0;">
                     
                     <h4>📄 Buat Soal dari Materi</h4>
-                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan membaca materi yang telah Anda upload dan membuat 10 soal berdasarkan isi materi tersebut.</p>
+                    <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan membaca materi yang telah Anda upload dan membuat soal berdasarkan isi materi tersebut.</p>
+                    <div class="form-group mb-2">
+                        <label>Jumlah Soal (Maks: 100)</label>
+                        <input type="number" id="ai-material-amount" class="form-control" min="1" max="100" value="10">
+                    </div>
                     <div class="form-group mb-2">
                         <label>Untuk Kelas</label>
                         <select id="ai-material-kelas" class="form-control">
@@ -988,7 +996,7 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ objectives: objectives, amount: 10, indicatorType: indicatorType, indicatorValue: indicatorValue, kelas: kelas })
+            body: JSON.stringify({ objectives: objectives, amount: parseInt(document.getElementById('ai-question-amount').value) || 10, indicatorType: indicatorType, indicatorValue: indicatorValue, kelas: kelas })
         });
 
         const data = await res.json();
@@ -1054,7 +1062,7 @@ async function generateBankSoalFromMaterial() {
         const res = await fetch('/api/question-bank/generate-from-material', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ materialId, amount: 10, indicatorType, indicatorValue, kelas })
+            body: JSON.stringify({ materialId, amount: parseInt(document.getElementById('ai-material-amount').value) || 10, indicatorType, indicatorValue, kelas })
         });
 
         const data = await res.json();
