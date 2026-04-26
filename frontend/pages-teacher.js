@@ -855,7 +855,6 @@ async function generateBankSoalAI() {
 
     const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
     const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
-    const kelas = document.getElementById('ai-material-kelas') ? document.getElementById('ai-material-kelas').value : 'Semua Kelas';
     const kelas = document.getElementById('ai-kelas') ? document.getElementById('ai-kelas').value : 'Semua Kelas';
 
     const btn = document.getElementById('btn-generate-ai');
@@ -922,7 +921,6 @@ async function generateBankSoalFromMaterial() {
     const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
     const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
     const kelas = document.getElementById('ai-material-kelas') ? document.getElementById('ai-material-kelas').value : 'Semua Kelas';
-    const kelas = document.getElementById('ai-kelas') ? document.getElementById('ai-kelas').value : 'Semua Kelas';
 
     const btn = document.getElementById('btn-generate-material');
     const originalText = btn.innerHTML;
