@@ -818,10 +818,13 @@ async function renderBankSoal(main) {
                                 <td><span class="badge badge-info">${q.kelas || 'Semua Kelas'}</span></td>
                                 <td><strong>${String.fromCharCode(65 + q.correct)}</strong></td>
                                 <td>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
+                                    <div class="flex gap-1">
+                                        <button class="btn btn-sm btn-outline" onclick="editBankSoal('${q._id}')"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
+                                    </div>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada soal di bank soal.</td></tr>'}
+                        `).join('') || '<tr><td colspan="7" class="text-center text-muted">Belum ada soal di bank soal.</td></tr>'}
                     </tbody>
                 </table>
             </div>

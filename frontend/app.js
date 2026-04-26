@@ -454,15 +454,7 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
             
-            <div class="nav-item-dropdown">
-                <button class="nav-item" onclick="this.parentElement.classList.toggle('open')">
-                    <i class="fas fa-database"></i> Bank Soal <i class="fas fa-chevron-down ml-auto" style="font-size:0.7rem"></i>
-                </button>
-                <div class="nav-submenu">
-                    <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-list"></i> Semua Soal</button>
-                    <button class="nav-item" onclick="navigateTo('banksoal-kelas')"><i class="fas fa-layer-group"></i> Per Kelas</button>
-                </div>
-            </div>
+            <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
             <button class="nav-item" onclick="navigateTo('kisi-kisi')"><i class="fas fa-file-signature"></i> Kisi-kisi Soal</button>
             
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
@@ -508,7 +500,7 @@ function navigateTo(page) {
         'chat-history': 'Riwayat Chat Siswa',
         'monitoring': 'Status Siswa',
         'teacher-journal': 'Jurnal Harian Guru',
-        'banksoal-kelas': 'Bank Soal Per Kelas',
+
         'kisi-kisi': 'Pembuatan Kisi-kisi Soal',
         'violation-data': 'Data Pelanggaran Siswa'
     };
@@ -582,9 +574,7 @@ function renderPage(page) {
         case 'teacher-journal':
             renderTeacherJournal(main);
             break;
-        case 'banksoal-kelas':
-            renderBankSoalKelas(main);
-            break;
+
         case 'kisi-kisi':
             renderKisiKisiSoal(main);
             break;
