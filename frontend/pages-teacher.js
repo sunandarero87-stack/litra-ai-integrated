@@ -415,25 +415,59 @@ function renderMaterials(main) {
     const materials = getMaterials();
     main.innerHTML = `
     <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <h3 class="card-title">📚 Materi Pembelajaran</h3>
+            <select id="material-class-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="filterMaterialsByClass()">
+                <option value="all">Semua Kelas</option>
+                ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
         </div>
-        <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
-            <i class="fas fa-cloud-upload-alt"></i>
-            <p>Klik untuk upload materi (PDF, DOC, DOCX)</p>
-            <p class="text-muted" style="font-size:0.8rem">Siswa akan membaca materi ini di Tahap 1</p>
-            <input type="file" id="material-upload" accept=".pdf,.doc,.docx" style="display:none" onchange="handleMaterialUpload(event)">
+        
+        <div style="padding:1.5rem; border-bottom:1px solid var(--border-color); background:var(--bg-input);">
+            <h4 style="margin-bottom:1rem">📤 Upload Materi Baru</h4>
+            <div class="form-group mb-2">
+                <label>Target Kelas</label>
+                <select id="material-target-kelas" class="form-control">
+                    <option value="Semua Kelas">Semua Kelas</option>
+                    ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            </div>
+            <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Klik untuk upload materi (PDF, DOC, DOCX)</p>
+                <p class="text-muted" style="font-size:0.8rem">Siswa kelas terpilih akan membaca materi ini di Tahap 1</p>
+                <input type="file" id="material-upload" accept=".pdf,.doc,.docx" style="display:none" onchange="handleMaterialUpload(event)">
+            </div>
         </div>
-        <div class="material-list" id="material-list">
+
+        <div class="material-list" id="material-list" style="padding:1rem">
             ${materials.map((m) => `
-                <div class="material-item">
+                <div class="material-item" data-kelas="${m.kelas || 'Semua Kelas'}">
                     <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}"></i>
-                    <span>${m.name}</span>
-                    <small class="text-muted">${new Date(m.date).toLocaleDateString('id-ID')}</small>
+                    <div style="flex:1">
+                        <div style="font-weight:600">${m.name}</div>
+                        <div style="font-size:0.75rem" class="text-muted">
+                             Kelas: <span class="badge badge-info" style="font-size:0.65rem">${m.kelas || 'Semua Kelas'}</span> • 
+                            ${new Date(m.date).toLocaleDateString('id-ID')}
+                        </div>
+                    </div>
                     <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m._id}')"><i class="fas fa-trash"></i></button>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi diupload</p>'}
         </div>
     </div>`;
+}
+
+function filterMaterialsByClass() {
+    const classFilter = document.getElementById('material-class-filter').value.toLowerCase();
+    const items = document.querySelectorAll('.material-item');
+    items.forEach(item => {
+        const itemClass = item.dataset.kelas.toLowerCase();
+        if (classFilter === 'all' || itemClass === classFilter) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
 }
 
 function handleMaterialUpload(event) {
@@ -450,7 +484,8 @@ function handleMaterialUpload(event) {
                 type: ext,
                 date: new Date().toISOString(),
                 size: file.size,
-                contentDataUrl: e.target.result
+                contentDataUrl: e.target.result,
+                kelas: document.getElementById('material-target-kelas').value
             };
             const res = await fetch('/api/materials', {
                 method: 'POST',

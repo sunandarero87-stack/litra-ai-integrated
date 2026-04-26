@@ -84,7 +84,10 @@ function renderStudentDashboard(main) {
 let currentMaterial = null;
 
 function renderTahap1(main) {
-    const materials = getMaterials();
+    let materials = getMaterials();
+    // Filter materials by class: show if 'Semua Kelas' or matches student's class
+    materials = materials.filter(m => !m.kelas || m.kelas === 'Semua Kelas' || m.kelas === currentUser.kelas);
+
     const users = getUsers();
     const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
     const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';

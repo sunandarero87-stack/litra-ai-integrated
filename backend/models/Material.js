@@ -6,7 +6,8 @@ const materialSchema = new mongoose.Schema({
     date: { type: Date, default: Date.now },
     size: { type: Number },
     contentDataUrl: { type: String, required: true },
-    content: { type: String } // Field to store extracted text
+    content: { type: String }, // Field to store extracted text
+    kelas: { type: String, default: 'Semua Kelas' }
 });
 
 module.exports = mongoose.model('Material', materialSchema);
