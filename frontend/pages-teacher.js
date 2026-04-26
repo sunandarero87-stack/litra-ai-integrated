@@ -712,6 +712,7 @@ async function renderBankSoal(main) {
                             <th>No.</th>
                             <th>Tipe</th>
                             <th style="width:50%">Pertanyaan</th>
+                            <th>Kelas</th>
                             <th>Jawaban Benar</th>
                             <th>Aksi</th>
                         </tr>
@@ -723,6 +724,7 @@ async function renderBankSoal(main) {
                                 <td>${index + 1}</td>
                                 <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type === 'literasi' ? 'Literasi' : 'Numerasi'}</span></td>
                                 <td>${q.question.substring(0, 150)}${q.question.length > 150 ? '...' : ''}</td>
+                                <td><span class="badge badge-info">${q.kelas || 'Semua Kelas'}</span></td>
                                 <td><strong>${String.fromCharCode(65 + q.correct)}</strong></td>
                                 <td>
                                     <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
@@ -774,6 +776,10 @@ async function renderBankSoal(main) {
                                 <option value="Data dan Ketidakpastian">Data dan Ketidakpastian</option>
                             </select>
                         </div>
+                    <div class="form-group mb-2">
+                        <label>Untuk Kelas</label>
+                        <input type="text" id="ai-kelas" class="form-control" placeholder="Contoh: 7A, 7B, atau Semua Kelas" value="Semua Kelas">
+                    </div>
                     <div class="form-group">
                         <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
                         <input type="number" id="ai-objective-count" min="1" max="10" value="1" onchange="renderObjectiveInputs()" oninput="renderObjectiveInputs()">
@@ -787,6 +793,10 @@ async function renderBankSoal(main) {
                     
                     <h4>📄 Buat Soal dari Materi</h4>
                     <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem;">Nara-AI akan membaca materi yang telah Anda upload dan membuat 10 soal berdasarkan isi materi tersebut.</p>
+                    <div class="form-group mb-2">
+                        <label>Untuk Kelas</label>
+                        <input type="text" id="ai-material-kelas" class="form-control" placeholder="Contoh: 7A, 7B, atau Semua Kelas" value="Semua Kelas">
+                    </div>
                     <div class="form-group mb-2">
                         <label>Pilih Materi</label>
                         <select id="ai-material-id" class="form-control">
@@ -808,6 +818,7 @@ async function renderBankSoal(main) {
                         <div class="form-group"><label>Opsi D</label><input type="text" id="ms-d" required></div>
                         <div class="form-group"><label>Kunci Jawaban</label><select id="ms-correct"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></div>
                         <div class="form-group"><label>Pembahasan</label><textarea id="ms-exp" required rows="2"></textarea></div>
+                        <div class="form-group"><label>Untuk Kelas</label><input type="text" id="ms-kelas" class="form-control" placeholder="Contoh: 7A, atau Semua Kelas" value="Semua Kelas"></div>
                         <button type="submit" class="btn btn-success w-100"><i class="fas fa-save"></i> Simpan Soal</button>
                     </form>
                 </div>
@@ -844,6 +855,8 @@ async function generateBankSoalAI() {
 
     const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
     const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
+    const kelas = document.getElementById('ai-material-kelas') ? document.getElementById('ai-material-kelas').value : 'Semua Kelas';
+    const kelas = document.getElementById('ai-kelas') ? document.getElementById('ai-kelas').value : 'Semua Kelas';
 
     const btn = document.getElementById('btn-generate-ai');
     btn.disabled = true;
@@ -853,7 +866,7 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ objectives: objectives, amount: 10, indicatorType: indicatorType, indicatorValue: indicatorValue })
+            body: JSON.stringify({ objectives: objectives, amount: 10, indicatorType: indicatorType, indicatorValue: indicatorValue, kelas: kelas })
         });
 
         const data = await res.json();
@@ -908,6 +921,8 @@ async function generateBankSoalFromMaterial() {
 
     const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
     const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
+    const kelas = document.getElementById('ai-material-kelas') ? document.getElementById('ai-material-kelas').value : 'Semua Kelas';
+    const kelas = document.getElementById('ai-kelas') ? document.getElementById('ai-kelas').value : 'Semua Kelas';
 
     const btn = document.getElementById('btn-generate-material');
     const originalText = btn.innerHTML;
@@ -918,7 +933,7 @@ async function generateBankSoalFromMaterial() {
         const res = await fetch('/api/question-bank/generate-from-material', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ materialId, amount: 10, indicatorType, indicatorValue })
+            body: JSON.stringify({ materialId, amount: 10, indicatorType, indicatorValue, kelas })
         });
 
         const data = await res.json();
@@ -1031,6 +1046,7 @@ async function handleManualSoal(e) {
         correct: parseInt(document.getElementById('ms-correct').value),
         explanation: document.getElementById('ms-exp').value,
         type: document.getElementById('ms-type').value,
+        kelas: document.getElementById('ms-kelas') ? document.getElementById('ms-kelas').value : 'Semua Kelas',
         topic: 'Analisis Data',
         grade: '7 SMP',
         difficulty: 'HOTS'

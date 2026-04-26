@@ -33,6 +33,10 @@ const questionBankSchema = new mongoose.Schema({
         type: String,
         default: '7 SMP'
     },
+    kelas: {
+        type: String,
+        default: 'Semua Kelas'
+    },
     curriculum: {
         type: String,
         default: 'Fase D'
