@@ -69,7 +69,13 @@ function renderTeacherDashboard(main) {
 
     <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <h3 class="card-title">📋 Status Progres Siswa</h3>
+            <div style="display:flex; align-items:center; gap:1rem;">
+                <h3 class="card-title" style="margin-bottom:0;">📋 Status Progres Siswa</h3>
+                <select id="progress-class-filter" class="form-control" style="width:auto; margin-bottom:0; padding:0.2rem 0.5rem;" onchange="filterDashboardProgress()">
+                    <option value="all">Semua Kelas</option>
+                    ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            </div>
             <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset Pembelajaran (<span id="count-reset-selected">0</span>)</button>
         </div>
         <div class="table-container">
@@ -100,6 +106,20 @@ function renderTeacherDashboard(main) {
         initDashboardCharts();
         renderJournalSummary();
     }, 100);
+}
+
+function filterDashboardProgress() {
+    const classFilter = document.getElementById('progress-class-filter').value.toLowerCase();
+    const rows = document.querySelectorAll('.card:last-child table tbody tr');
+
+    rows.forEach(row => {
+        const studentClass = row.cells[2].innerText.toLowerCase();
+        if (classFilter === 'all' || studentClass === classFilter) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
 // ---- RESET PROGRESS FUNCTIONS ----
