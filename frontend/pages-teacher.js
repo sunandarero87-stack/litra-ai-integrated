@@ -822,7 +822,15 @@ async function renderBankSoal(main) {
                     <h4>➕ Tambah Manual (1 Soal)</h4>
                     <form id="form-manual-soal" onsubmit="handleManualSoal(event)" style="display:flex; flex-direction:column; gap:0.8rem">
                         <div class="form-group"><label>Tipe Soal</label><select id="ms-type"><option value="literasi">Literasi</option><option value="numerasi">Numerasi</option></select></div>
-                        <div class="form-group"><label>Pertanyaan / Stimulus</label><textarea id="ms-q" required rows="3" placeholder="Masukkan cerita/soal..."></textarea></div>
+                        <div class="form-group">
+                            <label>Pertanyaan / Stimulus (Bisa Paste Gambar di sini)</label>
+                            <textarea id="ms-q" required rows="4" placeholder="Masukkan cerita/soal... Tip: Paste gambar langsung ke sini!" onpaste="handlePasteImage(event, 'ms-image-preview', 'manual')"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Gambar Soal (Opsional)</label>
+                            <input type="file" id="ms-image-input" accept="image/*" onchange="previewManualImage(this)" class="form-control">
+                            <div id="ms-image-preview" class="mt-1"></div>
+                        </div>
                         <div class="form-group"><label>Opsi A</label><input type="text" id="ms-a" required></div>
                         <div class="form-group"><label>Opsi B</label><input type="text" id="ms-b" required></div>
                         <div class="form-group"><label>Opsi C</label><input type="text" id="ms-c" required></div>
@@ -1063,7 +1071,8 @@ async function handleManualSoal(e) {
         kelas: document.getElementById('ms-kelas') ? document.getElementById('ms-kelas').value : 'Semua Kelas',
         topic: 'Analisis Data',
         grade: '7 SMP',
-        difficulty: 'HOTS'
+        difficulty: 'HOTS',
+        image: window.tempManualImage || null
     };
 
     try {
@@ -1075,6 +1084,7 @@ async function handleManualSoal(e) {
 
         if (res.ok) {
             alert('Soal manual berhasil ditambahkan!');
+            window.tempManualImage = null; // Reset image cache
             renderBankSoal(document.getElementById('main-content'));
         } else {
             const data = await res.json();
@@ -2533,8 +2543,8 @@ async function editBankSoal(id) {
             </div>
             <form id="form-edit-soal" onsubmit="handleUpdateSoal(event, '${id}')">
                 <div class="form-group">
-                    <label>Pertanyaan</label>
-                    <textarea id="edit-ms-q" class="form-control" rows="3" required>${q.question}</textarea>
+                    <label>Pertanyaan (Bisa Paste Gambar)</label>
+                    <textarea id="edit-ms-q" class="form-control" rows="3" required onpaste="handlePasteImage(event, 'edit-ms-image-preview', 'edit')">${q.question}</textarea>
                 </div>
                 <div class="form-row">
                     <div class="form-group"><label>Opsi A</label><input type="text" id="edit-ms-a" value="${q.options[0]}" required></div>
@@ -2572,7 +2582,7 @@ async function editBankSoal(id) {
                     <div id="edit-ms-image-preview" class="mt-1">
                         ${q.image ? `<div style="position:relative; display:inline-block;">
                             <img src="${q.image}" style="max-height:150px; border-radius:8px; border:1px solid var(--border-color);">
-                            <button type="button" class="btn btn-sm btn-danger" style="position:absolute; top:-10px; right:-10px; border-radius:50%; width:24px; height:24px; padding:0;" onclick="removeEditImage()">×</button>
+                            <button type="button" class="btn btn-sm btn-danger" style="position:absolute; top:-10px; right:-10px; border-radius:50%; width:24px; height:24px; padding:0;" onclick="removeManualImage('edit-ms-image-preview', 'edit')">×</button>
                         </div>` : ''}
                     </div>
                 </div>
@@ -2680,6 +2690,54 @@ function viewFullImage(src) {
         </div>`;
     modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
     document.body.appendChild(modal);
+}
+
+// ---- IMAGE HELPERS FOR MANUAL ENTRY ----
+window.tempManualImage = null;
+function previewManualImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    processImageFile(file, 'ms-image-preview', 'manual');
+}
+
+function handlePasteImage(e, previewId, mode) {
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+            const file = item.getAsFile();
+            processImageFile(file, previewId, mode);
+        }
+    }
+}
+
+function processImageFile(file, previewId, mode) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        if (mode === 'manual') window.tempManualImage = base64;
+        else window.tempEditImage = base64;
+
+        const preview = document.getElementById(previewId);
+        preview.innerHTML = `
+            <div style="position:relative; display:inline-block;">
+                <img src="${base64}" style="max-height:150px; border-radius:8px; border:1px solid var(--border-color);">
+                <button type="button" class="btn btn-sm btn-danger" style="position:absolute; top:-10px; right:-10px; border-radius:50%; width:24px; height:24px; padding:0;" onclick="removeManualImage('${previewId}', '${mode}')">×</button>
+            </div>`;
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeManualImage(previewId, mode) {
+    if (mode === 'manual') {
+        window.tempManualImage = null;
+        const input = document.getElementById('ms-image-input');
+        if (input) input.value = '';
+    } else {
+        window.tempEditImage = null;
+        const input = document.getElementById('edit-ms-image-input');
+        if (input) input.value = '';
+    }
+    document.getElementById(previewId).innerHTML = '';
 }
 
 
