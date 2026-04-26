@@ -14,6 +14,7 @@ const progressController = require('./controllers/progressController');
 const materialController = require('./controllers/materialController');
 const assessmentController = require('./controllers/assessmentController');
 const questionBankController = require('./controllers/questionBankController');
+const attendanceController = require('./controllers/attendanceController');
 const multer = require('multer');
 
 const app = express();
@@ -101,6 +102,8 @@ app.post('/api/progress/settings', progressController.saveSettings);
 app.post('/api/progress/reset', progressController.resetProgress);
 app.post('/api/progress/simulate', progressController.simulateData);
 app.post('/api/progress/reset-stage2', progressController.resetStage2All);
+app.post('/api/violations', progressController.recordViolation);
+app.get('/api/violations', progressController.getViolations);
 
 // Materials
 app.get('/api/materials', materialController.getMaterials);
@@ -108,6 +111,11 @@ app.get('/api/materials/content/:id', materialController.getMaterialContent);
 app.get('/api/materials/:id', materialController.getMaterialById);
 app.post('/api/materials', materialController.addMaterial);
 app.delete('/api/materials/:id', materialController.deleteMaterial);
+
+// Attendance
+app.post('/api/attendance', attendanceController.saveAttendance);
+app.get('/api/attendance', attendanceController.getAttendance);
+app.get('/api/attendance/summary', attendanceController.getSummary);
 
 // GET /api/health - Health check
 app.get('/api/health', (req, res) => {

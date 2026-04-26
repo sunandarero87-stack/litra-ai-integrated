@@ -293,7 +293,20 @@ window.addEventListener('blur', () => {
         if (!progress[`${currentPage}Complete`]) {
             tabViolationCount++;
             console.warn(`Tab Switch Detected! Violation #${tabViolationCount}`);
-            // We don't stop the timer, as per request "timer tetap berjalan"
+            
+            // Record to server
+            fetch('/api/violations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: currentUser.username,
+                    name: currentUser.name,
+                    kelas: currentUser.kelas,
+                    stage: currentPage,
+                    details: `Pindah tab ke-${tabViolationCount} pada ${currentPage}`
+                })
+            }).catch(err => console.error('Gagal mencatat kecurangan:', err));
+
             alert('PERINGATAN: Anda dilarang membuka tab lain selama pengerjaan! Pelanggaran ini tercatat di sistem.');
         }
     }

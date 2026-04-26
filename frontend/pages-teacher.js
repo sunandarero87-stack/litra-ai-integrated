@@ -1574,11 +1574,14 @@ async function renderMonitoring(main) {
     main.innerHTML = `
     <div class="flex justify-between items-center mb-2">
         <h3>Monitoring Status Siswa</h3>
-        <button class="btn btn-primary btn-sm" onclick="renderMonitoring(document.getElementById('main-content'))">
-            <i class="fas fa-sync-alt"></i> Refresh Manual
-        </button>
     </div>
     
+    <div class="tabs mb-2">
+        <button class="tab-button active" onclick="switchMonitoringTab('status', this)">Status Aktif</button>
+        <button class="tab-button" onclick="switchMonitoringTab('violations', this)">Laporan Kecurangan</button>
+    </div>
+
+    <div id="monitoring-status-tab" class="tab-content active">
     <div class="grid-3 mb-2">
         <div class="card stat-card" style="border-left: 4px solid var(--success)">
             <div class="stat-icon" style="background: rgba(76, 175, 80, 0.1); color: var(--success)"><i class="fas fa-user-check"></i></div>
@@ -1635,7 +1638,80 @@ async function renderMonitoring(main) {
             </table>
         </div>
     </div>
+    </div>
+
+    <div id="monitoring-violations-tab" class="tab-content">
+        <div class="card">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="card-title"><i class="fas fa-exclamation-triangle text-danger"></i> Daftar Pelanggaran Siswa</h3>
+                <button class="btn btn-outline btn-sm" onclick="exportViolationsToExcel()"><i class="fas fa-file-excel"></i> Download Excel</button>
+            </div>
+            <div class="table-container" id="violations-table-container">
+                <div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Memuat data pelanggaran...</div>
+            </div>
+        </div>
+    </div>
     `;
+}
+
+function switchMonitoringTab(tab, btn) {
+    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    btn.classList.add('active');
+    document.getElementById(`monitoring-${tab}-tab`).classList.add('active');
+    
+    if (tab === 'violations') {
+        loadViolationsReport();
+    }
+}
+
+async function loadViolationsReport() {
+    const container = document.getElementById('violations-table-container');
+    try {
+        const res = await fetch('/api/violations');
+        const data = await res.json();
+        
+        if (data.success) {
+            const v = data.violations;
+            container.innerHTML = `
+            <table id="table-violations">
+                <thead>
+                    <tr>
+                        <th>Waktu</th>
+                        <th>Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th>Tahap</th>
+                        <th>Detail Pelanggaran</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${v.map(r => `
+                        <tr>
+                            <td>${new Date(r.timestamp).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                            <td><strong>${r.name || r.username}</strong></td>
+                            <td>${r.kelas || '-'}</td>
+                            <td><span class="badge badge-info">${r.stage || '-'}</span></td>
+                            <td><span class="text-danger">${r.details}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada laporan kecurangan.</td></tr>'}
+                </tbody>
+            </table>`;
+        }
+    } catch (err) {
+        container.innerHTML = '<div class="error-msg">Gagal memuat laporan kecurangan.</div>';
+    }
+}
+
+function exportViolationsToExcel() {
+    const table = document.querySelector('#table-violations');
+    if (!table) return;
+    const html = table.outerHTML;
+    const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Laporan_Kecurangan_Siswa_${new Date().getTime()}.xls`;
+    link.click();
 }
 
 async function triggerDataSimulation() {
@@ -1706,95 +1782,264 @@ function toggleAllResults() {
 function renderStudentAttendance(main) {
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
+    const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
     const today = new Date().toISOString().split('T')[0];
 
     main.innerHTML = `
     <div class="card">
-        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <div>
-                <h3 class="card-title">📅 Absensi Siswa</h3>
-                <p class="text-muted" style="font-size:0.85rem">Tanggal: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <div class="card-header">
+            <h3 class="card-title">📅 Manajemen Absensi Siswa</h3>
+        </div>
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchAttendanceTab('input', this)">Input Absensi</button>
+            <button class="tab-button" onclick="switchAttendanceTab('report', this)">Laporan & Rekap</button>
+        </div>
+
+        <!-- Tab Content: Input -->
+        <div id="attendance-input-tab" class="tab-content active">
+            <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap; gap:1rem;">
+                <div>
+                    <h4 id="attendance-date-label">Presensi Hari Ini: ${new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</h4>
+                    <input type="date" id="attendance-date-input" value="${today}" class="form-control" style="width:auto; display:inline-block; margin-top:0.5rem;" onchange="loadAttendanceForDate(this.value)">
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterTable('search-attendance', 'table-attendance')">
+                    <button class="btn btn-success" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan Absensi</button>
+                </div>
             </div>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-                <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterTable('search-attendance', 'table-attendance')">
-                <button class="btn btn-success btn-sm" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan Absensi</button>
+            <div class="table-container">
+                <table id="table-attendance">
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>Nama Siswa</th>
+                            <th>Kelas</th>
+                            <th style="text-align:center">Hadir</th>
+                            <th style="text-align:center">Sakit</th>
+                            <th style="text-align:center">Izin</th>
+                            <th style="text-align:center">Alpha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${students.map((s, index) => `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td><strong>${s.name}</strong></td>
+                                <td>${s.kelas || '-'}</td>
+                                <td style="text-align:center">
+                                    <input type="radio" name="att-${s.username}" value="hadir" checked style="width:20px; height:20px; cursor:pointer">
+                                </td>
+                                <td style="text-align:center">
+                                    <input type="radio" name="att-${s.username}" value="sakit" style="width:20px; height:20px; cursor:pointer">
+                                </td>
+                                <td style="text-align:center">
+                                    <input type="radio" name="att-${s.username}" value="izin" style="width:20px; height:20px; cursor:pointer">
+                                </td>
+                                <td style="text-align:center">
+                                    <input type="radio" name="att-${s.username}" value="alpha" style="width:20px; height:20px; cursor:pointer">
+                                </td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="7" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="table-container mt-2">
-            <table id="table-attendance">
-                <thead>
-                    <tr>
-                        <th>No.</th>
-                        <th>Nama Siswa</th>
-                        <th>Kelas</th>
-                        <th style="text-align:center">Hadir</th>
-                        <th style="text-align:center">Sakit</th>
-                        <th style="text-align:center">Izin</th>
-                        <th style="text-align:center">Alpha</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${students.map((s, index) => `
-                        <tr>
-                            <td>${index + 1}</td>
-                            <td><strong>${s.name}</strong></td>
-                            <td>${s.kelas || '-'}</td>
-                            <td style="text-align:center">
-                                <input type="radio" name="att-${s.username}" value="hadir" checked style="width:20px; height:20px; cursor:pointer">
-                            </td>
-                            <td style="text-align:center">
-                                <input type="radio" name="att-${s.username}" value="sakit" style="width:20px; height:20px; cursor:pointer">
-                            </td>
-                            <td style="text-align:center">
-                                <input type="radio" name="att-${s.username}" value="izin" style="width:20px; height:20px; cursor:pointer">
-                            </td>
-                            <td style="text-align:center">
-                                <input type="radio" name="att-${s.username}" value="alpha" style="width:20px; height:20px; cursor:pointer">
-                            </td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="7" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
-                </tbody>
-            </table>
+
+        <!-- Tab Content: Report -->
+        <div id="attendance-report-tab" class="tab-content">
+            <div class="grid-3 mb-2" style="grid-template-columns: 1fr 1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                    <label>Periode Laporan</label>
+                    <select id="report-period" class="form-control" onchange="updateAttendanceReport()">
+                        <option value="daily">Harian</option>
+                        <option value="weekly">Mingguan</option>
+                        <option value="monthly">Bulanan</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Pilih Tanggal Acuan</label>
+                    <input type="date" id="report-date" value="${today}" class="form-control" onchange="updateAttendanceReport()">
+                </div>
+                <div class="form-group">
+                    <label>Filter Kelas</label>
+                    <select id="report-class" class="form-control" onchange="updateAttendanceReport()">
+                        <option value="all">Semua Kelas</option>
+                        ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+
+            <div id="attendance-report-summary" class="mb-2">
+                <!-- Summary cards populated by JS -->
+            </div>
+
+            <div id="attendance-report-content" class="table-container">
+                <div class="text-center py-3 text-muted">Silakan pilih parameter laporan.</div>
+            </div>
+            
+            <div class="flex justify-between mt-2">
+                <button class="btn btn-outline" onclick="exportAttendanceReport()"><i class="fas fa-file-excel"></i> Download Excel</button>
+                <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Cetak Laporan</button>
+            </div>
         </div>
     </div>`;
+
+    // Load current day's attendance if exists
+    loadAttendanceForDate(today);
 }
 
-function saveAttendance() {
+function switchAttendanceTab(tab, btn) {
+    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    btn.classList.add('active');
+    document.getElementById(`attendance-${tab}-tab`).classList.add('active');
+    
+    if (tab === 'report') {
+        updateAttendanceReport();
+    }
+}
+
+async function loadAttendanceForDate(date) {
+    const label = document.getElementById('attendance-date-label');
+    if (label) {
+        const d = new Date(date);
+        label.innerText = `Presensi: ${d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}`;
+    }
+
+    try {
+        const res = await fetch(`/api/attendance?date=${date}`);
+        const data = await res.json();
+        
+        if (data.success && data.records.length > 0) {
+            data.records.forEach(r => {
+                const radios = document.getElementsByName(`att-${r.username}`);
+                radios.forEach(rd => {
+                    if (rd.value === r.status) rd.checked = true;
+                });
+            });
+        } else {
+            // Reset to "hadir"
+            const allRadios = document.querySelectorAll('input[type="radio"][name^="att-"]');
+            allRadios.forEach(rd => {
+                if (rd.value === 'hadir') rd.checked = true;
+                else rd.checked = false;
+            });
+        }
+    } catch (err) {
+        console.error('Gagal memuat absensi:', err);
+    }
+}
+
+async function saveAttendance() {
+    const date = document.getElementById('attendance-date-input').value;
     const btn = event.target.closest('button');
     const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
 
-    const attendanceData = JSON.parse(localStorage.getItem('student_attendance') || '{}');
-    const today = new Date().toISOString().split('T')[0];
-    
-    if (!attendanceData[today]) attendanceData[today] = {};
-
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
-    
+    const records = {};
+
     students.forEach(s => {
         const radios = document.getElementsByName(`att-${s.username}`);
         let status = 'hadir';
         for (const r of radios) {
-            if (r.checked) {
-                status = r.value;
-                break;
-            }
+            if (r.checked) { status = r.value; break; }
         }
-        attendanceData[today][s.username] = {
+        records[s.username] = {
             status,
+            name: s.name,
             kelas: s.kelas || 'Tanpa Kelas'
         };
     });
 
-    localStorage.setItem('student_attendance', JSON.stringify(attendanceData));
-
-    setTimeout(() => {
+    try {
+        const res = await fetch('/api/attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date, records })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Absensi berhasil disimpan ke database!');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Gagal menyimpan absensi ke server.');
+    } finally {
         btn.disabled = false;
         btn.innerHTML = originalContent;
-        alert('✅ Data absensi berhasil disimpan!');
-    }, 1000);
+    }
+}
+
+async function updateAttendanceReport() {
+    const period = document.getElementById('report-period').value;
+    const date = document.getElementById('report-date').value;
+    const kelas = document.getElementById('report-class').value;
+    const content = document.getElementById('attendance-report-content');
+    const summaryDiv = document.getElementById('attendance-report-summary');
+
+    content.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Menghasilkan Laporan...</div>';
+
+    try {
+        const res = await fetch(`/api/attendance/summary?type=${period}&date=${date}&kelas=${kelas}`);
+        const data = await res.json();
+
+        if (data.success) {
+            const s = data.summary;
+            
+            // Render Summary Cards
+            summaryDiv.innerHTML = `
+            <div class="grid-4">
+                <div class="stat-card" style="padding:1rem; gap:0.5rem;"><div class="stat-icon green" style="width:32px; height:32px; font-size:0.9rem;"><i class="fas fa-check"></i></div><div class="stat-info"><h3 style="font-size:1.1rem;">${s.hadir}</h3><p style="font-size:0.7rem;">Hadir</p></div></div>
+                <div class="stat-card" style="padding:1rem; gap:0.5rem;"><div class="stat-icon blue" style="width:32px; height:32px; font-size:0.9rem;"><i class="fas fa-briefcase-medical"></i></div><div class="stat-info"><h3 style="font-size:1.1rem;">${s.sakit}</h3><p style="font-size:0.7rem;">Sakit</p></div></div>
+                <div class="stat-card" style="padding:1rem; gap:0.5rem;"><div class="stat-icon orange" style="width:32px; height:32px; font-size:0.9rem;"><i class="fas fa-envelope"></i></div><div class="stat-info"><h3 style="font-size:1.1rem;">${s.izin}</h3><p style="font-size:0.7rem;">Izin</p></div></div>
+                <div class="stat-card" style="padding:1rem; gap:0.5rem;"><div class="stat-icon red" style="width:32px; height:32px; font-size:0.9rem;"><i class="fas fa-times"></i></div><div class="stat-info"><h3 style="font-size:1.1rem;">${s.alpha}</h3><p style="font-size:0.7rem;">Alpha</p></div></div>
+            </div>`;
+
+            // Render Table
+            let tableHtml = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tanggal</th>
+                        <th>Nama Siswa</th>
+                        <th>Kelas</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${s.details.map(r => `
+                        <tr>
+                            <td>${new Date(r.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</td>
+                            <td><strong>${r.name || r.username}</strong></td>
+                            <td>${r.kelas || '-'}</td>
+                            <td><span class="badge badge-${r.status === 'hadir' ? 'success' : r.status === 'sakit' ? 'info' : r.status === 'izin' ? 'warning' : 'danger'}">${r.status.toUpperCase()}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="4" class="text-center text-muted">Tidak ada data absensi untuk periode ini.</td></tr>'}
+                </tbody>
+            </table>`;
+            content.innerHTML = tableHtml;
+        }
+    } catch (err) {
+        console.error(err);
+        content.innerHTML = '<div class="error-msg">Gagal memuat laporan absensi.</div>';
+    }
+}
+
+function exportAttendanceReport() {
+    const table = document.querySelector('#attendance-report-content table');
+    if (!table) return;
+    const html = table.outerHTML;
+    const blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Laporan_Absensi_${new Date().getTime()}.xls`;
+    link.click();
 }
 
 // ---- TEACHER JOURNAL ----

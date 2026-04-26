@@ -1,4 +1,5 @@
 const Progress = require('../models/Progress');
+const Violation = require('../models/Violation');
 const Setting = require('../models/Setting');
 
 // Get all progress data to sync to the client
@@ -224,3 +225,24 @@ exports.resetStage2All = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.recordViolation = async (req, res) => {
+    try {
+        const { username, name, kelas, stage, type, details } = req.body;
+        const newViolation = new Violation({ username, name, kelas, stage, type, details });
+        await newViolation.save();
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getViolations = async (req, res) => {
+    try {
+        const violations = await Violation.find().sort({ timestamp: -1 });
+        res.json({ success: true, violations });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
