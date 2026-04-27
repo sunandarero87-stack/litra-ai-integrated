@@ -604,8 +604,8 @@ function renderAssessmentMgmt(main) {
         <div class="card">
             <div class="card-header"><h3 class="card-title">📋 Info Asesmen & Pengaturan</h3></div>
             <div class="form-group mt-1">
-                <label>Jumlah Soal Asesmen (Default: 10)</label>
-                <input type="number" id="assessment-amount" value="${settings.questionAmount || 10}" min="5" max="100">
+                <label>Jumlah Soal Asesmen (Default: 50)</label>
+                <input type="number" id="assessment-amount" value="${settings.questionAmount || 50}" min="5" max="100">
             </div>
             <button class="btn btn-primary btn-sm mt-1" onclick="saveAssessmentQuestionAmount()">
                 <i class="fas fa-save"></i> Simpan Jumlah Soal
@@ -682,7 +682,7 @@ async function approveStudent(username, btnElement) {
     }
 
     const amountInput = document.getElementById('assessment-amount');
-    const amount = amountInput ? parseInt(amountInput.value) || 10 : 10;
+    const amount = amountInput ? parseInt(amountInput.value) || 50 : 50;
 
     try {
         const progress = getProgress(username);

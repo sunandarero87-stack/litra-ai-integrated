@@ -146,7 +146,7 @@ async function saveApprovalForUser(username, approvalData) {
         console.error('Failed to sync approval', err);
     }
 }
-function getAssessmentSettings() { return JSON.parse(localStorage.getItem('assessmentSettings') || '{"duration":90}'); }
+function getAssessmentSettings() { return JSON.parse(localStorage.getItem('assessmentSettings') || '{"duration":90, "questionAmount":50}'); }
 function saveAssessmentSettings(s) {
     localStorage.setItem('assessmentSettings', JSON.stringify(s));
     fetch('/api/progress/settings', {
