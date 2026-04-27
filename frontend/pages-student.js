@@ -168,6 +168,22 @@ function renderTahap1(main) {
     `;
 }
 
+function showMaterialPopup() {
+    const existing = document.getElementById('material-reminder-popup');
+    if (existing) existing.remove();
+
+    const popup = document.createElement('div');
+    popup.id = 'material-reminder-popup';
+    popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--bg-card); padding:2rem; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:9999; text-align:center; max-width:400px; width:90%; animation: slideUp 0.3s ease; border: 1px solid var(--border-color);';
+    popup.innerHTML = `
+        <i class="fas fa-robot" style="font-size:3rem; color:var(--primary); margin-bottom:1rem;"></i>
+        <h3 style="margin-bottom:0.5rem; color:var(--text-primary);">Waktunya Belajar!</h3>
+        <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem; line-height:1.5;">Setelah selesai membaca materi, klik <strong>icon chat di kanan bawah</strong> untuk menguji pemahamanmu bersama NARA-AI. <br><br>Kamu harus menjawab pertanyaan untuk bisa lanjut ke Tahap 2.</p>
+        <button class="btn btn-primary" onclick="this.parentElement.remove(); document.getElementById('chatbot-toggle-btn').classList.add('pulse'); setTimeout(()=>document.getElementById('chatbot-toggle-btn').classList.remove('pulse'), 5000);" style="width:100%;">Saya Mengerti</button>
+    `;
+    document.body.appendChild(popup);
+}
+
 async function viewMaterial(id, type) {
     document.getElementById('material-list-container').style.display = 'none';
     document.getElementById('material-viewer-container').style.display = 'block';
@@ -205,6 +221,9 @@ async function viewMaterial(id, type) {
     // Avoid duplicate initialization if switching material inside the viewer
     if (currentMaterial !== id) {
         currentMaterial = id;
+
+        // Tampilkan popup pengingat uji pemahaman
+        showMaterialPopup();
 
         // Reset chat container visibility if needed
         document.getElementById('floating-chatbot-container').style.display = 'flex';
