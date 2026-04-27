@@ -787,14 +787,57 @@ function startAssessment() {
     assessmentCurrentQ = 0;
     assessmentActive = true;
     tabViolationCount = 0;
-    // Timer handled globally by app.js startStageTimer triggered via navigateTo
 
-    // Anti-Cheat: hanya cegah copy/paste (swipe & tab-switch dihapus)
+    // Masuk ke Mode Fullscreen (Exambrowser)
+    enterFullscreen();
+
+    // Anti-Cheat: cegah copy/paste/klik kanan
     document.addEventListener('contextmenu', preventDefaultAction);
     document.addEventListener('copy', preventDefaultAction);
     document.addEventListener('paste', preventDefaultAction);
 
+    // Deteksi Pelanggaran (Tab Switch & Fullscreen Exit)
+    setupExambrowserListeners();
+
     showAssessmentQuestion(document.getElementById('main-content'));
+}
+
+function enterFullscreen() {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen();
+    } else if (elem.webkitRequestFullscreen) { /* Safari */
+        elem.webkitRequestFullscreen();
+    } else if (elem.msRequestFullscreen) { /* IE11 */
+        elem.msRequestFullscreen();
+    }
+}
+
+function setupExambrowserListeners() {
+    // Bersihkan listener lama jika ada
+    document.removeEventListener('visibilitychange', handleTabViolation);
+    document.removeEventListener('fullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenViolation);
+
+    document.addEventListener('visibilitychange', handleTabViolation);
+    document.addEventListener('fullscreenchange', handleFullscreenViolation);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenViolation);
+}
+
+function handleTabViolation() {
+    if (assessmentActive && document.visibilityState === 'hidden') {
+        tabViolationCount++;
+        alert(`🚨 PERINGATAN PELANGGARAN!\n\nKamu dilarang berpindah tab/aplikasi selama ujian.\nPelanggaran dicatat: ${tabViolationCount}x`);
+    }
+}
+
+function handleFullscreenViolation() {
+    if (assessmentActive && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        tabViolationCount++;
+        alert(`🚨 PERINGATAN!\n\nJangan keluar dari mode Fullscreen (Exambrowser) selama ujian.\nSilakan masuk kembali ke Fullscreen.\nPelanggaran dicatat: ${tabViolationCount}x`);
+        // Opsional: Paksa masuk lagi
+        // enterFullscreen();
+    }
 }
 
 function preventDefaultAction(e) {
@@ -857,19 +900,25 @@ function selectAssessmentAnswer(qId, optIdx) {
     showAssessmentQuestion(document.getElementById('main-content'));
 }
 
-function submitAssessment(autoRedirect = false) {
-    if (assessmentTimer) { clearInterval(assessmentTimer); assessmentTimer = null; }
+async function submitAssessment(autoRedirect = false) {
+    if (!assessmentActive) return;
+    if (!autoRedirect && !confirm("Kirim hasil asesmen sekarang?")) return;
 
-    // Remove anti-cheat listeners
+    assessmentActive = false;
+    clearInterval(assessmentTimer);
+
+    // Hentikan mode fullscreen dan hapus listener
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+
     document.removeEventListener('contextmenu', preventDefaultAction);
     document.removeEventListener('copy', preventDefaultAction);
     document.removeEventListener('paste', preventDefaultAction);
-
-    // Exit fullscreen if active
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
-        if (document.exitFullscreen) document.exitFullscreen().catch(err => { });
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-    }
+    document.removeEventListener('visibilitychange', handleTabViolation);
+    document.removeEventListener('fullscreenchange', handleFullscreenViolation);
+    document.removeEventListener('webkitfullscreenchange', handleFullscreenViolation);
 
     assessmentActive = false;
 
