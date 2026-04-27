@@ -748,9 +748,9 @@ function renderTahap3(main) {
             <h2>Asesmen Utama</h2>
             <p class="text-muted mt-1">Format TKA (Literasi & Numerasi)</p>
             <div style="margin:1.5rem 0;text-align:left" class="card" style="background:var(--bg-input)">
-                <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> 10 soal</p>
+                <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> ${settings.questionAmount || 10} soal</p>
                 <p class="mt-1"><i class="fas fa-clock"></i> <strong>Waktu:</strong> ${settings.duration} menit</p>
-                <p class="mt-1"><i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> <strong>Peringatan:</strong> Jika membuka tab lain, soal akan diulang dari awal!</p>
+                <p class="mt-1"><i class="fas fa-pencil-alt" style="color:var(--info)"></i> <strong>Petunjuk:</strong> Jawab semua soal dengan teliti dan jujur.</p>
                 <p class="mt-1"><i class="fas fa-percentage"></i> <strong>KKM:</strong> 70%</p>
             </div>
             <button class="btn btn-danger btn-full" onclick="startAssessment()">
@@ -770,152 +770,16 @@ function startAssessment() {
     tabViolationCount = 0;
     // Timer handled globally by app.js startStageTimer triggered via navigateTo
 
-    // Advanced Anti-Cheat Listeners
-    // 1. Fullscreen Enforcement
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) {
-        elem.requestFullscreen({ navigationUI: "hide" }).catch(err => console.log(err));
-    } else if (elem.webkitRequestFullscreen) { /* Safari */
-        elem.webkitRequestFullscreen();
-    } else if (elem.msRequestFullscreen) { /* IE11 */
-        elem.msRequestFullscreen();
-    }
-
-    // 2. Lockdown API / styling to prevent swiping & pull-to-refresh
-    document.body.style.touchAction = 'none';
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.touchAction = 'none';
-    document.documentElement.style.overflow = 'hidden';
-
-    document.addEventListener('visibilitychange', handleTabSwitch);
-    window.addEventListener('blur', handleTabSwitch);
-    window.addEventListener('resize', handleResizeViolation);
-
-    // Detect fullscreen exit (Notification swipe down often exits fullscreen on mobile)
-    document.addEventListener('fullscreenchange', handleFullscreenSwitch);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenSwitch);
-
-    // Detect mouse/touch leaving the upper boundary (swiping notifications)
-    document.addEventListener('mouseleave', handleMouseLeave);
-
-    // Disable right-click, copy, paste during assessment
+    // Anti-Cheat: hanya cegah copy/paste (swipe & tab-switch dihapus)
     document.addEventListener('contextmenu', preventDefaultAction);
     document.addEventListener('copy', preventDefaultAction);
     document.addEventListener('paste', preventDefaultAction);
-    document.addEventListener('touchmove', preventSwipeAction, { passive: false });
 
     showAssessmentQuestion(document.getElementById('main-content'));
 }
 
 function preventDefaultAction(e) {
     e.preventDefault();
-}
-
-function preventSwipeAction(e) {
-    // allow scroll if needed for content, but prevent global page swipe
-    if (e.target.closest('.quiz-container') || e.target.closest('.main-content')) {
-        return;
-    }
-    e.preventDefault();
-}
-
-function handleFullscreenSwitch(e) {
-    if (!assessmentActive) return;
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        // They exited full screen (e.g. pulled down notification bar or pressed physical back button)
-        handleTabSwitch({ type: 'fullscreenexit' });
-
-        // Try to force fullscreen back
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) elem.requestFullscreen().catch(err => { });
-        else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-    }
-}
-
-function handleMouseLeave(e) {
-    if (!assessmentActive) return;
-    // If pointer leaves from the top, they might be pulling down notifications
-    if (e.clientY <= 0) {
-        handleTabSwitch({ type: 'swipe_notification' });
-    }
-}
-
-function handleResizeViolation() {
-    if (!assessmentActive) return;
-    // Allow small resizes (like mobile address bar hiding), detect large resizes (split screen)
-    if (!window._lastWidth) {
-        window._lastWidth = window.innerWidth;
-        window._lastHeight = window.innerHeight;
-        return;
-    }
-
-    const widthDiff = Math.abs(window.innerWidth - window._lastWidth);
-    const heightDiff = Math.abs(window.innerHeight - window._lastHeight);
-
-    // If window resizes by more than 20%, consider it an attempt to split screen
-    if (widthDiff > window._lastWidth * 0.2 || heightDiff > window._lastHeight * 0.2) {
-        window._lastWidth = window.innerWidth;
-        window._lastHeight = window.innerHeight;
-        handleTabSwitch({ type: 'resize' });
-    } else {
-        window._lastWidth = window.innerWidth;
-        window._lastHeight = window.innerHeight;
-    }
-}
-
-function handleTabSwitch(e = {}) {
-    if (!assessmentActive) return;
-
-    // Prevent triggering twice instantly
-    if (window._lastViolationTime && (Date.now() - window._lastViolationTime < 2000)) return;
-    window._lastViolationTime = Date.now();
-
-    // Only detect hidden document or window blur/resize
-    if (e.type === 'visibilitychange' && !document.hidden) return;
-
-    tabViolationCount++;
-    assessmentAnswers = {};
-    assessmentCurrentQ = 0;
-
-    let violationReason = "membuka aplikasi lain / pindah tab";
-    if (e.type === 'blur') violationReason = "membuka aplikasi mengambang (Bubble) / Notification Box";
-    if (e.type === 'resize') violationReason = "membagi layar (Split Screen) / merespons aplikasi lain";
-    if (e.type === 'fullscreenexit') violationReason = "keluar dari mode layar penuh / menarik panel notifikasi";
-    if (e.type === 'swipe_notification') violationReason = "mengusap layar hp untuk melihat notifikasi";
-
-    if (tabViolationCount >= 3) {
-        alert('⚠️ Asesmen Dibatalkan! Kamu telah melakukan pelanggaran lebih dari 3 kali. Asesmen dihentikan dan jawabanmu tidak sah.');
-        submitAssessment(true);
-        return;
-    }
-
-    // Show violation overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'tab-violation-overlay';
-    overlay.id = 'tab-violation-overlay';
-    overlay.innerHTML = `
-    <div class="tab-violation-content">
-            <i class="fas fa-exclamation-triangle"></i>
-            <h2>⚠️ Pelanggaran Terdeteksi!</h2>
-            <p>Sistem mendeteksi kamu <b>${violationReason}</b>! Semua jawaban direset. Timer tetap berjalan.</p>
-            <p style="color:var(--danger); font-weight:bold;">Pelanggaran ke-${tabViolationCount} dari 3</p>
-            <button class="btn btn-outline" onclick="dismissViolation()" style="color:white;border-color:white;margin-top:1rem;">
-                Saya Mengerti, Kembali ke Soal
-            </button>
-        </div>`;
-    document.body.appendChild(overlay);
-}
-
-function dismissViolation() {
-    const overlay = document.getElementById('tab-violation-overlay');
-    if (overlay) overlay.remove();
-
-    // Try to force fullscreen back on dismiss
-    const elem = document.documentElement;
-    if (elem.requestFullscreen) elem.requestFullscreen().catch(err => { });
-    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
-
-    showAssessmentQuestion(document.getElementById('main-content'));
 }
 
 function updateTimerDisplay() {
@@ -977,23 +841,10 @@ function selectAssessmentAnswer(qId, optIdx) {
 function submitAssessment(autoRedirect = false) {
     if (assessmentTimer) { clearInterval(assessmentTimer); assessmentTimer = null; }
 
-    // Remove all anti-cheat listeners
-    document.removeEventListener('visibilitychange', handleTabSwitch);
-    window.removeEventListener('blur', handleTabSwitch);
-    window.removeEventListener('resize', handleResizeViolation);
-    document.removeEventListener('fullscreenchange', handleFullscreenSwitch);
-    document.removeEventListener('webkitfullscreenchange', handleFullscreenSwitch);
-    document.removeEventListener('mouseleave', handleMouseLeave);
+    // Remove anti-cheat listeners
     document.removeEventListener('contextmenu', preventDefaultAction);
     document.removeEventListener('copy', preventDefaultAction);
     document.removeEventListener('paste', preventDefaultAction);
-    document.removeEventListener('touchmove', preventSwipeAction, { passive: false });
-
-    // Remove Lockdown styling
-    document.body.style.touchAction = '';
-    document.body.style.overflow = '';
-    document.documentElement.style.touchAction = '';
-    document.documentElement.style.overflow = '';
 
     // Exit fullscreen if active
     if (document.fullscreenElement || document.webkitFullscreenElement) {

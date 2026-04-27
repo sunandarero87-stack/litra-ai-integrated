@@ -285,39 +285,11 @@ function handleStageTimeout(page) {
     }
 }
 
-// Anti-Cheat Listener
-window.addEventListener('blur', () => {
-    if (currentUser && currentUser.role === 'siswa' && STAGE_DURATION[currentPage]) {
-        const progress = getProgress(currentUser.username);
-        if (!progress[`${currentPage}Complete`]) {
-            tabViolationCount++;
-            console.warn(`Tab Switch Detected! Violation #${tabViolationCount}`);
-            
-            // Record to server
-            fetch('/api/violations', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: currentUser.username,
-                    name: currentUser.name,
-                    kelas: currentUser.kelas,
-                    stage: currentPage,
-                    details: `Pindah tab ke-${tabViolationCount} pada ${currentPage}`
-                })
-            }).catch(err => console.error('Gagal mencatat kecurangan:', err));
-
-            alert('PERINGATAN: Anda dilarang membuka tab lain selama pengerjaan! Pelanggaran ini tercatat di sistem.');
-        }
-    }
-});
-
+// Global visibility change listener (tidak ada anti-cheat di sini)
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-        if (currentUser && currentUser.role === 'siswa' && STAGE_DURATION[currentPage]) {
-             const progress = getProgress(currentUser.username);
-             if (!progress[`${currentPage}Complete`]) {
-                console.log('User left the tab, timer continues...');
-             }
+        if (currentUser && currentUser.role === 'siswa') {
+            console.log('User left the tab...');
         }
     }
 });
@@ -447,7 +419,6 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('student-attendance')"><i class="fas fa-calendar-check"></i> Absen Siswa</button>
             <button class="nav-item" onclick="navigateTo('teacher-journal')"><i class="fas fa-journal-whills"></i> Jurnal Harian</button>
             <button class="nav-item" onclick="navigateTo('student-results')"><i class="fas fa-poll"></i> Hasil Penilaian</button>
-            <button class="nav-item" onclick="navigateTo('violation-data')"><i class="fas fa-exclamation-triangle"></i> Data Pelanggaran</button>
             
             <div class="nav-section">Manajemen</div>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>

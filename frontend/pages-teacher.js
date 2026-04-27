@@ -605,8 +605,11 @@ function renderAssessmentMgmt(main) {
             <div class="card-header"><h3 class="card-title">📋 Info Asesmen & Pengaturan</h3></div>
             <div class="form-group mt-1">
                 <label>Jumlah Soal Asesmen (Default: 10)</label>
-                <input type="number" id="assessment-amount" value="10" min="5" max="100">
+                <input type="number" id="assessment-amount" value="${settings.questionAmount || 10}" min="5" max="100">
             </div>
+            <button class="btn btn-primary btn-sm mt-1" onclick="saveAssessmentQuestionAmount()">
+                <i class="fas fa-save"></i> Simpan Jumlah Soal
+            </button>
             <p class="mt-1"><strong>Tipe:</strong> Proporsional Literasi & Numerasi</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
         </div>
@@ -661,8 +664,15 @@ function renderAssessmentMgmt(main) {
 function saveAssessmentDuration() {
     const dur = parseInt(document.getElementById('assessment-duration').value);
     if (dur < 10 || dur > 180) { alert('Durasi harus antara 10-180 menit!'); return; }
-    saveAssessmentSettings({ duration: dur });
+    saveAssessmentSettings({ ...getAssessmentSettings(), duration: dur });
     alert('✅ Durasi asesmen berhasil disimpan!');
+}
+
+function saveAssessmentQuestionAmount() {
+    const amt = parseInt(document.getElementById('assessment-amount').value);
+    if (amt < 5 || amt > 100) { alert('Jumlah soal harus antara 5-100!'); return; }
+    saveAssessmentSettings({ ...getAssessmentSettings(), questionAmount: amt });
+    alert(`✅ Jumlah soal asesmen disimpan: ${amt} soal!`);
 }
 
 async function approveStudent(username, btnElement) {
@@ -767,7 +777,7 @@ function showAssessmentReviewModal(username, originalQuestions) {
                 <h2>Review Asesmen AI (Siswa: ${username})</h2>
                 <button class="modal-close" onclick="if(confirm('Batalkan review?')) this.closest('.modal-overlay').remove()">&times;</button>
             </div>
-            <p class="text-muted" style="margin-bottom:1rem">Berikut 10 soal buatan AI berdasarkan chat siswa. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
+            <p class="text-muted" style="margin-bottom:1rem">Berikut <strong>${originalQuestions.length} soal</strong> yang dipilih dari Bank Soal. Anda dapat mengedit redaksi kalimat, kunci jawaban, dan pilihan ganda sebelum dikirimkan ke siswa.</p>
             
             <div id="review-questions-container">
                 ${questionsHTML}
