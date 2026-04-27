@@ -648,8 +648,8 @@ function renderAssessmentMgmt(main) {
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
                             <td>
-                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-check-circle"></i> Setuju</button></div>` :
-                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-check-circle"></i> Setuju</button>` :
+                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-plus-circle"></i> Setuju</button></div>` :
+                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-plus-circle"></i> Setuju</button>` :
                     '<span class="text-muted">Menunggu Refleksi</span>'}
                             </td>
                         </tr>`;
@@ -678,14 +678,16 @@ function saveAssessmentQuestionAmount() {
 async function approveStudent(username, btnElement) {
     if (btnElement) {
         btnElement.disabled = true;
-        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan...';
     }
 
     const amountInput = document.getElementById('assessment-amount');
     const amount = amountInput ? parseInt(amountInput.value) || 10 : 10;
 
     try {
-        // Generate soal dari Bank Soal
+        const progress = getProgress(username);
+
+        // Langsung generate dari database
         const genRes = await fetch('/api/assessment/generate-from-bank', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -698,8 +700,7 @@ async function approveStudent(username, btnElement) {
         }
         const genData = await genRes.json();
 
-        // Langsung simpan soal ke progress siswa tanpa review
-        const progress = getProgress(username);
+        // Langsung setujui dan tambahkan soal
         progress.generatedAssessment = genData.questions;
         updateProgress(username, progress);
 
@@ -707,14 +708,14 @@ async function approveStudent(username, btnElement) {
         await saveApprovalForUser(username, { date: new Date().toISOString(), approvedBy: currentUser.username });
 
         renderAssessmentMgmt(document.getElementById('main-content'));
-        alert(`✅ Berhasil! ${genData.questions.length} soal telah disiapkan dan Tahap 3 terbuka untuk ${username}`);
+        alert(`Berhasil! Asesmen sebanyak ${genData.questions.length} soal telah ditambahkan untuk ${username}`);
 
     } catch (err) {
         console.error(err);
         alert(err.message || 'Gagal menyiapkan soal dari Bank Soal!');
         if (btnElement) {
             btnElement.disabled = false;
-            btnElement.innerHTML = '<i class="fas fa-check-circle"></i> Setuju';
+            btnElement.innerHTML = 'Setuju';
         }
     }
 }
