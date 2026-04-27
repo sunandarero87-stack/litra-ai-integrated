@@ -10,9 +10,8 @@ let assessmentTimer = null;
 let assessmentTimeLeft = 0;
 let tabViolationCount = 0;
 
-// Stage Timer Config (in seconds)
+// Stage Timer Config (in seconds) — Tahap 1 dikecualikan (tidak ada timer/anti-cheat)
 const STAGE_DURATION = {
-    'tahap1': 20 * 60,
     'tahap2': 20 * 60,
     'tahap3': 30 * 60,
     'tahap4': 20 * 60
