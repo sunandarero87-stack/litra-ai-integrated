@@ -740,7 +740,7 @@ async function renderTahap2(main) {
     }
 
     main.innerHTML = `
-        <div class="quiz-container">
+        <div class="quiz-container" oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;" onpaste="return false;" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
         <div class="quiz-header">
             <h3>📝 Tahap 2: Refleksi Belajar</h3>
             <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan NARA-AI.</p>
@@ -1122,7 +1122,7 @@ function renderTahap4(main) {
     ];
 
     main.innerHTML = `
-    <div class="card fade-in">
+    <div class="card fade-in" oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;" onpaste="return false;" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
         <h3 class="card-title text-center mb-2">🌱 Refleksi 7 Kebiasaan Hebat Anak Indonesia</h3>
         <p class="text-center text-muted mb-3">Silakan jawab dengan jujur secara mandiri. Jawaban akan dianalisis oleh AI. Copy & Paste dinonaktifkan.</p>
         

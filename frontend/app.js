@@ -345,6 +345,8 @@ async function handleLogin(e) {
 
         if (user.mustChangePassword) {
             showPage('page-change-password');
+        } else if (user.role === 'siswa') {
+            showStudentOnboarding();
         } else {
             showAppShell();
         }
@@ -402,6 +404,88 @@ function handleLogout() {
     sessionStorage.removeItem('currentSession');
     if (assessmentTimer) { clearInterval(assessmentTimer); assessmentTimer = null; }
     showPage('page-login');
+}
+
+function showStudentOnboarding() {
+    const existing = document.getElementById('student-onboarding-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'student-onboarding-overlay';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(8px); padding:20px;';
+    
+    overlay.innerHTML = `
+    <div style="background:var(--bg-card); width:100%; max-width:600px; max-height:90vh; border-radius:24px; box-shadow:var(--shadow-lg); border:1px solid var(--border-color); display:flex; flex-direction:column; overflow:hidden; animation:slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
+        <div style="background:var(--gradient-primary); padding:2rem; text-align:center; color:white;">
+            <i class="fas fa-graduation-cap" style="font-size:3rem; margin-bottom:1rem; display:block;"></i>
+            <h2 style="font-size:1.5rem; font-weight:800;">Panduan Belajar Litra-AI</h2>
+            <p style="opacity:0.9; font-size:0.9rem;">Pahami alur pembelajaranmu bersama NARA-AI</p>
+        </div>
+        
+        <div style="flex:1; overflow-y:auto; padding:2rem; display:flex; flex-direction:column; gap:1.5rem;">
+            <div style="display:flex; gap:1rem; align-items:flex-start;">
+                <div style="width:40px; height:40px; border-radius:12px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">1</div>
+                <div>
+                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 1: Eksplorasi & Diskusi</h4>
+                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Pelajari materi dan diskusikan dengan <strong>NARA-AI</strong>. Kamu wajib mengklik "Sudah Paham" dan menjawab pertanyaan uji pemahaman untuk lanjut.</p>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:1rem; align-items:flex-start;">
+                <div style="width:40px; height:40px; border-radius:12px; background:var(--accent-light); color:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">2</div>
+                <div>
+                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 2: Refleksi Mandiri</h4>
+                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Jawab 5 pertanyaan refleksi berdasarkan hasil diskusimu. <strong>Anti-cheat aktif:</strong> Dilarang copy-paste atau klik kanan.</p>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:1rem; align-items:flex-start;">
+                <div style="width:40px; height:40px; border-radius:12px; background:var(--danger-light); color:var(--danger); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">3</div>
+                <div>
+                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 3: Asesmen Utama</h4>
+                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Ujian utama dengan pengawasan ketat. Membutuhkan persetujuan guru, mode layar penuh, dan deteksi perpindahan tab.</p>
+                </div>
+            </div>
+            
+            <div style="display:flex; gap:1rem; align-items:flex-start;">
+                <div style="width:40px; height:40px; border-radius:12px; background:var(--success-light); color:var(--success); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">4</div>
+                <div>
+                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 4: Pembentukan Karakter</h4>
+                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Refleksi 7 Kebiasaan Hebat Anak Indonesia untuk membangun pribadi yang lebih baik.</p>
+                </div>
+            </div>
+
+            <div style="background:var(--bg-input); padding:1rem; border-radius:12px; border:1px dashed var(--border-color);">
+                <h5 style="font-size:0.9rem; color:var(--danger); margin-bottom:0.5rem;"><i class="fas fa-exclamation-triangle"></i> Aturan Penting:</h5>
+                <ul style="font-size:0.8rem; color:var(--text-secondary); padding-left:1.2rem; line-height:1.4;">
+                    <li>Satu akun hanya boleh digunakan di <strong>satu perangkat</strong>.</li>
+                    <li>Segala bentuk kecurangan (copy-paste, dsb) akan terekam oleh sistem.</li>
+                    <li>Gunakan bahasa yang sopan saat berdiskusi dengan NARA-AI.</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div style="padding:1.5rem 2rem; background:var(--bg-sidebar); border-top:1px solid var(--border-color); text-align:center;">
+            <button class="btn btn-primary btn-full" style="padding:1rem; font-size:1.1rem; font-weight:700; border-radius:12px;" onclick="closeStudentOnboarding()">
+                <i class="fas fa-check-circle"></i> Saya Mengerti & Siap Belajar
+            </button>
+        </div>
+    </div>`;
+    
+    document.body.appendChild(overlay);
+}
+
+function closeStudentOnboarding() {
+    const overlay = document.getElementById('student-onboarding-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => {
+            overlay.remove();
+            showAppShell();
+            navigateTo('dashboard'); // Pastikan dashboard terbuka
+        }, 300);
+    }
 }
 
 function showError(elemId, msg) {
