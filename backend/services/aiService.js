@@ -69,7 +69,9 @@ FORMAT JAWABAN: Kamu harus menyajikan jawaban dengan struktur "Dokumen Profesion
 - Gunakan **Teks Tebal** untuk kata kunci atau istilah penting.
 - Gunakan bullet points atau penomoran untuk langkah-langkah atau daftar.
 - Berikan spasi antar paragraf agar tidak menumpuk.
-- Pastikan ada alur: Sapaan Singkat -> Penjelasan Terstruktur -> Pertanyaan Pemancing (untuk mengajak siswa berpikir).
+- Pastikan ada alur: Sapaan Singkat -> Penjelasan Terstruktur.
+- PENTING: JANGAN memberikan pertanyaan balasan di akhir penjelasan kecuali jika siswa memintanya secara eksplisit (seperti meminta uji pemahaman). Fokus saja memberikan penjelasan yang mendalam dan mudah dipahami.
+- Pertanyaan uji pemahaman HANYA diberikan jika siswa menyatakan sudah paham dan meminta tantangan/pertanyaan.
 KONTEKS: ${materialContext}
 TAHAP: ${stage}`;
 

@@ -643,9 +643,12 @@ function sendFloatingChat(quickMsg) {
 
                 // Tampilkan tombol Paham/Belum Paham hanya jika:
                 // 1. Tidak sedang menunggu jawaban uji pemahaman
-                // 2. Pesan siswa bukan sapaan (sapaan tidak butuh tombol paham/belum paham)
+                // 2. Pesan siswa bukan sapaan
                 // 3. SEDANG MEMBAHAS MATERI (currentMaterial tidak null)
-                if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage) && currentMaterial) {
+                // 4. Jawaban AI bukan pesan penolakan karena di luar konteks
+                const isOffContext = aiReply.includes("Maaf saya ditugaskan pak nandar membahas sesuai materi");
+                
+                if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage) && currentMaterial && !isOffContext) {
                     showPahamButtons();
                 }
             } else {
