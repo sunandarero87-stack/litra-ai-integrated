@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
     kelas: { type: String },
     mustChangePassword: { type: Boolean, default: true },
     photo: { type: String },
+    sessionId: { type: String },
     createdAt: { type: Date, default: Date.now },
     lastSeen: { type: Date, default: Date.now }
 });

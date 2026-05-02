@@ -196,13 +196,28 @@ function toggleSidebar() {
 }
 
 // Heartbeat to track online users (every 30 seconds)
-setInterval(() => {
+setInterval(async () => {
     if (currentUser) {
-        fetch('/api/auth/heartbeat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username })
-        }).catch(err => console.error('Heartbeat failed:', err));
+        try {
+            const res = await fetch('/api/auth/heartbeat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    username: currentUser.username,
+                    sessionId: currentUser.sessionId
+                })
+            });
+
+            if (res.status === 401) {
+                const data = await res.json();
+                if (data.error === 'SESSION_EXPIRED') {
+                    alert(data.message);
+                    handleLogout();
+                }
+            }
+        } catch (err) {
+            console.error('Heartbeat failed:', err);
+        }
     }
 }, 30000);
 

@@ -31,7 +31,13 @@ const initDefaultUsers = async () => {
 const login = async (req, res) => {
     try {
         const { username, password } = req.body;
-        const user = await User.findOne({ username, password });
+        const sessionId = Date.now().toString() + Math.random().toString(36).substring(2);
+        const user = await User.findOneAndUpdate(
+            { username, password },
+            { sessionId },
+            { returnDocument: 'after' }
+        );
+
         if (!user) {
             return res.status(401).json({ error: 'Username atau password salah!' });
         }
@@ -211,8 +217,17 @@ const bulkDeleteUsers = async (req, res) => {
 
 const heartbeat = async (req, res) => {
     try {
-        const { username } = req.body;
+        const { username, sessionId } = req.body;
         if (!username) return res.status(400).json({ error: 'Username required' });
+        
+        const user = await User.findOne({ username });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Jika sessionId tidak cocok, berarti ada login baru di tempat lain
+        if (user.sessionId && user.sessionId !== sessionId) {
+            return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Akun Anda sedang digunakan di perangkat lain. Sesi ini telah berakhir.' });
+        }
+
         await User.findOneAndUpdate(
             { username },
             { lastSeen: new Date() }
