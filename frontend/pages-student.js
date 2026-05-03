@@ -176,12 +176,54 @@ function showMaterialPopup() {
     popup.id = 'material-reminder-popup';
     popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:var(--bg-card); padding:2rem; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:9999; text-align:center; max-width:400px; width:90%; animation: slideUp 0.3s ease; border: 1px solid var(--border-color);';
     popup.innerHTML = `
-        <i class="fas fa-robot" style="font-size:3rem; color:var(--primary); margin-bottom:1rem;"></i>
-        <h3 style="margin-bottom:0.5rem; color:var(--text-primary);">Waktunya Belajar!</h3>
-        <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.95rem; line-height:1.5;">Setelah selesai membaca materi, klik <strong>icon chat di kanan bawah</strong> untuk menguji pemahamanmu bersama NARA-AI. <br><br>Kamu harus menjawab pertanyaan untuk bisa lanjut ke Tahap 2.</p>
-        <button class="btn btn-primary" onclick="this.parentElement.remove(); document.getElementById('chatbot-toggle-btn').classList.add('pulse'); setTimeout(()=>document.getElementById('chatbot-toggle-btn').classList.remove('pulse'), 5000);" style="width:100%;">Saya Mengerti</button>
+        <div style="margin-bottom:1rem; position:relative; display:inline-block;">
+             <i class="fas fa-robot" style="font-size:3.5rem; color:var(--primary);"></i>
+        </div>
+        <h3 style="margin-bottom:0.75rem; color:var(--text-primary); font-size:1.2rem;">NARA-AI Siap Membantu!</h3>
+        <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:1rem; line-height:1.6;">Chat dengan <strong>NARA-AI</strong> untuk mendampingi kamu belajar dan menguji pemahamanmu.</p>
+        <button class="btn btn-primary" onclick="this.parentElement.remove(); showChatbotPointer();" style="width:100%; padding: 0.8rem;">Saya Mengerti</button>
     `;
     document.body.appendChild(popup);
+}
+
+/**
+ * Tunjukkan tanda panah ke arah chatbot toggle button
+ */
+function showChatbotPointer() {
+    const btn = document.getElementById('chatbot-toggle-btn');
+    if (!btn) return;
+
+    // Hapus arrow lama jika ada
+    const existingArrow = document.getElementById('chatbot-arrow-pointer');
+    if (existingArrow) existingArrow.remove();
+
+    const arrow = document.createElement('div');
+    arrow.id = 'chatbot-arrow-pointer';
+    // Posisi di atas tombol chatbot (bottom right)
+    arrow.style.cssText = 'position: fixed; bottom: 90px; right: 20px; width: 120px; pointer-events: none; z-index: 1001;';
+    arrow.innerHTML = `
+        <div style="text-align: center; color: var(--primary-light); animation: bounce-arrow 2s infinite;">
+            <div style="font-weight: 800; font-size: 0.75rem; background: var(--primary); color: white; padding: 4px 12px; border-radius: 20px; box-shadow: var(--shadow-md); margin-bottom: 10px; white-space: nowrap; text-transform: uppercase; letter-spacing: 1px;">Chat di Sini!</div>
+            <i class="fas fa-arrow-down" style="font-size: 2.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>
+        </div>
+    `;
+
+    document.body.appendChild(arrow);
+
+    // Tambahkan efek pulse pada tombol
+    btn.classList.add('pulse');
+
+    // Hapus arrow saat chatbot dibuka
+    btn.addEventListener('click', () => {
+        if (arrow.parentElement) arrow.remove();
+        btn.classList.remove('pulse');
+    }, { once: true });
+
+    // Bersihkan otomatis setelah 15 detik jika tidak diklik
+    setTimeout(() => {
+        if (arrow.parentElement) arrow.remove();
+        btn.classList.remove('pulse');
+    }, 15000);
 }
 
 async function viewMaterial(id, type) {
@@ -276,6 +318,9 @@ function downloadMaterial(id, name, type, event) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+
+    // Tampilkan popup pengingat chatbot setelah download
+    showMaterialPopup();
 }
 
 function closeMaterialViewer() {
@@ -380,6 +425,25 @@ function hidePahamButtons() {
     if (qr) { qr.style.display = 'none'; qr.innerHTML = ''; }
 }
 
+/**
+ * Tampilkan tombol Ulangi Penjelasan / Buat Pertanyaan Baru saat skor < 75
+ */
+function showGagalButtons() {
+    const qr = document.getElementById('quick-replies');
+    if (!qr) return;
+    qr.style.display = 'flex';
+    qr.innerHTML = `
+        <button id="btn-ulangi-penjelasan" class="btn btn-outline btn-sm" onclick="onBelumPaham()"
+            style="padding:0.4rem 0.9rem;font-size:0.85rem;border-color:var(--primary);color:var(--primary);">
+            <i class="fas fa-sync-alt"></i> Ulangi Penjelasan
+        </button>
+        <button id="btn-buat-pertanyaan" class="btn btn-primary btn-sm" onclick="onMintaPertanyaanBaru()"
+            style="padding:0.4rem 0.9rem;font-size:0.85rem;">
+            <i class="fas fa-question-circle"></i> Buat Pertanyaan baru
+        </button>
+    `;
+}
+
 /** Siswa klik "Belum Paham" */
 function onBelumPaham() {
     hidePahamButtons();
@@ -391,6 +455,13 @@ function onPaham() {
     hidePahamButtons();
     waitingForUnderstandingAnswer = true;
     sendFloatingChat('Saya sudah paham. Tolong berikan SATU pertanyaan singkat untuk mengukur pemahamanku terhadap penjelasan tadi.');
+}
+
+/** Siswa klik "Buat Pertanyaan baru" setelah gagal */
+function onMintaPertanyaanBaru() {
+    hidePahamButtons();
+    waitingForUnderstandingAnswer = true;
+    sendFloatingChat('Tolong berikan SATU pertanyaan baru untuk menguji pemahamanku lagi.');
 }
 
 /**
@@ -448,7 +519,7 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                     <div style="font-size:1rem;font-weight:700;margin-top:0.3rem;">Luar Biasa! Skor Pemahaman: ${score}%</div>
                     <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Tombol <strong>Lanjut ke Tahap 2</strong> sudah terbuka di atas! 🎉</div>
                 </div>`;
-                
+
                 // Mulai hitungan mundur otomatis
                 setTimeout(() => {
                     startChatbotCountdown();
@@ -459,6 +530,10 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                     <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}% — Belum Mencapai 75%</div>
                     <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Yuk, pelajari lagi bagian yang belum dipahami dan coba diskusikan ulang dengan NARA-AI!</div>
                 </div>`;
+                // Tampilkan tombol bantuan jika gagal
+                setTimeout(() => {
+                    showGagalButtons();
+                }, 500);
             }
             appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
 
@@ -483,8 +558,8 @@ function startChatbotCountdown() {
     const overlay = document.createElement('div');
     overlay.id = 'chatbot-countdown-overlay';
     overlay.style.cssText = 'position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter:blur(4px); transition:all 0.3s; border-radius:16px;';
-    
-    let seconds = 5;
+
+    let seconds = 10;
     overlay.innerHTML = `
         <div style="text-align:center; animation: scaleIn 0.3s ease; padding: 2rem;">
             <i class="fas fa-robot" style="font-size:3.5rem; color:var(--primary-light); margin-bottom:1rem;"></i>
@@ -494,10 +569,10 @@ function startChatbotCountdown() {
             <p style="margin-top:1.5rem; font-size:0.85rem; color:var(--text-secondary);">Siap-siap lanjut ke Tahap 2</p>
         </div>
     `;
-    
+
     chatPanel.style.position = 'relative';
     chatPanel.appendChild(overlay);
-    
+
     const timer = setInterval(() => {
         seconds--;
         const numElem = document.getElementById('countdown-number');
@@ -507,7 +582,7 @@ function startChatbotCountdown() {
             void numElem.offsetWidth; // trigger reflow
             numElem.style.animation = 'scaleIn 0.5s ease';
         }
-        
+
         if (seconds <= 0) {
             clearInterval(timer);
             overlay.style.opacity = '0';
@@ -525,14 +600,14 @@ function startChatbotCountdown() {
 function showTahap2Pointer() {
     const btn = document.getElementById('btn-lanjut-tahap2');
     if (!btn) return;
-    
+
     // Scroll ke tombol agar terlihat
     btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
+
     // Hapus arrow lama jika ada
     const existingArrow = document.getElementById('tahap2-arrow-pointer');
     if (existingArrow) existingArrow.remove();
-    
+
     const arrow = document.createElement('div');
     arrow.id = 'tahap2-arrow-pointer';
     arrow.style.cssText = 'position: absolute; top: -75px; left: 50%; transform: translateX(-50%); width: 100px; pointer-events: none; z-index: 100;';
@@ -542,17 +617,17 @@ function showTahap2Pointer() {
             <div style="font-weight: 800; font-size: 0.85rem; background: var(--success); color: white; padding: 4px 12px; border-radius: 20px; box-shadow: var(--shadow-md); margin-top: 5px; white-space: nowrap; text-transform: uppercase; letter-spacing: 1px;">Klik Sini!</div>
         </div>
     `;
-    
+
     // Pastikan parent punya position relative
     const parent = btn.parentElement;
     if (parent) {
         parent.style.position = 'relative';
         parent.appendChild(arrow);
     }
-    
+
     // Tambahkan efek kilau pada tombol
     btn.classList.add('pulse');
-    
+
     // Bersihkan setelah beberapa saat jika tidak diklik
     setTimeout(() => {
         if (arrow.parentElement) arrow.remove();
@@ -1200,5 +1275,5 @@ async function clearChatHistory() {
         console.error(err);
         alert('Gagal menghapus riwayat chat.');
     }
-} 
+}
 
