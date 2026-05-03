@@ -454,14 +454,20 @@ function onBelumPaham() {
 function onPaham() {
     hidePahamButtons();
     waitingForUnderstandingAnswer = true;
-    sendFloatingChat('Saya sudah paham. Tolong berikan SATU pertanyaan singkat untuk mengukur pemahamanku terhadap penjelasan tadi.');
+    const materials = getMaterials();
+    const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+    const materialName = currMat ? currMat.name : currentMaterial;
+    sendFloatingChat(`Saya sudah paham penjelasan tadi mengenai materi **${materialName}**. Sekarang, tolong berikan SATU pertanyaan singkat yang berkaitan langsung dengan penjelasan yang baru saja kamu berikan untuk menguji pemahamanku.`);
 }
 
 /** Siswa klik "Buat Pertanyaan baru" setelah gagal */
 function onMintaPertanyaanBaru() {
     hidePahamButtons();
     waitingForUnderstandingAnswer = true;
-    sendFloatingChat('Tolong berikan SATU pertanyaan baru untuk menguji pemahamanku lagi.');
+    const materials = getMaterials();
+    const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+    const materialName = currMat ? currMat.name : currentMaterial;
+    sendFloatingChat(`Tolong berikan SATU pertanyaan baru yang berkaitan dengan materi **${materialName}** berdasarkan penjelasanmu tadi untuk menguji pemahamanku lagi.`);
 }
 
 /**

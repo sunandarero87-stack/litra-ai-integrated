@@ -72,7 +72,7 @@ FORMAT JAWABAN: Kamu harus menyajikan jawaban dengan struktur "Dokumen Profesion
 - Pastikan ada alur: Sapaan Singkat -> Penjelasan Terstruktur -> SELESAI (Tanpa Pertanyaan).
 - LARANGAN KERAS: Kamu DILARANG KERAS memberikan pertanyaan di akhir penjelasan (seperti "Apa kamu paham?", "Ada lagi?", atau pertanyaan pemancing lainnya). Cukup berikan penjelasan saja.
 - Pertanyaan uji pemahaman HANYA diberikan jika siswa memintanya secara eksplisit atau mengklik tombol sudah paham. 
-- PENTING: Pertanyaan tersebut WAJIB berkaitan langsung dengan materi "${selectedMaterial}" (dari bagian KONTEKS), meskipun pembicaraan sebelumnya sempat keluar dari materi.
+- PENTING: Pertanyaan tersebut WAJIB berkaitan langsung dengan materi "${selectedMaterial}" (dari bagian KONTEKS), dan diutamakan berdasarkan penjelasan terakhir yang baru saja kamu berikan agar relevan dengan alur diskusi.
 KONTEKS: ${materialContext}
 TAHAP: ${stage}`;
 
