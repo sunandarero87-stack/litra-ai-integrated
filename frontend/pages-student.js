@@ -457,7 +457,7 @@ function onPaham() {
     const materials = getMaterials();
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
-    sendFloatingChat(`Saya sudah paham penjelasan tadi mengenai materi **${materialName}**. Sekarang, tolong berikan SATU pertanyaan singkat yang berkaitan langsung dengan penjelasan yang baru saja kamu berikan untuk menguji pemahamanku.`);
+    sendFloatingChat(`Wah Kamu Keren banget dan cepat paham tentang ${materialName}. Sekarang, Mari kita Uji pemahaman kamu dengan menjawab Soal berikut yang berkaitan langsung dengan penjelasan yang baru saja kamu berikan untuk menguji pemahamanku.`, true);
 }
 
 /** Siswa klik "Buat Pertanyaan baru" setelah gagal */
@@ -467,7 +467,7 @@ function onMintaPertanyaanBaru() {
     const materials = getMaterials();
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
-    sendFloatingChat(`Tolong berikan SATU pertanyaan baru yang berkaitan dengan materi **${materialName}** berdasarkan penjelasanmu tadi untuk menguji pemahamanku lagi.`);
+    sendFloatingChat(`Tolong berikan SATU pertanyaan baru yang berkaitan dengan materi **${materialName}** berdasarkan penjelasanmu tadi untuk menguji pemahamanku lagi.`, true);
 }
 
 /**
@@ -641,7 +641,7 @@ function showTahap2Pointer() {
     }, 15000);
 }
 
-function sendFloatingChat(quickMsg) {
+function sendFloatingChat(quickMsg, isSilent = false) {
     const input = document.getElementById('floating-chat-input');
     let msg = (typeof quickMsg === 'string') ? quickMsg : input.value.trim();
     if (!msg) return;
@@ -656,7 +656,7 @@ function sendFloatingChat(quickMsg) {
     const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
     const chatBox = document.getElementById('floating-chat-messages');
-    appendFloatingMessage('user', msg, teacherPhoto);
+    if (!isSilent) appendFloatingMessage('user', msg, teacherPhoto);
 
     const histories = getChatHistories();
     if (!histories[currentUser.username]) histories[currentUser.username] = [];
