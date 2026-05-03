@@ -457,7 +457,8 @@ function onPaham() {
     const materials = getMaterials();
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
-    sendFloatingChat(`Saya Sudah Siap diuji.`);
+    // Kirim pesan "Saya Sudah Siap diuji." secara silent (tidak muncul di chat)
+    sendFloatingChat(`Saya Sudah Siap diuji.`, true);
 }
 
 /** Siswa klik "Buat Pertanyaan baru" setelah gagal */
@@ -641,7 +642,7 @@ function showTahap2Pointer() {
     }, 15000);
 }
 
-function sendFloatingChat(quickMsg) {
+function sendFloatingChat(quickMsg, isSilent = false) {
     const input = document.getElementById('floating-chat-input');
     let msg = (typeof quickMsg === 'string') ? quickMsg : input.value.trim();
     if (!msg) return;
@@ -656,7 +657,11 @@ function sendFloatingChat(quickMsg) {
     const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
     const chatBox = document.getElementById('floating-chat-messages');
-    appendFloatingMessage('user', msg, teacherPhoto);
+    
+    // Tampilkan pesan di UI hanya jika tidak silent
+    if (!isSilent) {
+        appendFloatingMessage('user', msg, teacherPhoto);
+    }
 
     const histories = getChatHistories();
     if (!histories[currentUser.username]) histories[currentUser.username] = [];
