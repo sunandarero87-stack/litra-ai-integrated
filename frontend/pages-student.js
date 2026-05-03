@@ -272,25 +272,40 @@ async function viewMaterial(id, type) {
 
         // Initiative greeting for the currently selected material
         const chatBox = document.getElementById('floating-chat-messages');
-        chatBox.innerHTML = '';
-        const histories = getChatHistories();
-        if (!histories[currentUser.username]) histories[currentUser.username] = [];
-
+        chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
+        
         const users = getUsers();
         const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
         const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
-        // Custom greeting updating the topic to the newly selected material
-        const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+        fetch(`/api/chat/${currentUser.username}`)
+            .then(res => res.json())
+            .then(data => {
+                chatBox.innerHTML = '';
+                let history = [];
+                if (data.success && data.history) {
+                    history = data.history;
+                }
 
-        // Push new greeting logically (don't strictly clear history to save context overall, but for UI we might render from scratch)
-        appendFloatingMessage('bot', initialGreeting, teacherPhoto);
-        histories[currentUser.username].push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
-        saveChatHistories(histories);
-
-        // Re-render past history so student still sees context
-        chatBox.innerHTML = '';
-        histories[currentUser.username].forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
+                if (history.length === 0) {
+                    const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+                    appendFloatingMessage('bot', initialGreeting, teacherPhoto);
+                    history.push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
+                } else {
+                    history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
+                }
+                
+                // Update local storage
+                const histories = getChatHistories();
+                histories[currentUser.username] = history;
+                saveChatHistories(histories);
+            })
+            .catch(err => {
+                console.error('Failed to fetch chat history:', err);
+                chatBox.innerHTML = '';
+                const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+                appendFloatingMessage('bot', initialGreeting, teacherPhoto);
+            });
     }
 }
 

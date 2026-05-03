@@ -142,7 +142,23 @@ exports.handleAnalyzeUnderstanding = async (req, res) => {
     }
 };
 
+exports.getHistory = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const historyLogs = await ChatLog.find({ username }).sort({ timestamp: 1 });
+        const history = historyLogs.map(log => ({
+            role: log.role,
+            text: log.content,
+            time: log.timestamp
+        }));
+        res.json({ success: true, history });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 exports.clearHistory = async (req, res) => {
+
     try {
         const { username } = req.params;
         await ChatLog.deleteMany({ username });

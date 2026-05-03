@@ -63,6 +63,7 @@ mongoose.connect(MONGODB_URI, mongooseOptions)
 // ---- API Routes ----
 
 app.post('/api/chat', chatController.handleChat);
+app.get('/api/chat/:username', chatController.getHistory);
 app.post('/api/chat/analyze-understanding', chatController.handleAnalyzeUnderstanding);
 app.delete('/api/chat/:username', chatController.clearHistory);
 

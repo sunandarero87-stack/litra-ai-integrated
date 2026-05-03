@@ -1,6 +1,8 @@
 const Progress = require('../models/Progress');
 const Setting = require('../models/Setting');
 const Violation = require('../models/Violation');
+const ChatLog = require('../models/ChatLog');
+
 
 // Get all progress data to sync to the client
 exports.syncAll = async (req, res) => {
@@ -156,6 +158,10 @@ exports.resetProgress = async (req, res) => {
             { $set: updateData }
         );
 
+        // Clear chat history for the reset students
+        await ChatLog.deleteMany({ username: { $in: usernames } });
+
+
         res.json({ success: true, message: `Berhasil mereset ${result.modifiedCount} siswa` });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -246,7 +252,17 @@ exports.resetStage2All = async (req, res) => {
                 aiReadiness: ''
             }
         });
+
+        // Clear chat history for Stage 2 reset if specific usernames are provided
+        if (usernames && Array.isArray(usernames) && usernames.length > 0) {
+            await ChatLog.deleteMany({ username: { $in: usernames } });
+        } else if (!usernames) {
+            // If no usernames provided (reset all), clear all chat logs
+            await ChatLog.deleteMany({});
+        }
+
         res.json({ success: true, message: 'Berhasil mereset Tahap 2 untuk ' + result.modifiedCount + ' siswa' });
+
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
