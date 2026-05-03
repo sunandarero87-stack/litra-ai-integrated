@@ -111,7 +111,11 @@ async function initApp() {
                 if (currentUser) {
                     const latestUsers = getUsers();
                     const updatedUser = latestUsers.find(u => u.username === currentUser.username);
-                    if (updatedUser) currentUser = updatedUser;
+                    if (updatedUser) {
+                        // Tetap pertahankan sessionId agar tidak dianggap login di perangkat lain
+                        const currentSessionId = currentUser.sessionId;
+                        currentUser = { ...updatedUser, sessionId: currentSessionId };
+                    }
                 }
             });
 

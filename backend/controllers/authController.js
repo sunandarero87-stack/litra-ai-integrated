@@ -234,7 +234,8 @@ const heartbeat = async (req, res) => {
         if (!user) return res.status(404).json({ error: 'User not found' });
 
         // Jika sessionId tidak cocok, berarti ada login baru di tempat lain
-        if (user.sessionId && user.sessionId !== sessionId) {
+        // Pengecualian: Admin dan Guru diizinkan memiliki beberapa sesi/tab untuk memudahkan manajemen
+        if (user.role === 'siswa' && sessionId && user.sessionId && user.sessionId !== sessionId) {
             return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Akun Anda sedang digunakan di perangkat lain. Sesi ini telah berakhir.' });
         }
 
