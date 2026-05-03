@@ -105,7 +105,7 @@ async function initApp() {
         try {
             const userData = JSON.parse(session);
             currentUser = userData; // Gunakan data dari sesi langsung agar cepat
-            
+
             // Sinkronkan data pendukung di background agar data terbaru
             syncData().then(() => {
                 if (currentUser) {
@@ -192,15 +192,15 @@ function getProgress(username) {
     if (!all[username]) {
         // Return default progress without saving to localStorage automatically
         // to avoid performance hits during large loop renders (e.g. Teacher Dashboard)
-        return { 
-            tahap: 1, 
-            tahap1Complete: false, 
-            tahap2Complete: false, 
-            tahap2Score: 0, 
-            tahap3Complete: false, 
-            tahap4Complete: false, 
-            tahap4Score: 0, 
-            tahap4Analysis: null, 
+        return {
+            tahap: 1,
+            tahap1Complete: false,
+            tahap2Complete: false,
+            tahap2Score: 0,
+            tahap3Complete: false,
+            tahap4Complete: false,
+            tahap4Score: 0,
+            tahap4Analysis: null,
             tahap4Details: [],
             reflectionAnswers: [],
             aiReadiness: '',
@@ -248,7 +248,7 @@ setInterval(async () => {
             const res = await fetch('/api/auth/heartbeat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     username: currentUser.username,
                     sessionId: currentUser.sessionId
                 })
@@ -310,7 +310,7 @@ function updateTimerDisplay() {
     const mins = Math.floor(assessmentTimeLeft / 60);
     const secs = assessmentTimeLeft % 60;
     timerElem.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    
+
     if (assessmentTimeLeft < 60) {
         timerElem.style.color = 'var(--danger)';
         timerElem.classList.add('pulse');
@@ -463,12 +463,12 @@ function showStudentOnboarding() {
     const overlay = document.createElement('div');
     overlay.id = 'student-onboarding-overlay';
     overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(8px); padding:20px;';
-    
+
     overlay.innerHTML = `
     <div style="background:var(--bg-card); width:100%; max-width:600px; max-height:90vh; border-radius:24px; box-shadow:var(--shadow-lg); border:1px solid var(--border-color); display:flex; flex-direction:column; overflow:hidden; animation:slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
         <div style="background:var(--gradient-primary); padding:2rem; text-align:center; color:white;">
             <i class="fas fa-graduation-cap" style="font-size:3rem; margin-bottom:1rem; display:block;"></i>
-            <h2 style="font-size:1.5rem; font-weight:800;">Panduan Belajar Litra-AI</h2>
+            <h2 style="font-size:1.5rem; font-weight:800;">Panduan Belajar NARA-AI</h2>
             <p style="opacity:0.9; font-size:0.9rem;">Pahami alur pembelajaranmu bersama NARA-AI</p>
         </div>
         
@@ -477,7 +477,7 @@ function showStudentOnboarding() {
                 <div style="width:40px; height:40px; border-radius:12px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">1</div>
                 <div>
                     <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 1: Eksplorasi & Diskusi</h4>
-                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Pelajari materi dan diskusikan dengan <strong>NARA-AI</strong>. Kamu wajib mengklik "Sudah Paham" dan menjawab pertanyaan uji pemahaman untuk lanjut.</p>
+                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Pelajari materi dan diskusikan dengan <strong>NARA-AI</strong>. Kamu bisa mengklik "Sudah Paham" dan menjawab pertanyaan uji pemahaman untuk lanjut Ke tahap 2.</p>
                 </div>
             </div>
             
@@ -521,7 +521,7 @@ function showStudentOnboarding() {
             </button>
         </div>
     </div>`;
-    
+
     document.body.appendChild(overlay);
 }
 
@@ -748,11 +748,11 @@ window.sortTable = function (tableId, colIndex) {
         ths.forEach(t => {
             t.dataset.sortDir = '';
             const icon = t.querySelector('.fa-sort, .fa-sort-up, .fa-sort-down');
-            if(icon) icon.className = 'fas fa-sort text-muted';
+            if (icon) icon.className = 'fas fa-sort text-muted';
         });
         th.dataset.sortDir = order;
         const icon = th.querySelector('i.fas');
-        if(icon) icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        if (icon) icon.className = order === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
     }
     rows.sort((a, b) => {
         const cellA = a.cells[colIndex];
@@ -760,14 +760,14 @@ window.sortTable = function (tableId, colIndex) {
         if (!cellA || !cellB) return 0;
         let valA = (cellA.textContent || cellA.innerText).trim();
         let valB = (cellB.textContent || cellB.innerText).trim();
-        let isNumA = !isNaN(parseFloat(valA)) && isFinite(valA.replace('%','').replace(/,/g,''));
-        let isNumB = !isNaN(parseFloat(valB)) && isFinite(valB.replace('%','').replace(/,/g,''));
+        let isNumA = !isNaN(parseFloat(valA)) && isFinite(valA.replace('%', '').replace(/,/g, ''));
+        let isNumB = !isNaN(parseFloat(valB)) && isFinite(valB.replace('%', '').replace(/,/g, ''));
         if (isNumA && isNumB) {
-            let nA = parseFloat(valA.replace('%','').replace(/,/g,''));
-            let nB = parseFloat(valB.replace('%','').replace(/,/g,''));
+            let nA = parseFloat(valA.replace('%', '').replace(/,/g, ''));
+            let nB = parseFloat(valB.replace('%', '').replace(/,/g, ''));
             return order === 'asc' ? nA - nB : nB - nA;
         }
-        return order === 'asc' ? valA.localeCompare(valB, undefined, {numeric: true}) : valB.localeCompare(valA, undefined, {numeric: true});
+        return order === 'asc' ? valA.localeCompare(valB, undefined, { numeric: true }) : valB.localeCompare(valA, undefined, { numeric: true });
     });
     rows.forEach(row => tbody.appendChild(row));
 }
