@@ -426,22 +426,26 @@ function hidePahamButtons() {
 }
 
 /**
- * Tampilkan tombol Ulangi Penjelasan / Buat Pertanyaan Baru saat skor < 75
+ * Tampilkan tombol Selesai Belajar Tahap 1 saat skor >= 75
  */
-function showGagalButtons() {
+function showSelesaiTahap1Button() {
     const qr = document.getElementById('quick-replies');
     if (!qr) return;
     qr.style.display = 'flex';
     qr.innerHTML = `
-        <button id="btn-ulangi-penjelasan" class="btn btn-outline btn-sm" onclick="onBelumPaham()"
-            style="padding:0.4rem 0.9rem;font-size:0.85rem;border-color:var(--primary);color:var(--primary);">
-            <i class="fas fa-sync-alt"></i> Ulangi Penjelasan
-        </button>
-        <button id="btn-buat-pertanyaan" class="btn btn-primary btn-sm" onclick="onMintaPertanyaanBaru()"
-            style="padding:0.4rem 0.9rem;font-size:0.85rem;">
-            <i class="fas fa-question-circle"></i> Buat Pertanyaan baru
+        <button id="btn-selesai-tahap1" class="btn btn-primary" onclick="startChatbotCountdown()"
+            style="padding:0.6rem 1.2rem; font-weight:700; background:var(--gradient-primary); border:none; border-radius:12px; box-shadow:var(--shadow-md);">
+            <i class="fas fa-graduation-cap"></i> Selesai Belajar Tahap 1
         </button>
     `;
+}
+
+/**
+ * Tampilkan tombol Ulangi Penjelasan / Buat Pertanyaan Baru saat skor < 75
+ */
+function showGagalButtons() {
+    // Diganti menjadi showPahamButtons sesuai permintaan user agar alur tetap konsisten
+    showPahamButtons();
 }
 
 /** Siswa klik "Belum Paham" */
@@ -523,22 +527,22 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#1a7a4a,#22c55e);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
                     <i class="fas fa-star" style="font-size:1.4rem;"></i>
                     <div style="font-size:1rem;font-weight:700;margin-top:0.3rem;">Luar Biasa! Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Tombol <strong>Lanjut ke Tahap 2</strong> sudah terbuka di atas! 🎉</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Klik tombol <strong>Selesai Belajar</strong> untuk melanjutkan! 🎉</div>
                 </div>`;
 
-                // Mulai hitungan mundur otomatis
+                // Tampilkan tombol Selesai Belajar Tahap 1 (tidak otomatis countdown)
                 setTimeout(() => {
-                    startChatbotCountdown();
-                }, 1500);
+                    showSelesaiTahap1Button();
+                }, 1000);
             } else {
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
                     <i class="fas fa-redo" style="font-size:1.2rem;"></i>
                     <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}% — Belum Mencapai 75%</div>
                     <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Yuk, pelajari lagi bagian yang belum dipahami dan coba diskusikan ulang dengan NARA-AI!</div>
                 </div>`;
-                // Tampilkan tombol bantuan jika gagal
+                // Tampilkan tombol Sudah Paham/Belum Paham jika gagal agar siswa bisa minta penjelasan lagi
                 setTimeout(() => {
-                    showGagalButtons();
+                    showPahamButtons();
                 }, 500);
             }
             appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
