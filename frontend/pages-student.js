@@ -579,16 +579,17 @@ function startChatbotCountdown() {
 
     const overlay = document.createElement('div');
     overlay.id = 'chatbot-countdown-overlay';
-    overlay.style.cssText = 'position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; z-index:100; backdrop-filter:blur(4px); transition:all 0.3s; border-radius:16px;';
+    // Mengubah overlay menjadi kartu melayang kecil agar tidak menutupi seluruh chat/nilai
+    overlay.style.cssText = 'position:absolute; top:35%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:280px; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); color:white; z-index:100; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:1.5rem; text-align:center; transition:all 0.3s; border:1px solid rgba(255,255,255,0.1);';
 
     let seconds = 10;
     overlay.innerHTML = `
-        <div style="text-align:center; animation: scaleIn 0.3s ease; padding: 2rem;">
-            <i class="fas fa-robot" style="font-size:3.5rem; color:var(--primary-light); margin-bottom:1rem;"></i>
-            <h2 style="margin-bottom:0.5rem; font-size:1.4rem;">Pemahaman Terverifikasi!</h2>
-            <p style="opacity:0.9; margin-bottom:1.5rem; font-size:0.95rem;">Panel Chat akan tertutup otomatis dalam:</p>
-            <div id="countdown-number" style="font-size:4.5rem; font-weight:800; color:var(--success); line-height:1;">${seconds}</div>
-            <p style="margin-top:1.5rem; font-size:0.85rem; color:var(--text-secondary);">Siap-siap lanjut ke Tahap 2</p>
+        <div style="animation: scaleIn 0.3s ease;">
+            <i class="fas fa-robot" style="font-size:2.5rem; color:var(--primary-light); margin-bottom:0.75rem;"></i>
+            <h3 style="margin-bottom:0.3rem; font-size:1.1rem; font-weight:700;">Verifikasi Berhasil!</h3>
+            <p style="opacity:0.8; margin-bottom:1rem; font-size:0.8rem;">Menutup otomatis dalam:</p>
+            <div id="countdown-number" style="font-size:3.5rem; font-weight:800; color:var(--success); line-height:1; text-shadow:0 0 20px rgba(34,197,94,0.5);">${seconds}</div>
+            <p style="margin-top:1rem; font-size:0.7rem; color:var(--text-secondary); font-style:italic;">Siap lanjut ke Tahap 2</p>
         </div>
     `;
 
