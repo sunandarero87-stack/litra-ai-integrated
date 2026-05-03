@@ -590,6 +590,7 @@ function renderAssessmentMgmt(main) {
     const approvals = getApprovals();
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
+    const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
 
     main.innerHTML = `
     <div class="grid-2">
@@ -616,18 +617,26 @@ function renderAssessmentMgmt(main) {
     </div>
     <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <h3 class="card-title" style="margin-bottom:0;">✅ Persetujuan Siswa untuk Asesmen</h3>
+            <div style="display:flex; align-items:center; gap:1rem;">
+                <h3 class="card-title" style="margin-bottom:0;">✅ Persetujuan Siswa untuk Asesmen</h3>
+                <select id="approval-class-filter" class="form-control" style="width:auto; margin-bottom:0; padding:0.2rem 0.5rem;" onchange="filterAssessmentApproval()">
+                    <option value="all">Semua Kelas</option>
+                    ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            </div>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-assessment-approval', 'table-assessment-approval')">
+                <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterAssessmentApproval()">
+                <button class="btn btn-success btn-sm" onclick="approveSelectedStudents()" id="btn-approve-bulk" style="display:none;"><i class="fas fa-check-double"></i> Setujui Masal (<span id="count-approve-selected">0</span>)</button>
             </div>
         </div>
         <div class="table-container">
             <table id="table-assessment-approval">
                 <thead><tr>
-                    <th onclick="sortTable('table-assessment-approval', 0)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama <i class="fas fa-sort text-muted"></i></th>
-                    <th onclick="sortTable('table-assessment-approval', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
-                    <th onclick="sortTable('table-assessment-approval', 2)" style="cursor:pointer" title="Klik untuk mengurutkan">Progres <i class="fas fa-sort text-muted"></i></th>
-                    <th onclick="sortTable('table-assessment-approval', 3)" style="cursor:pointer" title="Klik untuk mengurutkan">Analisis AI (Kesiapan) <i class="fas fa-sort text-muted"></i></th>
+                    <th><input type="checkbox" id="check-all-approvals" onchange="toggleAllApprovals(this)"></th>
+                    <th onclick="sortTable('table-assessment-approval', 1)" style="cursor:pointer" title="Klik untuk mengurutkan">Nama <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 2)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 3)" style="cursor:pointer" title="Klik untuk mengurutkan">Progres <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 4)" style="cursor:pointer" title="Klik untuk mengurutkan">Analisis AI (Kesiapan) <i class="fas fa-sort text-muted"></i></th>
                     <th>Aksi Approval</th>
                 </tr></thead>
                 <tbody>
@@ -639,6 +648,7 @@ function renderAssessmentMgmt(main) {
         const readyColor = p.isReady ? 'var(--success)' : hasReflection ? 'var(--warning)' : 'var(--text-muted)';
 
         return `<tr>
+                            <td><input type="checkbox" class="check-approval" value="${s.username}" onchange="updateApprovalBtn()" ${!hasReflection ? 'disabled' : ''}></td>
                             <td>${s.name}</td><td>${s.kelas || '-'}</td>
                             <td>${hasReflection ? '<span class="badge badge-success">Refleksi Selesai</span>' : '<span class="badge badge-warning">Belum Refleksi</span>'}</td>
                             <td style="max-width:300px">
@@ -648,17 +658,16 @@ function renderAssessmentMgmt(main) {
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
                             <td>
-                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-plus-circle"></i> Setuju</button></div>` :
+                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-plus-circle"></i> Setuju Ulang</button></div>` :
                 hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-plus-circle"></i> Setuju</button>` :
                     '<span class="text-muted">Menunggu Refleksi</span>'}
                             </td>
                         </tr>`;
-    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada siswa</td></tr>'}
+    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada siswa</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
-
 }
 
 function saveAssessmentDuration() {
@@ -674,6 +683,98 @@ function saveAssessmentQuestionAmount() {
     saveAssessmentSettings({ ...getAssessmentSettings(), questionAmount: amt });
     alert(`✅ Jumlah soal asesmen disimpan: ${amt} soal!`);
 }
+
+function filterAssessmentApproval() {
+    const classFilter = document.getElementById('approval-class-filter').value.toLowerCase();
+    const searchFilter = document.getElementById('search-assessment-approval').value.toLowerCase();
+    const rows = document.querySelectorAll('#table-assessment-approval tbody tr');
+
+    rows.forEach(row => {
+        if (row.cells.length < 3) return;
+        const studentName = row.cells[1].innerText.toLowerCase();
+        const studentClass = row.cells[2].innerText.toLowerCase();
+        
+        const matchClass = (classFilter === 'all' || studentClass === classFilter);
+        const matchSearch = studentName.includes(searchFilter);
+
+        if (matchClass && matchSearch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+function toggleAllApprovals(source) {
+    const checkboxes = document.querySelectorAll('.check-approval:not(:disabled)');
+    checkboxes.forEach(cb => {
+        const row = cb.closest('tr');
+        if (row.style.display !== 'none') {
+            cb.checked = source.checked;
+        }
+    });
+    updateApprovalBtn();
+}
+
+function updateApprovalBtn() {
+    const checkedBoxes = document.querySelectorAll('.check-approval:checked');
+    const btn = document.getElementById('btn-approve-bulk');
+    const countSpan = document.getElementById('count-approve-selected');
+
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+        countSpan.innerText = checkedBoxes.length;
+    } else {
+        btn.style.display = 'none';
+        const checkAll = document.getElementById('check-all-approvals');
+        if (checkAll) checkAll.checked = false;
+    }
+}
+
+async function approveSelectedStudents() {
+    const checkedBoxes = document.querySelectorAll('.check-approval:checked');
+    const usernames = Array.from(checkedBoxes).map(cb => cb.value);
+
+    if (usernames.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menyetujui asesmen untuk ${usernames.length} siswa terpilih?`)) return;
+
+    const btn = document.getElementById('btn-approve-bulk');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+    const amountInput = document.getElementById('assessment-amount');
+    const amount = amountInput ? parseInt(amountInput.value) || 50 : 50;
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const username of usernames) {
+        try {
+            const progress = getProgress(username);
+            const genRes = await fetch('/api/assessment/generate-from-bank', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, amount })
+            });
+
+            if (!genRes.ok) throw new Error("Gagal generate");
+            
+            const genData = await genRes.json();
+            progress.generatedAssessment = genData.questions;
+            updateProgress(username, progress);
+            await saveApprovalForUser(username, { date: new Date().toISOString(), approvedBy: currentUser.username });
+            successCount++;
+        } catch (err) {
+            console.error(`Gagal menyetujui ${username}:`, err);
+            failCount++;
+        }
+    }
+
+    alert(`Proses Selesai!\nBerhasil: ${successCount}\nGagal: ${failCount}`);
+    renderAssessmentMgmt(document.getElementById('main-content'));
+}
+
 
 async function approveStudent(username, btnElement) {
     if (btnElement) {
