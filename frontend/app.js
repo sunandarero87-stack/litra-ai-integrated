@@ -31,28 +31,55 @@ async function syncUsers() {
 
 async function syncData() {
     try {
-        const [usersRes, syncRes, materialsRes] = await Promise.all([
-            fetch('/api/users', { cache: 'no-store' }),
-            fetch('/api/sync', { cache: 'no-store' }),
+        const isStudent = currentUser && currentUser.role === 'siswa';
+        const usernameParam = isStudent ? `?username=${currentUser.username}` : '';
+
+        // Prioritas 1: Progress & Materials (Essential for Dashboard)
+        const [syncRes, materialsRes] = await Promise.all([
+            fetch(`/api/sync${usernameParam}`, { cache: 'no-store' }),
             fetch('/api/materials', { cache: 'no-store' })
         ]);
 
-        if (usersRes.ok) {
-            const users = await usersRes.json();
-            localStorage.setItem('users', JSON.stringify(users));
-        }
-
         if (syncRes.ok) {
             const data = await syncRes.json();
-            localStorage.setItem('studentProgress', JSON.stringify(data.studentProgress || {}));
-            localStorage.setItem('assessmentResults', JSON.stringify(data.assessmentResults || {}));
-            localStorage.setItem('assessmentApprovals', JSON.stringify(data.assessmentApprovals || {}));
+            if (isStudent) {
+                const existingProgress = getStudentProgress();
+                const mergedProgress = { ...existingProgress, ...data.studentProgress };
+                localStorage.setItem('studentProgress', JSON.stringify(mergedProgress));
+
+                const existingResults = getAssessmentResults();
+                const mergedResults = { ...existingResults, ...data.assessmentResults };
+                localStorage.setItem('assessmentResults', JSON.stringify(mergedResults));
+
+                const existingApprovals = getApprovals();
+                const mergedApprovals = { ...existingApprovals, ...data.assessmentApprovals };
+                localStorage.setItem('assessmentApprovals', JSON.stringify(mergedApprovals));
+            } else {
+                localStorage.setItem('studentProgress', JSON.stringify(data.studentProgress || {}));
+                localStorage.setItem('assessmentResults', JSON.stringify(data.assessmentResults || {}));
+                localStorage.setItem('assessmentApprovals', JSON.stringify(data.assessmentApprovals || {}));
+            }
             localStorage.setItem('assessmentSettings', JSON.stringify(data.assessmentSettings || { duration: 90 }));
         }
 
         if (materialsRes.ok) {
             const data = await materialsRes.json();
             localStorage.setItem('materials', JSON.stringify(data.materials || []));
+        }
+
+        // Prioritas 2: Users (Background sync as it can be large)
+        fetch('/api/users', { cache: 'no-store' })
+            .then(res => res.ok ? res.json() : [])
+            .then(users => {
+                localStorage.setItem('users', JSON.stringify(users));
+                if (['student-accounts', 'monitoring', 'tahap1'].includes(currentPage)) {
+                    renderPage(currentPage);
+                }
+            })
+            .catch(err => console.error('Users sync failed:', err));
+
+        if (currentPage === 'dashboard' || currentPage === 'tahap1') {
+            renderPage(currentPage);
         }
     } catch (err) {
         console.error('Gagal sinkronisasi data dari server:', err);
@@ -340,8 +367,8 @@ async function handleLogin(e) {
         currentUser = user;
         sessionStorage.setItem('currentSession', JSON.stringify(user));
 
-        // Sync all data right after successful login
-        await syncData();
+        // Sync data in background (non-blocking for faster transition)
+        syncData();
 
         if (user.mustChangePassword) {
             showPage('page-change-password');
@@ -349,6 +376,7 @@ async function handleLogin(e) {
             showStudentOnboarding();
         } else {
             showAppShell();
+            navigateTo('dashboard');
         }
         document.getElementById('login-form').reset();
     } catch (err) {

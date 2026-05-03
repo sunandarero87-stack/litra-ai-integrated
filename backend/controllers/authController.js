@@ -95,7 +95,7 @@ const updateProfile = async (req, res) => {
 
 const getUsers = async (req, res) => {
     try {
-        const users = await User.find({});
+        const users = await User.find({}).select('-password -sessionId');
         res.json(users);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });

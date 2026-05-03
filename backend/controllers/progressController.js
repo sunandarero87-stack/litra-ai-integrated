@@ -5,7 +5,9 @@ const Violation = require('../models/Violation');
 // Get all progress data to sync to the client
 exports.syncAll = async (req, res) => {
     try {
-        const progresses = await Progress.find({});
+        const { username } = req.query;
+        const query = username ? { username } : {};
+        const progresses = await Progress.find(query);
         const settingsDoc = await Setting.findOne({ key: 'assessmentSettings' });
 
         let studentProgress = {};
