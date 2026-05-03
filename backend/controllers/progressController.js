@@ -27,7 +27,8 @@ exports.syncAll = async (req, res) => {
                 tahap4Details: p.tahap4Details,
                 aiReadiness: p.aiReadiness,
                 isReady: p.isReady,
-                generatedAssessment: p.generatedAssessment
+                // Only send generatedAssessment for individual student sync to keep payload small
+                generatedAssessment: username ? p.generatedAssessment : []
             };
             if (p.assessmentResult && p.assessmentResult.date) {
                 assessmentResults[p.username] = p.assessmentResult;

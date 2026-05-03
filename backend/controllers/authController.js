@@ -96,7 +96,17 @@ const updateProfile = async (req, res) => {
 const getUsers = async (req, res) => {
     try {
         const users = await User.find({}).select('-password -sessionId');
-        res.json(users);
+        // Optimization: Remove photos for students to reduce payload size.
+        // Students only need the teacher's photo for the chatbot.
+        // Their own photo is already in their session.
+        const optimizedUsers = users.map(u => {
+            const userObj = u.toObject();
+            if (userObj.role === 'siswa') {
+                delete userObj.photo;
+            }
+            return userObj;
+        });
+        res.json(optimizedUsers);
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }

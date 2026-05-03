@@ -186,8 +186,23 @@ function saveAssessmentSettings(s) {
 function getProgress(username) {
     const all = getStudentProgress();
     if (!all[username]) {
-        all[username] = { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false, tahap4Complete: false, tahap4Score: 0, tahap4Analysis: null, tahap4Details: [] };
-        saveStudentProgress(all);
+        // Return default progress without saving to localStorage automatically
+        // to avoid performance hits during large loop renders (e.g. Teacher Dashboard)
+        return { 
+            tahap: 1, 
+            tahap1Complete: false, 
+            tahap2Complete: false, 
+            tahap2Score: 0, 
+            tahap3Complete: false, 
+            tahap4Complete: false, 
+            tahap4Score: 0, 
+            tahap4Analysis: null, 
+            tahap4Details: [],
+            reflectionAnswers: [],
+            aiReadiness: '',
+            isReady: false,
+            generatedAssessment: []
+        };
     }
     return all[username];
 }
@@ -376,7 +391,10 @@ async function handleLogin(e) {
             showStudentOnboarding();
         } else {
             showAppShell();
-            navigateTo('dashboard');
+            // Use requestAnimationFrame to ensure the UI transition happens before heavy rendering
+            requestAnimationFrame(() => {
+                navigateTo('dashboard');
+            });
         }
         document.getElementById('login-form').reset();
     } catch (err) {
