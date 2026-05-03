@@ -457,7 +457,7 @@ function onPaham() {
     const materials = getMaterials();
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
-    sendFloatingChat(`Wah Kamu Keren banget dan cepat paham tentang ${materialName}. Sekarang, Mari kita Uji pemahaman kamu dengan menjawab Soal berikut yang berkaitan langsung dengan penjelasan yang baru saja kamu berikan untuk menguji pemahamanku.`);
+    sendFloatingChat(`Saya Sudah Siap diuji.`);
 }
 
 /** Siswa klik "Buat Pertanyaan baru" setelah gagal */

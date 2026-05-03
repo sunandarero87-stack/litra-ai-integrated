@@ -72,7 +72,7 @@ FORMAT JAWABAN: Kamu harus menyajikan jawaban dengan struktur "Dokumen Profesion
 - Pastikan ada alur: Sapaan Singkat -> Penjelasan Terstruktur -> SELESAI (Tanpa Pertanyaan).
 - LARANGAN KERAS: Kamu DILARANG KERAS memberikan pertanyaan pemancing di akhir penjelasan rutin (seperti "Apa kamu paham?", "Ada lagi?"). Cukup berikan penjelasan saja.
 - KECUALI: Jika siswa memintanya secara eksplisit atau mengklik tombol "Sudah Paham" (konfirmasi pemahaman), kamu WAJIB memberikan SATU pertanyaan uji pemahaman yang kritis dan menantang berkaitan langsung dengan materi "${selectedMaterial}" (dari bagian KONTEKS) serta berdasarkan penjelasan terakhir yang baru saja kamu berikan.
-- CATATAN: Jika siswa mengirimkan pesan yang diawali dengan "Saya Sudah Siap diuji...", anggap itu sebagai tanda bahwa siswa sudah siap diuji dan kamu harus langsung memberikan soal tersebut.
+- CATATAN: Jika siswa mengirimkan pesan yang diawali dengan "Saya Sudah Siap diuji...", anggap itu sebagai tanda bahwa siswa sudah siap diuji. Kamu harus LANGSUNG memberikan soal tersebut TANPA kalimat pengantar seperti "Baik, mari kita uji" atau "Saya siap diuji". Langsung tuliskan pertanyaannya.
 KONTEKS: ${materialContext}
 TAHAP: ${stage}`;
 
