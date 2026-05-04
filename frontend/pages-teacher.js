@@ -76,7 +76,10 @@ function renderTeacherDashboard(main) {
                     ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
                 </select>
             </div>
-            <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset Pembelajaran (<span id="count-reset-selected">0</span>)</button>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button class="btn btn-outline btn-sm" onclick="exportProgressToExcel()"><i class="fas fa-download"></i> Download Laporan</button>
+                <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset Pembelajaran (<span id="count-reset-selected">0</span>)</button>
+            </div>
         </div>
         <div class="table-container">
             <table>
@@ -376,6 +379,38 @@ async function resetStage3Selected() {
 
 
 // ---- EXPORT FUNCTIONS ----
+function exportProgressToExcel() {
+    const users = getUsers().filter(u => u.role === 'siswa');
+    const results = getAssessmentResults();
+    
+    let tableHTML = '<table><thead><tr>' +
+        '<th style="background-color:#E2EFDA">Nama Siswa</th><th style="background-color:#E2EFDA">Kelas</th><th style="background-color:#E2EFDA">Tahap Pembelajaran</th><th style="background-color:#E2EFDA">Rekomendasi AI</th><th style="background-color:#E2EFDA">Status Hasil</th>' +
+        '</tr></thead><tbody>';
+
+    let hasData = false;
+    users.forEach(s => {
+        hasData = true;
+        const p = getProgress(s.username);
+        const r = results[s.username];
+        const stage = p.tahap4Complete ? 'Selesai' : p.tahap3Complete ? 'Tahap 4' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
+        const badge = r ? (r.pass ? 'Lulus' : 'Tidak Lulus') : 'Proses';
+        const aiRec = p.tahap2Complete ? (p.isReady ? 'SIAP' : 'PERLU BIMBINGAN') : '-';
+        
+        tableHTML += `<tr>
+            <td>${s.name}</td>
+            <td>${s.kelas || '-'}</td>
+            <td>${stage}</td>
+            <td>${aiRec}</td>
+            <td>${badge}</td>
+        </tr>`;
+    });
+    
+    tableHTML += '</tbody></table>';
+    
+    if (!hasData) return alert('Belum ada data progres siswa untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Progres_Siswa');
+}
+
 function exportAllStagesToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
     const progresses = getStudentProgress();
