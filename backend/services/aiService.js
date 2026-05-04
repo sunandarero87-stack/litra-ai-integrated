@@ -28,22 +28,29 @@ function getHeaders() {
 }
 
 // Helper: request dengan fallback model otomatis
-async function requestWithFallback(payload, retryDelay = 3000) {
+async function requestWithFallback(payload, retryDelay = 2000) {
     let lastError;
     for (const model of FALLBACK_MODELS) {
         try {
-            const res = await axios.post(API_URL, { ...payload, model }, { headers: getHeaders(), timeout: 30000 });
+            const res = await axios.post(API_URL, { ...payload, model }, { headers: getHeaders(), timeout: 60000 });
             if (res.data.choices && res.data.choices[0]) return res;
         } catch (e) {
             const status = e.response?.status;
-            const errMsg = e.response?.data ? JSON.stringify(e.response.data) : e.message;
-            console.warn(`[AI] Model "${model}" gagal (${status || e.code}): ${errMsg}`);
+            const errorDetail = e.response?.data?.error?.message || e.response?.data?.error || e.message;
+            console.warn(`[AI] Model "${model}" gagal (${status || 'Err'}): ${JSON.stringify(errorDetail)}`);
+            
+            // Jika 400 (Bad Request), kemungkinan payload/prompt bermasalah, jangan lanjut fallback jika sama
+            if (status === 400) {
+                lastError = new Error(`AI Bad Request (400): ${JSON.stringify(errorDetail)}`);
+                continue; // Coba model lain tetap, siapa tahu model lain lebih toleran
+            }
+            
             lastError = e;
-            // Jika rate limit, tunggu sebentar sebelum coba model berikutnya
             if (status === 429) await new Promise(r => setTimeout(r, retryDelay));
         }
     }
-    throw lastError || new Error("Semua model AI tidak dapat dijangkau.");
+    const finalErrorMsg = lastError.response?.data?.error?.message || lastError.message;
+    throw new Error(finalErrorMsg);
 }
 
 /**
@@ -320,12 +327,15 @@ async function generateBankSoal(objectivesArray, amount = 10, indicatorType = ''
 
 async function generateBankSoalFromMaterial(materialContent, amount = 10, indicatorType = '', indicatorValue = '') {
     const indicatorContext = indicatorType && indicatorValue ? `\n\nSyarat Tambahan Soal:\n- Fokus Tipe Soal adalah ${indicatorType.toUpperCase()}\n- WAJIB menerapkan Indikator Soal: ${indicatorValue}` : '';
+    const safeContent = materialContent ? materialContent.substring(0, 30000) : "";
+    const safeAmount = Math.min(parseInt(amount) || 10, 20); // Batasi maks 20 soal per AI call agar tidak 400/timeout
+    
     const payload = {
         messages: [
             { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berdasarkan materi pembelajaran. OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID.\nWAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD). HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
-            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda berdasarkan materi berikut ini:\n\n${materialContent}${indicatorContext}\n\nFormat output WAJIB berbentuk JSON array of objects dengan struktur berikut:\n[\n  {\n    "question": "[STIMULUS BERUPA STUDI KASUS/CERITA] [PERTANYAAN UTAMA]",\n    "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],\n    "correct": 0,\n    "explanation": "Penjelasan mengapa jawaban tersebut benar",\n    "type": "literasi atau numerasi"\n  }\n]\n\nATURAN KETAT DAN MUTLAK:\n1. JUMLAH SOAL HARUS TEPAT ${amount} OBJEK DALAM ARRAY.\n2. PENTING: Setiap soal WAJIB diawali dengan "Stimulus" berupa studi kasus sederhana, cerita, atau fakta pendukung yang relevan dari materi. Gabungkan stimulus dan pertanyaan ke dalam field "question".\n3. Nilai "correct" adalah INDEX (0 untuk A, 1 untuk B, 2 untuk C, 3 untuk D).\n4. Gunakan Bahasa Indonesia baku yang natural dan mudah dipahami siswa.\n5. Jangan tulis kata pengantar atau penjelasan di luar JSON. Langsung berikan JSON array.` }
+            { role: "user", content: `Buat TEPAT ${safeAmount} buah soal pilihan ganda berdasarkan materi berikut ini:\n\n${safeContent}${indicatorContext}\n\nFormat output WAJIB berbentuk JSON array of objects dengan struktur berikut:\n[\n  {\n    "question": "[STIMULUS BERUPA STUDI KASUS/CERITA] [PERTANYAAN UTAMA]",\n    "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],\n    "correct": 0,\n    "explanation": "Penjelasan mengapa jawaban tersebut benar",\n    "type": "literasi atau numerasi"\n  }\n]\n\nATURAN KETAT DAN MUTLAK:\n1. JUMLAH SOAL HARUS TEPAT ${safeAmount} OBJEK DALAM ARRAY.\n2. PENTING: Setiap soal WAJIB diawali dengan "Stimulus" berupa studi kasus sederhana, cerita, atau fakta pendukung yang relevan dari materi. Gabungkan stimulus dan pertanyaan ke dalam field "question".\n3. Nilai "correct" adalah INDEX (0 untuk A, 1 untuk B, 2 untuk C, 3 untuk D).\n4. Gunakan Bahasa Indonesia baku yang natural dan mudah dipahami siswa.\n5. Jangan tulis kata pengantar atau penjelasan di luar JSON. Langsung berikan JSON array.` }
         ],
-        max_tokens: 4096,
+        max_tokens: 4000,
         temperature: 0.6
     };
 
