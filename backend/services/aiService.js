@@ -2,9 +2,14 @@ const axios = require('axios');
 const ChatLog = require('../models/ChatLog');
 
 // Configuration
-const AI_API_KEY = (process.env.AI_API_KEY || "").trim();
+// Memungkinkan banyak API key dipisahkan dengan koma di Railway (contoh: key1,key2,key3)
+const RAW_API_KEYS = (process.env.AI_API_KEYS || process.env.AI_API_KEY || "").trim();
+const API_KEYS = RAW_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 0);
+
 const AI_MODEL = (process.env.AI_MODEL || "llama-3.3-70b-versatile").trim();
 const API_URL = (process.env.AI_BASE_URL || "https://api.groq.com/openai/v1/chat/completions").trim();
+
+let currentKeyIndex = 0;
 
 // Daftar fallback model jika model utama gagal atau rate-limited
 const FALLBACK_MODELS = [
@@ -14,9 +19,17 @@ const FALLBACK_MODELS = [
     "mixtral-8x7b-32768"
 ].filter((v, i, a) => v && a.indexOf(v) === i); // Unik dan tidak kosong
 
+function getNextApiKey() {
+    if (API_KEYS.length === 0) return "";
+    const key = API_KEYS[currentKeyIndex];
+    currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+    return key;
+}
+
 function getHeaders() {
+    const apiKey = getNextApiKey();
     const headers = {
-        "Authorization": `Bearer ${AI_API_KEY}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
     };
     // Header tambahan khusus OpenRouter (diabaikan oleh Google AI Studio)
