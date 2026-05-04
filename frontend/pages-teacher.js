@@ -750,21 +750,21 @@ function renderScheduleMgmt(main) {
                         else if (stage === 'tahap2') sched = t2;
                         else if (stage === 'tahap3') sched = t3;
 
-                        return \`
+                        return `
                         <tr>
-                            <td><strong>\${c}</strong></td>
-                            <td><input type="time" id="start-\${c}" class="form-control" style="margin-bottom:0" value="\${sched.start}"></td>
-                            <td><input type="time" id="end-\${c}" class="form-control" style="margin-bottom:0" value="\${sched.end}"></td>
+                            <td><strong>${c}</strong></td>
+                            <td><input type="time" id="start-${c}" class="form-control" style="margin-bottom:0" value="${sched.start}"></td>
+                            <td><input type="time" id="end-${c}" class="form-control" style="margin-bottom:0" value="${sched.end}"></td>
                             <td>
-                                <select id="active-\${c}" class="form-control" style="margin-bottom:0">
-                                    <option value="true" \${sched.active ? 'selected' : ''}>Aktif (Dibatasi Waktu)</option>
-                                    <option value="false" \${!sched.active ? 'selected' : ''}>Tidak Aktif (Bebas)</option>
+                                <select id="active-${c}" class="form-control" style="margin-bottom:0">
+                                    <option value="true" ${sched.active ? 'selected' : ''}>Aktif (Dibatasi Waktu)</option>
+                                    <option value="false" ${!sched.active ? 'selected' : ''}>Tidak Aktif (Bebas)</option>
                                 </select>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-primary" onclick="saveSchedule('\${c}')"><i class="fas fa-save"></i> Simpan</button>
+                                <button class="btn btn-sm btn-primary" onclick="saveSchedule('${c}')"><i class="fas fa-save"></i> Simpan</button>
                             </td>
-                        </tr>\`;
+                        </tr>`;
                     }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada kelas terdaftar</td></tr>'}
                 </tbody>
             </table>
