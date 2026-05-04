@@ -592,7 +592,7 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
 
             // Mulai hitungan mundur otomatis untuk menutup chat
             setTimeout(() => {
-                startChatbotCountdown();
+                startChatbotCountdown(score);
             }, 1500);
 
             appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
@@ -608,7 +608,7 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
     }
 }
 
-function startChatbotCountdown() {
+function startChatbotCountdown(score) {
     const chatPanel = document.getElementById('chatbot-panel');
     if (!chatPanel || chatPanel.style.display === 'none') return;
 
@@ -621,6 +621,13 @@ function startChatbotCountdown() {
     overlay.style.cssText = 'position:absolute; top:35%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:280px; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); color:white; z-index:100; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:1.5rem; text-align:center; transition:all 0.3s; border:1px solid rgba(255,255,255,0.1);';
 
     let seconds = 10;
+    
+    // Tombol batal jika skor < 75
+    let cancelBtnHTML = '';
+    if (score !== undefined && score < 75) {
+        cancelBtnHTML = `<button id="btn-cancel-countdown" class="btn btn-sm btn-outline mt-2" style="border-color:white; color:white;">Batalkan</button>`;
+    }
+
     overlay.innerHTML = `
         <div style="animation: scaleIn 0.3s ease;">
             <i class="fas fa-robot" style="font-size:2.5rem; color:var(--primary-light); margin-bottom:0.75rem;"></i>
@@ -628,13 +635,23 @@ function startChatbotCountdown() {
             <p style="opacity:0.8; margin-bottom:1rem; font-size:0.8rem;">Menutup otomatis dalam:</p>
             <div id="countdown-number" style="font-size:3.5rem; font-weight:800; color:var(--success); line-height:1; text-shadow:0 0 20px rgba(34,197,94,0.5);">${seconds}</div>
             <p style="margin-top:1rem; font-size:0.7rem; color:var(--text-secondary); font-style:italic;">Siap lanjut ke Tahap 2</p>
+            ${cancelBtnHTML}
         </div>
     `;
 
     chatPanel.style.position = 'relative';
     chatPanel.appendChild(overlay);
 
-    const timer = setInterval(() => {
+    let timer;
+
+    if (score !== undefined && score < 75) {
+        document.getElementById('btn-cancel-countdown').addEventListener('click', () => {
+            clearInterval(timer);
+            overlay.remove();
+        });
+    }
+
+    timer = setInterval(() => {
         seconds--;
         const numElem = document.getElementById('countdown-number');
         if (numElem) {

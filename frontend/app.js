@@ -570,6 +570,7 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('student-results')"><i class="fas fa-poll"></i> Hasil Penilaian</button>
             
             <div class="nav-section">Manajemen</div>
+            <button class="nav-item" onclick="navigateTo('schedule-mgmt')"><i class="fas fa-clock"></i> Penjadwalan Waktu</button>
             <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
             <button class="nav-item" onclick="navigateTo('assessment-mgmt')"><i class="fas fa-clipboard-check"></i> Asesmen</button>
             
@@ -602,19 +603,32 @@ function updateAvatar(elemId, user) {
 
 // ---- NAVIGATION ----
 function navigateTo(page) {
-    if (page === 'tahap1' && currentUser.role === 'siswa') {
-        const settings = getAssessmentSettings();
-        const schedules = settings.classSchedules || {};
-        const myClass = currentUser.kelas || 'Tanpa Kelas';
-        const schedule = schedules[myClass];
-
-        if (schedule && schedule.active) {
-            const now = new Date();
-            const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    if (page === 'tahap1' || page === 'tahap2' || page === 'tahap3') {
+        if (currentUser && currentUser.role === 'siswa') {
+            const settings = getAssessmentSettings();
+            const schedules = settings.classSchedules || {};
+            const myClass = currentUser.kelas || 'Tanpa Kelas';
+            const classSchedule = schedules[myClass] || {};
             
-            if (currentTime < schedule.start || currentTime > schedule.end) {
-                alert(`⚠️ Belum Waktunya!\n\nJadwal belajar Tahap 1 untuk Kelas ${myClass} adalah:\n🕒 ${schedule.start} s/d ${schedule.end}\n\nSilakan kembali pada jam tersebut.`);
-                return;
+            // Fallback for old data structure
+            const t1 = classSchedule.tahap1 || { start: classSchedule.start || '00:00', end: classSchedule.end || '23:59', active: classSchedule.active || false };
+            const t2 = classSchedule.tahap2 || { start: '00:00', end: '23:59', active: false };
+            const t3 = classSchedule.tahap3 || { start: '00:00', end: '23:59', active: false };
+            
+            let currentStageSchedule;
+            if (page === 'tahap1') currentStageSchedule = t1;
+            else if (page === 'tahap2') currentStageSchedule = t2;
+            else if (page === 'tahap3') currentStageSchedule = t3;
+
+            if (currentStageSchedule && currentStageSchedule.active) {
+                const now = new Date();
+                const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+                
+                if (currentTime < currentStageSchedule.start || currentTime > currentStageSchedule.end) {
+                    const stageName = page === 'tahap1' ? 'Tahap 1' : page === 'tahap2' ? 'Tahap 2' : 'Tahap 3';
+                    alert(`⚠️ Belum Waktunya!\n\nJadwal akses ${stageName} untuk Kelas ${myClass} adalah:\n🕒 ${currentStageSchedule.start} s/d ${currentStageSchedule.end}\n\nSilakan kembali pada jam tersebut.`);
+                    return;
+                }
             }
         }
     }
@@ -631,6 +645,7 @@ function navigateTo(page) {
         'student-results': 'Hasil Penilaian Siswa',
         'materials': 'Manajemen Materi',
         'assessment-mgmt': 'Manajemen Asesmen',
+        'schedule-mgmt': 'Penjadwalan Waktu Akses',
         'banksoal': 'Bank Soal (HOTS)',
         'student-accounts': 'Manajemen Akun Siswa',
         'chat-history': 'Riwayat Chat Siswa',
@@ -691,6 +706,9 @@ function renderPage(page) {
             break;
         case 'assessment-mgmt':
             renderAssessmentMgmt(main);
+            break;
+        case 'schedule-mgmt':
+            if (typeof renderScheduleMgmt === 'function') renderScheduleMgmt(main);
             break;
         case 'banksoal':
             renderBankSoal(main);

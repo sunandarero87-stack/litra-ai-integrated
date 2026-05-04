@@ -650,43 +650,7 @@ function renderAssessmentMgmt(main) {
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
         </div>
     </div>
-    <div class="card mt-2">
-        <div class="card-header"><h3 class="card-title"><i class="fas fa-clock"></i> Penjadwalan Tahap 1 (Materi Pembelajaran)</h3></div>
-        <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem; padding:0 1rem;">Atur waktu akses Tahap 1 untuk setiap kelas. Siswa tidak akan bisa masuk ke Tahap 1 di luar jam yang ditentukan.</p>
-        <div class="table-container">
-            <table id="table-class-schedules">
-                <thead>
-                    <tr>
-                        <th>Kelas</th>
-                        <th>Jam Mulai</th>
-                        <th>Jam Selesai</th>
-                        <th>Status</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody id="schedule-body">
-                    ${classes.map(c => {
-                        const schedule = (settings.classSchedules || {})[c] || { start: '00:00', end: '23:59', active: false };
-                        return `
-                        <tr>
-                            <td><strong>${c}</strong></td>
-                            <td><input type="time" id="start-${c}" class="form-control" style="margin-bottom:0" value="${schedule.start}"></td>
-                            <td><input type="time" id="end-${c}" class="form-control" style="margin-bottom:0" value="${schedule.end}"></td>
-                            <td>
-                                <select id="active-${c}" class="form-control" style="margin-bottom:0">
-                                    <option value="true" ${schedule.active ? 'selected' : ''}>Aktif (Dibatasi)</option>
-                                    <option value="false" ${!schedule.active ? 'selected' : ''}>Tidak Aktif (Bebas)</option>
-                                </select>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-primary" onclick="saveSchedule('${c}')"><i class="fas fa-save"></i> Simpan</button>
-                            </td>
-                        </tr>`;
-                    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada kelas terdaftar</td></tr>'}
-                </tbody>
-            </table>
-        </div>
-    </div>
+
     <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <div style="display:flex; align-items:center; gap:1rem;">
@@ -742,18 +706,112 @@ function renderAssessmentMgmt(main) {
     </div>`;
 }
 
+function renderScheduleMgmt(main) {
+    const settings = getAssessmentSettings();
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa');
+    const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
+
+    // Build the dropdown to select which stage to schedule
+    main.innerHTML = `
+    <div class="card mt-2">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title"><i class="fas fa-clock"></i> Penjadwalan Waktu Akses (Tahap 1, 2, 3)</h3>
+            <select id="schedule-stage-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="renderScheduleMgmt(document.getElementById('main-content'))">
+                <option value="tahap1" ${window.currentScheduleStage === 'tahap1' ? 'selected' : ''}>Tahap 1: Materi & Diskusi</option>
+                <option value="tahap2" ${window.currentScheduleStage === 'tahap2' || !window.currentScheduleStage ? 'selected' : ''}>Tahap 2: Refleksi</option>
+                <option value="tahap3" ${window.currentScheduleStage === 'tahap3' ? 'selected' : ''}>Tahap 3: Asesmen</option>
+            </select>
+        </div>
+        <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem; padding:0 1rem;">Atur waktu akses untuk setiap kelas. Siswa tidak akan bisa masuk ke Tahap ini di luar jam yang ditentukan.</p>
+        <div class="table-container">
+            <table id="table-class-schedules">
+                <thead>
+                    <tr>
+                        <th>Kelas</th>
+                        <th>Jam Mulai</th>
+                        <th>Jam Selesai</th>
+                        <th>Status Batasan</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-body">
+                    ${classes.map(c => {
+                        const classSchedule = (settings.classSchedules || {})[c] || {};
+                        const stage = window.currentScheduleStage || 'tahap2';
+                        
+                        // Fallback logic for old data format
+                        const t1 = classSchedule.tahap1 || { start: classSchedule.start || '00:00', end: classSchedule.end || '23:59', active: classSchedule.active || false };
+                        const t2 = classSchedule.tahap2 || { start: '00:00', end: '23:59', active: false };
+                        const t3 = classSchedule.tahap3 || { start: '00:00', end: '23:59', active: false };
+                        
+                        let sched;
+                        if (stage === 'tahap1') sched = t1;
+                        else if (stage === 'tahap2') sched = t2;
+                        else if (stage === 'tahap3') sched = t3;
+
+                        return \`
+                        <tr>
+                            <td><strong>\${c}</strong></td>
+                            <td><input type="time" id="start-\${c}" class="form-control" style="margin-bottom:0" value="\${sched.start}"></td>
+                            <td><input type="time" id="end-\${c}" class="form-control" style="margin-bottom:0" value="\${sched.end}"></td>
+                            <td>
+                                <select id="active-\${c}" class="form-control" style="margin-bottom:0">
+                                    <option value="true" \${sched.active ? 'selected' : ''}>Aktif (Dibatasi Waktu)</option>
+                                    <option value="false" \${!sched.active ? 'selected' : ''}>Tidak Aktif (Bebas)</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="saveSchedule('\${c}')"><i class="fas fa-save"></i> Simpan</button>
+                            </td>
+                        </tr>\`;
+                    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada kelas terdaftar</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+    
+    // update state so it remembers selection when rerendered
+    const select = document.getElementById('schedule-stage-filter');
+    if (select) {
+        select.addEventListener('change', (e) => {
+            window.currentScheduleStage = e.target.value;
+        });
+    }
+}
+
 async function saveSchedule(kelas) {
+    const stage = window.currentScheduleStage || 'tahap2';
     const start = document.getElementById(`start-${kelas}`).value;
     const end = document.getElementById(`end-${kelas}`).value;
     const active = document.getElementById(`active-${kelas}`).value === 'true';
 
     const settings = getAssessmentSettings();
     const schedules = settings.classSchedules || {};
-    schedules[kelas] = { start, end, active };
+    
+    // Ensure class obj exists
+    if (!schedules[kelas]) {
+        schedules[kelas] = {};
+    }
+    
+    // Migrate old data if necessary
+    if (!schedules[kelas].tahap1 && schedules[kelas].start) {
+        schedules[kelas].tahap1 = { start: schedules[kelas].start, end: schedules[kelas].end, active: schedules[kelas].active };
+        delete schedules[kelas].start;
+        delete schedules[kelas].end;
+        delete schedules[kelas].active;
+    }
+    
+    if (!schedules[kelas].tahap1) schedules[kelas].tahap1 = { start: '00:00', end: '23:59', active: false };
+    if (!schedules[kelas].tahap2) schedules[kelas].tahap2 = { start: '00:00', end: '23:59', active: false };
+    if (!schedules[kelas].tahap3) schedules[kelas].tahap3 = { start: '00:00', end: '23:59', active: false };
+
+    schedules[kelas][stage] = { start, end, active };
 
     try {
         saveAssessmentSettings({ ...settings, classSchedules: schedules });
-        alert(`✅ Jadwal kelas ${kelas} berhasil diperbarui!`);
+        const stageName = stage === 'tahap1' ? 'Tahap 1' : stage === 'tahap2' ? 'Tahap 2' : 'Tahap 3';
+        alert(`✅ Jadwal kelas ${kelas} untuk ${stageName} berhasil diperbarui!`);
     } catch (err) {
         alert('Gagal menyimpan jadwal.');
     }
