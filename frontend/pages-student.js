@@ -990,13 +990,19 @@ let assessmentActive = false;
 function renderTahap3(main) {
     const progress = getProgress(currentUser.username);
 
-    // Check if already completed
     if (progress.tahap3Complete) {
         const results = getAssessmentResults();
         const r = results[currentUser.username];
         if (r) {
             const pct = Math.round((r.score / r.total) * 100);
-            main.innerHTML = `<div class="score-display"><div class="score-circle ${pct >= 70 ? 'pass' : 'fail'}">${pct}%<small>${pct >= 70 ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p><button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div>`;
+            const pass = pct >= 70;
+            
+            let remedialInfo = '';
+            if (!pass && progress.remedialStatus === 'waiting_approval') {
+                remedialInfo = '<div class="alert alert-warning mt-2" style="background:var(--warning-light); color:var(--warning); padding:1rem; border-radius:8px;"><i class="fas fa-exclamation-triangle"></i> Kamu belum lulus. Silakan melapor ke Guru untuk meminta persetujuan <strong>Remedial</strong>.</div>';
+            }
+
+            main.innerHTML = `<div class="score-display"><div class="score-circle ${pass ? 'pass' : 'fail'}">${pct}%<small>${pass ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p>${remedialInfo}<button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div>`;
         }
         return;
     }
@@ -1235,9 +1241,9 @@ async function submitAssessment(autoRedirect = false) {
 
     updateProgress(currentUser.username, { tahap3Complete: true });
 
-    // If fail, reset to tahap 1
+    // If fail, set to waiting remedial instead of resetting to tahap 1
     if (!pass) {
-        updateProgress(currentUser.username, { tahap: 1, tahap1Complete: false, tahap2Complete: false, tahap2Score: 0, tahap3Complete: false, tahap4Complete: false, tahap4Score: 0 });
+        updateProgress(currentUser.username, { remedialStatus: 'waiting_approval' });
         // Clear approval
         saveApprovalForUser(currentUser.username, null);
     }
@@ -1270,7 +1276,7 @@ async function submitAssessment(autoRedirect = false) {
                         <div class="analysis-value ${pass ? 'high' : 'low'}">${score}/${total}</div>
                     </div>
                 </div>
-                ${!pass ? '<p style="color:var(--danger)" class="mt-2"><i class="fas fa-redo"></i> Kamu harus mengulang dari Tahap 1.</p>' : ''}
+                ${!pass ? '<p style="color:var(--warning)" class="mt-2"><i class="fas fa-exclamation-triangle"></i> Kamu harus melakukan Remedial atas persetujuan guru.</p>' : ''}
                 ${tabViolationCount > 0 ? `<p class="mt-1 text-muted">⚠️ Pelanggaran tab: ${tabViolationCount}x</p>` : ''}
                 <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
             </div>

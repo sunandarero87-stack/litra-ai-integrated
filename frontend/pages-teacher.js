@@ -683,21 +683,33 @@ function renderAssessmentMgmt(main) {
         const aiAnalysis = p.aiReadiness || 'Belum ada refleksi';
         const readyColor = p.isReady ? 'var(--success)' : hasReflection ? 'var(--warning)' : 'var(--text-muted)';
 
+        let progressBadge = hasReflection ? '<span class="badge badge-success">Refleksi Selesai</span>' : '<span class="badge badge-warning">Belum Refleksi</span>';
+        if (p.remedialStatus === 'waiting_approval') {
+            progressBadge = '<span class="badge badge-danger">Menunggu Remedial</span>';
+        }
+
+        let actionButtons = '';
+        if (p.remedialStatus === 'waiting_approval') {
+            actionButtons = `<button class="btn btn-sm btn-danger" onclick="approveRemedial('${s.username}', this)"><i class="fas fa-redo"></i> Setujui Remedial</button>`;
+        } else if (approved) {
+            actionButtons = `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-plus-circle"></i> Setuju Ulang</button></div>`;
+        } else if (hasReflection) {
+            actionButtons = `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-plus-circle"></i> Setuju</button>`;
+        } else {
+            actionButtons = '<span class="text-muted">Menunggu Refleksi</span>';
+        }
+
         return `<tr>
                             <td><input type="checkbox" class="check-approval" value="${s.username}" onchange="updateApprovalBtn()" ${!hasReflection ? 'disabled' : ''}></td>
                             <td>${s.name}</td><td>${s.kelas || '-'}</td>
-                            <td>${hasReflection ? '<span class="badge badge-success">Refleksi Selesai</span>' : '<span class="badge badge-warning">Belum Refleksi</span>'}</td>
+                            <td>${progressBadge}</td>
                             <td style="max-width:300px">
                                 <div style="color:${readyColor}; font-weight:bold; margin-bottom:4px">
                                     ${p.isReady ? '✅ Direkomendasikan' : hasReflection ? '⚠️ Perlu Penguatan' : '⏳ Menunggu'}
                                 </div>
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
-                            <td>
-                                ${approved ? `<div style="display:flex; flex-direction:column; gap:0.5rem"><span class="badge badge-success">Disetujui</span> <button class="btn btn-sm btn-warning" onclick="approveStudent('${s.username}', this)" style="font-size:0.75rem"><i class="fas fa-plus-circle"></i> Setuju Ulang</button></div>` :
-                hasReflection ? `<button class="btn btn-sm btn-success" onclick="approveStudent('${s.username}', this)"><i class="fas fa-plus-circle"></i> Setuju</button>` :
-                    '<span class="text-muted">Menunggu Refleksi</span>'}
-                            </td>
+                            <td>${actionButtons}</td>
                         </tr>`;
     }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada siswa</td></tr>'}
                 </tbody>
@@ -964,6 +976,55 @@ async function approveStudent(username, btnElement) {
         if (btnElement) {
             btnElement.disabled = false;
             btnElement.innerHTML = 'Setuju';
+        }
+    }
+}
+
+async function approveRemedial(username, btnElement) {
+    if (!confirm("Setujui siswa ini untuk melakukan Remedial? Soal baru akan digenerate dari Bank Soal.")) return;
+    
+    if (btnElement) {
+        btnElement.disabled = true;
+        btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan...';
+    }
+
+    const amountInput = document.getElementById('assessment-amount');
+    const amount = amountInput ? parseInt(amountInput.value) || 50 : 50;
+
+    try {
+        const progress = getProgress(username);
+
+        // Generate soal baru
+        const genRes = await fetch('/api/assessment/generate-from-bank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, amount })
+        });
+
+        if (!genRes.ok) {
+            const errBody = await genRes.json();
+            throw new Error(errBody.error || "Gagal mengambil soal dari Bank Soal");
+        }
+        const genData = await genRes.json();
+
+        // Update progress
+        progress.generatedAssessment = genData.questions;
+        progress.tahap3Complete = false;
+        progress.remedialStatus = 'approved';
+        updateProgress(username, progress);
+
+        // Beri approval baru
+        await saveApprovalForUser(username, { date: new Date().toISOString(), approvedBy: currentUser.username });
+
+        renderAssessmentMgmt(document.getElementById('main-content'));
+        alert(`Berhasil! Asesmen Remedial sebanyak ${genData.questions.length} soal telah disiapkan untuk ${username}`);
+
+    } catch (err) {
+        console.error(err);
+        alert(err.message || 'Gagal menyiapkan soal Remedial!');
+        if (btnElement) {
+            btnElement.disabled = false;
+            btnElement.innerHTML = '<i class="fas fa-redo"></i> Setujui Remedial';
         }
     }
 }
