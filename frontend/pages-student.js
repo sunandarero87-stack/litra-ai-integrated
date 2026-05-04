@@ -970,21 +970,7 @@ function renderTahap3(main) {
         return;
     }
 
-    // Check approval
-    const approvals = getApprovals();
-    if (!approvals[currentUser.username]) {
-        main.innerHTML = `
-        <div class="card">
-            <div class="approval-waiting">
-                <div class="approval-icon"><i class="fas fa-hourglass-half"></i></div>
-                <h2>Menunggu Persetujuan Guru</h2>
-                <p class="text-muted">Guru harus menyetujui kamu sebelum asesmen dapat dimulai.</p>
-                <p class="text-muted mt-1">Hubungi Pak Nandar untuk mendapatkan persetujuan.</p>
-                <button class="btn btn-outline mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
-            </div>
-        </div>`;
-        return;
-    }
+
 
     // Show start screen
     if (!assessmentActive) {
@@ -1010,11 +996,54 @@ function renderTahap3(main) {
     showAssessmentQuestion(main);
 }
 
-function startAssessment() {
+async function startAssessment() {
     assessmentAnswers = {};
     assessmentCurrentQ = 0;
     assessmentActive = true;
     tabViolationCount = 0;
+
+    const btn = document.querySelector('button[onclick="startAssessment()"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan Soal...';
+    }
+
+    try {
+        const settings = getAssessmentSettings();
+        const res = await fetch('/api/assessment/generate-from-bank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username, amount: settings.questionAmount || 10 })
+        });
+        const data = await res.json();
+        
+        if (data.success && data.questions && data.questions.length > 0) {
+            const progress = getProgress(currentUser.username);
+            progress.generatedAssessment = data.questions;
+            updateProgress(currentUser.username, progress);
+        } else {
+            alert(data.error || 'Gagal mengambil soal dari Bank Soal');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-play"></i> Mulai Asesmen';
+            }
+            assessmentActive = false;
+            return;
+        }
+    } catch(err) {
+        alert('Gagal menghubungi server untuk mengambil soal.');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> Mulai Asesmen';
+        }
+        assessmentActive = false;
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-play"></i> Mulai Asesmen';
+    }
 
     // Masuk ke Mode Fullscreen (Exambrowser)
     enterFullscreen();
