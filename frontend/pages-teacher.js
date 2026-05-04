@@ -616,6 +616,43 @@ function renderAssessmentMgmt(main) {
         </div>
     </div>
     <div class="card mt-2">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-clock"></i> Penjadwalan Tahap 1 (Materi Pembelajaran)</h3></div>
+        <p class="text-muted" style="font-size:0.9rem; margin-bottom:1rem; padding:0 1rem;">Atur waktu akses Tahap 1 untuk setiap kelas. Siswa tidak akan bisa masuk ke Tahap 1 di luar jam yang ditentukan.</p>
+        <div class="table-container">
+            <table id="table-class-schedules">
+                <thead>
+                    <tr>
+                        <th>Kelas</th>
+                        <th>Jam Mulai</th>
+                        <th>Jam Selesai</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="schedule-body">
+                    ${classes.map(c => {
+                        const schedule = (settings.classSchedules || {})[c] || { start: '00:00', end: '23:59', active: false };
+                        return `
+                        <tr>
+                            <td><strong>${c}</strong></td>
+                            <td><input type="time" id="start-${c}" class="form-control" style="margin-bottom:0" value="${schedule.start}"></td>
+                            <td><input type="time" id="end-${c}" class="form-control" style="margin-bottom:0" value="${schedule.end}"></td>
+                            <td>
+                                <select id="active-${c}" class="form-control" style="margin-bottom:0">
+                                    <option value="true" ${schedule.active ? 'selected' : ''}>Aktif (Dibatasi)</option>
+                                    <option value="false" ${!schedule.active ? 'selected' : ''}>Tidak Aktif (Bebas)</option>
+                                </select>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" onclick="saveSchedule('${c}')"><i class="fas fa-save"></i> Simpan</button>
+                            </td>
+                        </tr>`;
+                    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada kelas terdaftar</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card mt-2">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <div style="display:flex; align-items:center; gap:1rem;">
                 <h3 class="card-title" style="margin-bottom:0;">✅ Persetujuan Siswa untuk Asesmen</h3>
@@ -668,6 +705,23 @@ function renderAssessmentMgmt(main) {
             </table>
         </div>
     </div>`;
+}
+
+async function saveSchedule(kelas) {
+    const start = document.getElementById(`start-${kelas}`).value;
+    const end = document.getElementById(`end-${kelas}`).value;
+    const active = document.getElementById(`active-${kelas}`).value === 'true';
+
+    const settings = getAssessmentSettings();
+    const schedules = settings.classSchedules || {};
+    schedules[kelas] = { start, end, active };
+
+    try {
+        saveAssessmentSettings({ ...settings, classSchedules: schedules });
+        alert(`✅ Jadwal kelas ${kelas} berhasil diperbarui!`);
+    } catch (err) {
+        alert('Gagal menyimpan jadwal.');
+    }
 }
 
 function saveAssessmentDuration() {

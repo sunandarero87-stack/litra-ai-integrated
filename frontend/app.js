@@ -602,6 +602,23 @@ function updateAvatar(elemId, user) {
 
 // ---- NAVIGATION ----
 function navigateTo(page) {
+    if (page === 'tahap1' && currentUser.role === 'siswa') {
+        const settings = getAssessmentSettings();
+        const schedules = settings.classSchedules || {};
+        const myClass = currentUser.kelas || 'Tanpa Kelas';
+        const schedule = schedules[myClass];
+
+        if (schedule && schedule.active) {
+            const now = new Date();
+            const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            
+            if (currentTime < schedule.start || currentTime > schedule.end) {
+                alert(`⚠️ Belum Waktunya!\n\nJadwal belajar Tahap 1 untuk Kelas ${myClass} adalah:\n🕒 ${schedule.start} s/d ${schedule.end}\n\nSilakan kembali pada jam tersebut.`);
+                return;
+            }
+        }
+    }
+
     currentPage = page;
     localStorage.setItem('lastVisitedPage', page);
     const titles = {
