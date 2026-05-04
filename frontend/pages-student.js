@@ -554,31 +554,33 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
             // Hapus tag [SKOR: X] dari teks yang ditampilkan
             feedbackText = feedbackText.replace(/\[SKOR:\s*\d+\]/gi, '').trim();
 
+            // Tunjukkan tombol Lanjut ke Tahap 2 (Sekarang selalu muncul sesuai request)
+            const btnLanjut = document.getElementById('btn-lanjut-tahap2');
+            if (btnLanjut) btnLanjut.style.display = 'inline-block';
+
             if (score >= 75) {
-                // Tunjukkan tombol Lanjut ke Tahap 2
-                const btnLanjut = document.getElementById('btn-lanjut-tahap2');
-                if (btnLanjut) btnLanjut.style.display = 'inline-block';
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#1a7a4a,#22c55e);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
                     <i class="fas fa-star" style="font-size:1.4rem;"></i>
                     <div style="font-size:1rem;font-weight:700;margin-top:0.3rem;">Luar Biasa! Skor Pemahaman: ${score}%</div>
                     <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Tombol <strong>Lanjut ke Tahap 2</strong> sudah terbuka di atas! 🎉</div>
                 </div>`;
-
-                // Mulai hitungan mundur otomatis
-                setTimeout(() => {
-                    startChatbotCountdown();
-                }, 1500);
             } else {
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
                     <i class="fas fa-redo" style="font-size:1.2rem;"></i>
-                    <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}% — Belum Mencapai 75%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Yuk, pelajari lagi bagian yang belum dipahami dan coba diskusikan ulang dengan NARA-AI!</div>
+                    <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Meskipun belum mencapai 75%, kamu tetap bisa lanjut ke Tahap 2. Silakan klik tombol di atas!</div>
                 </div>`;
-                // Tampilkan tombol bantuan jika gagal
+                // Tampilkan tombol bantuan jika ingin mengulang penjelasan (opsional bagi siswa)
                 setTimeout(() => {
                     showGagalButtons();
                 }, 500);
             }
+
+            // Mulai hitungan mundur otomatis untuk menutup chat
+            setTimeout(() => {
+                startChatbotCountdown();
+            }, 1500);
+
             appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
 
             const histories = getChatHistories();
