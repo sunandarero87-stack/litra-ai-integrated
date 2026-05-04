@@ -2,6 +2,57 @@ const aiService = require('../services/aiService');
 const Student = require('../models/Student');
 const Material = require('../models/Material');
 const ChatLog = require('../models/ChatLog');
+const Progress = require('../models/Progress');
+
+exports.checkQueue = async (req, res) => {
+    try {
+        const { username } = req.body;
+        
+        // 1. Bersihkan antrian yang sudah kadaluarsa (lebih dari 15 menit tidak aktif)
+        const timeout = new Date(Date.now() - 15 * 60 * 1000);
+        await Progress.updateMany(
+            { isChatting: true, lastChatActivity: { $lt: timeout } },
+            { $set: { isChatting: false } }
+        );
+
+        // 2. Jika user sudah chatting, izinkan lanjut
+        const myProgress = await Progress.findOne({ username });
+        if (myProgress && myProgress.isChatting) {
+            return res.json({ success: true, allowed: true });
+        }
+
+        // 3. Hitung jumlah siswa yang sedang chatting
+        const activeCount = await Progress.countDocuments({ isChatting: true });
+
+        if (activeCount < 10) {
+            // Berikan slot
+            await Progress.findOneAndUpdate(
+                { username },
+                { $set: { isChatting: true, lastChatActivity: new Date() } },
+                { upsert: true }
+            );
+            return res.json({ success: true, allowed: true });
+        } else {
+            return res.json({ 
+                success: true, 
+                allowed: false, 
+                message: "Maaf, antrian penuh (Maksimal 10 siswa). Silakan menunggu sambil mempelajari materi. Nara-AI akan tersedia setelah siswa lain selesai." 
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.endChatSession = async (req, res) => {
+    try {
+        const { username } = req.body;
+        await Progress.findOneAndUpdate({ username }, { $set: { isChatting: false } });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
 
 exports.handleChat = async (req, res) => {
     try {
@@ -10,6 +61,9 @@ exports.handleChat = async (req, res) => {
         if (!message || !username) {
             return res.status(400).json({ error: 'Message dan username wajib diisi' });
         }
+
+        // Update aktivitas chat
+        await Progress.findOneAndUpdate({ username }, { $set: { lastChatActivity: new Date(), isChatting: true } });
 
         let student = await Student.findOne({ username });
         if (!student) {

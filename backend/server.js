@@ -66,6 +66,8 @@ app.post('/api/chat', chatController.handleChat);
 app.get('/api/chat/:username', chatController.getHistory);
 app.post('/api/chat/analyze-understanding', chatController.handleAnalyzeUnderstanding);
 app.delete('/api/chat/:username', chatController.clearHistory);
+app.post('/api/chat/check-queue', chatController.checkQueue);
+app.post('/api/chat/end-session', chatController.endChatSession);
 
 // New Routes for Stage 2 & 3
 app.post('/api/reflections', chatController.handleReflections);

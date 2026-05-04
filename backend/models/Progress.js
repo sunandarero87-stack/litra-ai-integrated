@@ -31,7 +31,9 @@ const progressSchema = new mongoose.Schema({
     // Assessment Approvals
     approvedForAssessment: { type: Boolean, default: false },
     approvedBy: { type: String },
-    approvalDate: { type: Date }
+    approvalDate: { type: Date },
+    isChatting: { type: Boolean, default: false },
+    lastChatActivity: { type: Date }
 });
 
 module.exports = mongoose.model('Progress', progressSchema);

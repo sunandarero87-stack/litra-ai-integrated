@@ -76,6 +76,12 @@ exports.updateProgress = async (req, res) => {
         p.markModified('generatedAssessment');
         p.markModified('reflectionAnswers');
         p.markModified('tahap4Details');
+
+        // Jika tahap 1 selesai atau tahap berubah, bebaskan antrian chat
+        if (progressData.tahap1Complete || progressData.tahap > 1) {
+            p.isChatting = false;
+        }
+
         await p.save();
         res.json({ success: true, progress: p });
     } catch (err) {
@@ -150,7 +156,9 @@ exports.resetProgress = async (req, res) => {
             assessmentResult: null,
             approvedForAssessment: false,
             approvedBy: null,
-            approvalDate: null
+            approvalDate: null,
+            isChatting: false,
+            lastChatActivity: null
         };
 
         const result = await Progress.updateMany(

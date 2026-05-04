@@ -346,11 +346,33 @@ function closeMaterialViewer() {
     currentMaterial = null;
 }
 
-function toggleChatbot() {
+async function toggleChatbot() {
     const panel = document.getElementById('chatbot-panel');
-    panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
-    if (panel.style.display === 'flex') {
-        document.getElementById('floating-chat-input').focus();
+    const isOpening = panel.style.display === 'none';
+
+    if (isOpening) {
+        // Cek antrian ke server
+        try {
+            const res = await fetch('/api/chat/check-queue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username })
+            });
+            const data = await res.json();
+
+            if (!data.allowed) {
+                alert(data.message || "Maaf, antrian penuh (Maksimal 10 siswa). Silakan menunggu sambil mempelajari materi.");
+                return;
+            }
+
+            panel.style.display = 'flex';
+            document.getElementById('floating-chat-input').focus();
+        } catch (err) {
+            console.error('Queue check failed:', err);
+            alert('Gagal menghubungkan ke sistem antrian. Silakan coba lagi.');
+        }
+    } else {
+        panel.style.display = 'none';
     }
 }
 
@@ -776,7 +798,16 @@ function formatMessageLocal(text) {
     return text.toString().replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
 
-function completeTahap1() {
+async function completeTahap1() {
+    // Beri tahu server bahwa sesi chat selesai (bebaskan slot antrian)
+    try {
+        await fetch('/api/chat/end-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username })
+        });
+    } catch (e) { console.error('End session failed', e); }
+
     updateProgress(currentUser.username, { tahap1Complete: true });
     alert('🎉 Tahap 1 selesai! Sekarang kamu bisa mengerjakan Latihan Soal di Tahap 2.');
     navigateTo('dashboard');
