@@ -24,7 +24,14 @@ exports.generateFromBank = async (req, res) => {
         const matchConditionNum = { type: 'numerasi' };
         
         if (studentKelas) {
-            const classFilter = { $or: [{ kelas: studentKelas }, { kelas: 'Semua Kelas' }, { kelas: { $exists: false } }] };
+            let classFilter = { $or: [{ kelas: studentKelas }, { kelas: 'Semua Kelas' }, { kelas: { $exists: false } }] };
+            
+            const match = studentKelas.match(/^\d+/);
+            if (match) {
+                const grade = match[0];
+                classFilter.$or.push({ kelas: { $regex: new RegExp(`^${grade}(\\.|$)`) } });
+            }
+            
             matchConditionLit.$or = classFilter.$or;
             matchConditionNum.$or = classFilter.$or;
         }

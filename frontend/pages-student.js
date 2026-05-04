@@ -85,8 +85,22 @@ let currentMaterial = null;
 
 function renderTahap1(main) {
     let materials = getMaterials();
-    // Filter materials by class: show if 'Semua Kelas' or matches student's class
-    materials = materials.filter(m => !m.kelas || m.kelas === 'Semua Kelas' || m.kelas === currentUser.kelas);
+    // Filter materials by class: show if 'Semua Kelas' or matches student's base grade (e.g. 7.6 -> 7 matches 7.7 -> 7)
+    materials = materials.filter(m => {
+        if (!m.kelas || m.kelas === 'Semua Kelas') return true;
+        if (m.kelas === currentUser.kelas) return true;
+        
+        const getGrade = (kelasStr) => {
+            if (!kelasStr) return null;
+            const match = kelasStr.match(/^\d+/);
+            return match ? match[0] : kelasStr;
+        };
+        
+        const mGrade = getGrade(m.kelas);
+        const userGrade = getGrade(currentUser.kelas);
+        
+        return mGrade && userGrade && mGrade === userGrade;
+    });
 
     const users = getUsers();
     const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
