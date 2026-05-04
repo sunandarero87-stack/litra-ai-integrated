@@ -24,7 +24,7 @@ exports.checkQueue = async (req, res) => {
         // 3. Hitung jumlah siswa yang sedang chatting
         const activeCount = await Progress.countDocuments({ isChatting: true });
 
-        if (activeCount < 10) {
+        if (activeCount < 50) {
             // Berikan slot
             await Progress.findOneAndUpdate(
                 { username },
@@ -36,7 +36,7 @@ exports.checkQueue = async (req, res) => {
             return res.json({ 
                 success: true, 
                 allowed: false, 
-                message: "Maaf, antrian penuh (Maksimal 10 siswa). Silakan menunggu sambil mempelajari materi. Nara-AI akan tersedia setelah siswa lain selesai." 
+                message: "Maaf, antrian penuh (Maksimal 50 siswa). Silakan menunggu sambil mempelajari materi. Nara-AI akan tersedia setelah siswa lain selesai." 
             });
         }
     } catch (error) {

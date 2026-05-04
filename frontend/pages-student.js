@@ -361,7 +361,7 @@ async function toggleChatbot() {
             const data = await res.json();
 
             if (!data.allowed) {
-                alert(data.message || "Maaf, antrian penuh (Maksimal 10 siswa). Silakan menunggu sambil mempelajari materi.");
+                alert(data.message || "Maaf, antrian penuh (Maksimal 50 siswa). Silakan menunggu sambil mempelajari materi.");
                 return;
             }
 
