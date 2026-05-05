@@ -62,34 +62,15 @@ exports.addMaterial = async (req, res) => {
                     const data = await pdf(buffer);
                     materialData.content = data.text;
                     console.log(`[Material] Extracted text from PDF: ${materialData.name} (${data.numpages} pages)`);
-                    
-                    if (!materialData.content || !materialData.content.trim()) {
-                        console.log(`[Material] Teks PDF kosong, mencoba OCR menggunakan Tesseract untuk ${materialData.name}...`);
-                        try {
-                            const pdf2img = require('pdf-img-convert');
-                            const Tesseract = require('tesseract.js');
-                            
-                            const totalPages = data.numpages || 1;
-                            const pagesToConvert = [];
-                            for(let i = 1; i <= Math.min(totalPages, 3); i++) {
-                                pagesToConvert.push(i);
-                            }
-                            
-                            const pdfArray = await pdf2img.convert(buffer, { width: 1200, page_numbers: pagesToConvert });
-                            let ocrText = "";
-                            for (let i = 0; i < pdfArray.length; i++) {
-                                const { data: { text: pageText } } = await Tesseract.recognize(Buffer.from(pdfArray[i]), 'ind');
-                                ocrText += pageText + "\n";
-                            }
-                            materialData.content = ocrText;
-                            console.log(`[Material] OCR berhasil mengekstrak teks untuk ${materialData.name}`);
-                        } catch (ocrErr) {
-                            console.warn(`[Material] OCR gagal untuk ${materialData.name}:`, ocrErr.message);
-                        }
-                    }
                 }
             } catch (parseErr) {
                 console.warn(`[Material] Failed to parse PDF text for ${materialData.name}:`, parseErr.message);
+            }
+
+            // Jika pdf-parse gagal ekstrak teks (PDF hasil scan), gunakan OCR dari frontend
+            if ((!materialData.content || !materialData.content.trim()) && materialData.ocrContent) {
+                console.log(`[Material] Menggunakan teks OCR dari frontend untuk ${materialData.name}`);
+                materialData.content = materialData.ocrContent;
             }
         } 
         // Extract text content if it's a DOCX or DOC
@@ -109,8 +90,11 @@ exports.addMaterial = async (req, res) => {
 
         // Validasi konten: tolak jika kosong
         if (!materialData.content || !materialData.content.trim()) {
-            return res.status(400).json({ error: 'Gagal membaca teks dari dokumen. Format file terlalu kompleks atau hasil scan tidak terbaca oleh sistem OCR kami.' });
+            return res.status(400).json({ error: 'Gagal membaca teks dari dokumen. Pastikan file PDF/DOCX berisi teks yang bisa dibaca, atau coba upload ulang.' });
         }
+
+        // Bersihkan field ocrContent agar tidak tersimpan ke DB
+        delete materialData.ocrContent;
 
         const newMaterial = new Material(materialData);
         await newMaterial.save();

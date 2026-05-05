@@ -583,6 +583,65 @@ function handleMaterialUpload(event) {
                 contentDataUrl: e.target.result,
                 kelas: document.getElementById('material-target-kelas').value
             };
+
+            // Untuk PDF: coba OCR di browser sebagai fallback jika PDF berupa scan
+            if (ext === 'pdf' && window.pdfjsLib && window.Tesseract) {
+                try {
+                    // Coba baca teks biasa dulu via pdfjs
+                    const base64 = e.target.result.split(',')[1];
+                    const pdfData = atob(base64);
+                    const pdfBytes = new Uint8Array(pdfData.length);
+                    for (let i = 0; i < pdfData.length; i++) pdfBytes[i] = pdfData.charCodeAt(i);
+
+                    const pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
+                    let nativeText = '';
+                    for (let p = 1; p <= Math.min(pdfDoc.numPages, 3); p++) {
+                        const page = await pdfDoc.getPage(p);
+                        const tc = await page.getTextContent();
+                        nativeText += tc.items.map(i => i.str).join(' ') + '\n';
+                    }
+
+                    // Jika teks native kosong → PDF hasil scan, jalankan OCR di browser
+                    if (!nativeText.trim()) {
+                        const statusEl = document.createElement('div');
+                        statusEl.id = 'ocr-status';
+                        statusEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-card,#fff);padding:2rem;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:9999;text-align:center;min-width:320px;';
+                        statusEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary,#2563eb);"></i><p style="margin-top:1rem;font-weight:600;">Sedang membaca dokumen scan (OCR)...</p><p class="text-muted" id="ocr-progress">Halaman 0/0</p>';
+                        document.body.appendChild(statusEl);
+
+                        let ocrText = '';
+                        const maxPages = Math.min(pdfDoc.numPages, 5);
+                        for (let p = 1; p <= maxPages; p++) {
+                            document.getElementById('ocr-progress').textContent = `Halaman ${p}/${maxPages}`;
+                            const page = await pdfDoc.getPage(p);
+                            const viewport = page.getViewport({ scale: 2.0 });
+                            const canvas = document.createElement('canvas');
+                            canvas.width = viewport.width;
+                            canvas.height = viewport.height;
+                            const ctx = canvas.getContext('2d');
+                            await page.render({ canvasContext: ctx, viewport }).promise;
+
+                            const imgData = canvas.toDataURL('image/png');
+                            const { data: { text: pageText } } = await Tesseract.recognize(imgData, 'ind');
+                            ocrText += pageText + '\n';
+                            canvas.remove();
+                        }
+
+                        const statusNode = document.getElementById('ocr-status');
+                        if (statusNode) statusNode.remove();
+
+                        if (ocrText.trim()) {
+                            payload.ocrContent = ocrText;
+                            console.log('[OCR] Berhasil mengekstrak teks dari PDF scan (' + ocrText.length + ' karakter)');
+                        }
+                    }
+                } catch (ocrErr) {
+                    console.warn('[OCR] Gagal OCR di browser:', ocrErr.message);
+                    const statusNode = document.getElementById('ocr-status');
+                    if (statusNode) statusNode.remove();
+                }
+            }
+
             const res = await fetch('/api/materials', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
