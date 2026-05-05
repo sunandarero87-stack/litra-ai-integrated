@@ -236,7 +236,7 @@ function renderTahap1(main) {
                 </div>
                 <div class="chat-header-info" style="flex:1">
                     <h3 style="font-size:0.95rem; margin:0">NARA-AI Asisten ${teacher.name}</h3>
-                    <p style="font-size:0.75rem; color: rgba(255,255,255,0.8); margin:0">Membahas Materi</p>
+                    <p id="chat-material-context" style="font-size:0.75rem; color: rgba(255,255,255,0.8); margin:0">Membahas: Pilih Materi</p>
                 </div>
                 <div class="chat-header-actions" style="display:flex; gap:0.5rem;">
                     <button style="background:none; border:none; color:white; cursor:pointer; font-size:1rem; opacity:0.8;" onclick="clearChatHistory()" title="Bersihkan Riwayat Chat"><i class="fas fa-trash-alt"></i></button>
@@ -402,6 +402,10 @@ async function viewMaterial(id, type) {
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
 
+        // Update chatbot header subtitle
+        const contextEl = document.getElementById('chat-material-context');
+        if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
+
         const chatBox = document.getElementById('floating-chat-messages');
         chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
         
@@ -438,9 +442,14 @@ async function viewMaterial(id, type) {
                 appendFloatingMessage('bot', initialGreeting, teacherPhoto);
             });
     } else {
-        // Even if same material, ensure chatbot is visible
+        // Even if same material, ensure chatbot is visible and context is set
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
+        
+        const contextEl = document.getElementById('chat-material-context');
+        const materials = getMaterials();
+        const mat = materials.find(m => m._id === id || m.name === id);
+        if (contextEl && mat) contextEl.textContent = `Membahas: ${mat.name}`;
     }
 }
 

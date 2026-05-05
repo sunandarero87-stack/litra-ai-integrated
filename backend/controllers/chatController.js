@@ -72,7 +72,15 @@ exports.handleChat = async (req, res) => {
 
         let materialContext = "";
         if (selectedMaterial) {
-            const mat = await Material.findOne({ name: selectedMaterial });
+            // Coba cari berdasarkan ID dulu, lalu Nama
+            let mat = null;
+            if (selectedMaterial.match(/^[0-9a-fA-F]{24}$/)) {
+                mat = await Material.findById(selectedMaterial);
+            }
+            if (!mat) {
+                mat = await Material.findOne({ name: selectedMaterial });
+            }
+
             if (mat && mat.content) {
                 materialContext = `Materi Utama: ${mat.name}\n${mat.content}`;
             } else if (mat) {
