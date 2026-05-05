@@ -228,7 +228,7 @@ function renderTahap1(main) {
     </div>
 
     <!-- Floating Chatbot -->
-    <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 0; left: 0; padding: 0 20px; z-index: 99999; align-items: flex-end; flex-direction: column; pointer-events: none;">
+    <div id="floating-chatbot-container" style="display:flex; position: fixed; bottom: 20px; right: 0; left: 0; padding: 0 20px; z-index: 99999; align-items: flex-end; flex-direction: column; pointer-events: none;">
         <div id="chatbot-panel" style="display: none; width: 100%; max-width: 100vw; height: 75vh; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease; pointer-events: auto;">
             <div class="chat-header" style="background: var(--gradient-primary); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
                 <div class="bot-avatar" style="width:40px;height:40px;border-radius:50%;background:white;color:var(--primary);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
@@ -398,10 +398,10 @@ async function viewMaterial(id, type) {
         // Tampilkan popup pengingat uji pemahaman
         showMaterialPopup();
 
-        // Reset chat container visibility if needed
-        document.getElementById('floating-chatbot-container').style.display = 'flex';
+        // Ensure chatbot is visible in viewer
+        const chatbotContainer = document.getElementById('floating-chatbot-container');
+        if (chatbotContainer) chatbotContainer.style.display = 'flex';
 
-        // Initiative greeting for the currently selected material
         const chatBox = document.getElementById('floating-chat-messages');
         chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
         
@@ -437,6 +437,10 @@ async function viewMaterial(id, type) {
                 const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
                 appendFloatingMessage('bot', initialGreeting, teacherPhoto);
             });
+    } else {
+        // Even if same material, ensure chatbot is visible
+        const chatbotContainer = document.getElementById('floating-chatbot-container');
+        if (chatbotContainer) chatbotContainer.style.display = 'flex';
     }
 }
 
