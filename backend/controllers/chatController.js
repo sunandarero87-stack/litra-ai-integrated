@@ -71,6 +71,8 @@ exports.handleChat = async (req, res) => {
         }
 
         let materialContext = "";
+        let materialNameContext = selectedMaterial || "Umum";
+
         if (selectedMaterial) {
             // Coba cari berdasarkan ID dulu, lalu Nama
             let mat = null;
@@ -81,16 +83,20 @@ exports.handleChat = async (req, res) => {
                 mat = await Material.findOne({ name: selectedMaterial });
             }
 
-            if (mat && mat.content) {
-                materialContext = `Materi Utama: ${mat.name}\n${mat.content}`;
-            } else if (mat) {
-                materialContext = `Materi Utama: ${mat.name}`;
+            if (mat) {
+                materialNameContext = mat.name;
+                if (mat.content) {
+                    materialContext = `Materi Utama: ${mat.name}\n${mat.content}`;
+                } else {
+                    materialContext = `Materi Utama: ${mat.name}\n(Konten teks tidak tersedia, bahas berdasarkan judul materi ini)`;
+                }
             }
         }
 
-        if (!materialContext) {
+        // Hanya fallback ke semua materi JIKA tidak ada materi yang dipilih secara spesifik
+        if (!selectedMaterial && !materialContext) {
             const materials = await Material.find();
-            materialContext = materials.map(m => m.content || "").join('\n\n');
+            materialContext = materials.map(m => `Materi ${m.name}:\n${m.content || ""}`).join('\n\n');
         }
 
         const historyLogs = await ChatLog.find({ username })
@@ -108,7 +114,7 @@ exports.handleChat = async (req, res) => {
             student.stage,
             materialContext,
             history,
-            selectedMaterial,
+            materialNameContext,
             teacherName || 'Guru',
             studentName || ''
         );
