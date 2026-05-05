@@ -998,14 +998,67 @@ function renderTahap3(main) {
             const pass = pct >= 70;
             
             let remedialInfo = '';
-            if (!pass && progress.remedialStatus === 'waiting_approval') {
-                remedialInfo = '<div class="alert alert-warning mt-2" style="background:var(--warning-light); color:var(--warning); padding:1rem; border-radius:8px;"><i class="fas fa-exclamation-triangle"></i> Kamu belum lulus. Silakan melapor ke Guru untuk meminta persetujuan <strong>Remedial</strong>.</div>';
+            if (!pass) {
+                const settings = getAssessmentSettings();
+                if (settings.remedialMode === 'mandiri') {
+                    remedialInfo = `<div class="alert alert-info mt-2" style="background:var(--info-light); color:var(--info); padding:1rem; border-radius:8px;">
+                        <i class="fas fa-info-circle"></i> Kamu belum lulus. Kamu dapat mengulang asesmen secara mandiri.
+                        <br><button class="btn btn-sm btn-primary mt-1" onclick="startRemedialMandiri()">Mulai Remedial Mandiri</button>
+                    </div>`;
+                } else if (progress.remedialStatus === 'waiting_approval') {
+                    remedialInfo = '<div class="alert alert-warning mt-2" style="background:var(--warning-light); color:var(--warning); padding:1rem; border-radius:8px;"><i class="fas fa-exclamation-triangle"></i> Kamu belum lulus. Silakan melapor ke Guru untuk meminta persetujuan <strong>Remedial</strong>.</div>';
+                } else if (progress.remedialStatus === 'approved') {
+                    // Just in case it was set to approved but tahap3Complete is true somehow
+                    remedialInfo = '<div class="alert alert-success mt-2" style="background:var(--success-light); color:var(--success); padding:1rem; border-radius:8px;"><i class="fas fa-check-circle"></i> Remedial disetujui.</div>';
+                }
             }
 
             main.innerHTML = `<div class="score-display"><div class="score-circle ${pass ? 'pass' : 'fail'}">${pct}%<small>${pass ? 'LULUS' : 'TIDAK LULUS'}</small></div><p>Skor: ${r.score}/${r.total}</p><p>Literasi: ${r.literasi} | Numerasi: ${r.numerasi}</p>${remedialInfo}<button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali</button></div>`;
         }
         return;
     }
+
+async function startRemedialMandiri() {
+    if (!confirm('Apakah kamu yakin ingin memulai Remedial Mandiri sekarang? Soal baru akan disiapkan.')) return;
+    
+    const settings = getAssessmentSettings();
+    const amount = settings.questionAmount || 50;
+
+    const btn = document.querySelector('button[onclick="startRemedialMandiri()"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan...';
+    }
+
+    try {
+        const genRes = await fetch('/api/assessment/generate-from-bank', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username, amount })
+        });
+
+        if (!genRes.ok) {
+            const errBody = await genRes.json();
+            throw new Error(errBody.error || "Gagal mengambil soal dari Bank Soal");
+        }
+        const genData = await genRes.json();
+
+        const progress = getProgress(currentUser.username);
+        progress.generatedAssessment = genData.questions;
+        progress.tahap3Complete = false;
+        progress.remedialStatus = 'approved';
+        updateProgress(currentUser.username, progress);
+        
+        renderTahap3(document.getElementById('main-content'));
+    } catch(err) {
+        console.error(err);
+        alert(err.message || 'Gagal menyiapkan soal Remedial Mandiri!');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = 'Mulai Remedial Mandiri';
+        }
+    }
+}
 
 
 
@@ -1241,6 +1294,8 @@ async function submitAssessment(autoRedirect = false) {
 
     updateProgress(currentUser.username, { tahap3Complete: true });
 
+    const settings = getAssessmentSettings();
+
     // If fail, set to waiting remedial instead of resetting to tahap 1
     if (!pass) {
         updateProgress(currentUser.username, { remedialStatus: 'waiting_approval' });
@@ -1251,6 +1306,15 @@ async function submitAssessment(autoRedirect = false) {
     if (autoRedirect) {
         navigateTo('dashboard');
         return;
+    }
+
+    let failInfo = '';
+    if (!pass) {
+        if (settings.remedialMode === 'mandiri') {
+            failInfo = `<p style="color:var(--info)" class="mt-2"><i class="fas fa-info-circle"></i> Kamu belum lulus. Kamu dapat mengulang asesmen secara mandiri.</p>`;
+        } else {
+            failInfo = `<p style="color:var(--warning)" class="mt-2"><i class="fas fa-exclamation-triangle"></i> Kamu harus melakukan Remedial atas persetujuan guru.</p>`;
+        }
     }
 
     const main = document.getElementById('main-content');
@@ -1276,7 +1340,7 @@ async function submitAssessment(autoRedirect = false) {
                         <div class="analysis-value ${pass ? 'high' : 'low'}">${score}/${total}</div>
                     </div>
                 </div>
-                ${!pass ? '<p style="color:var(--warning)" class="mt-2"><i class="fas fa-exclamation-triangle"></i> Kamu harus melakukan Remedial atas persetujuan guru.</p>' : ''}
+                ${failInfo}
                 ${tabViolationCount > 0 ? `<p class="mt-1 text-muted">⚠️ Pelanggaran tab: ${tabViolationCount}x</p>` : ''}
                 <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
             </div>

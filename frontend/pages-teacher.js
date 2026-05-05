@@ -646,6 +646,16 @@ function renderAssessmentMgmt(main) {
             <button class="btn btn-primary btn-sm mt-1" onclick="saveAssessmentQuestionAmount()">
                 <i class="fas fa-save"></i> Simpan Jumlah Soal
             </button>
+            <div class="form-group mt-2 mb-1">
+                <label>Mode Remedial Siswa</label>
+                <select id="remedial-mode" class="form-control">
+                    <option value="persetujuan" ${settings.remedialMode !== 'mandiri' ? 'selected' : ''}>Mode Persetujuan Guru</option>
+                    <option value="mandiri" ${settings.remedialMode === 'mandiri' ? 'selected' : ''}>Mode Siswa Remedial Mandiri</option>
+                </select>
+            </div>
+            <button class="btn btn-primary btn-sm mb-2" onclick="saveRemedialMode()">
+                <i class="fas fa-save"></i> Simpan Mode Remedial
+            </button>
             <p class="mt-1"><strong>Tipe:</strong> Proporsional Literasi & Numerasi</p>
             <p class="mt-1"><strong>KKM:</strong> 70%</p>
         </div>
@@ -663,6 +673,7 @@ function renderAssessmentMgmt(main) {
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterAssessmentApproval()">
                 <button class="btn btn-success btn-sm" onclick="approveSelectedStudents()" id="btn-approve-bulk" style="display:none;"><i class="fas fa-check-double"></i> Setujui Masal (<span id="count-approve-selected">0</span>)</button>
+                <button class="btn btn-primary btn-sm" onclick="exportAIPreadinessToExcel()"><i class="fas fa-download"></i> Download Analisis AI (Kesiapan)</button>
             </div>
         </div>
         <div class="table-container">
@@ -841,6 +852,49 @@ function saveAssessmentQuestionAmount() {
     if (amt < 5 || amt > 100) { alert('Jumlah soal harus antara 5-100!'); return; }
     saveAssessmentSettings({ ...getAssessmentSettings(), questionAmount: amt });
     alert(`✅ Jumlah soal asesmen disimpan: ${amt} soal!`);
+}
+
+function saveRemedialMode() {
+    const mode = document.getElementById('remedial-mode').value;
+    saveAssessmentSettings({ ...getAssessmentSettings(), remedialMode: mode });
+    alert(`✅ Mode Remedial berhasil disimpan: ${mode === 'mandiri' ? 'Mandiri' : 'Persetujuan Guru'}!`);
+}
+
+function exportAIPreadinessToExcel() {
+    const users = getUsers().filter(u => u.role === 'siswa');
+    const progresses = getStudentProgress();
+    
+    let tableHTML = '<table><thead><tr>' +
+        '<th style="background-color:#E2EFDA">Nama Siswa</th>' +
+        '<th style="background-color:#E2EFDA">Kelas</th>' +
+        '<th style="background-color:#E2EFDA">Status Refleksi</th>' +
+        '<th style="background-color:#E2EFDA">Rekomendasi Kesiapan</th>' +
+        '<th style="background-color:#E2EFDA">Analisis AI (Kesiapan)</th>' +
+        '</tr></thead><tbody>';
+
+    let hasData = false;
+    users.forEach(s => {
+        const p = progresses[s.username] || {};
+        if (p.tahap2Complete || p.aiReadiness) {
+            hasData = true;
+            const status = p.tahap2Complete ? 'Selesai' : 'Belum';
+            const req = p.isReady ? 'Direkomendasikan' : 'Perlu Penguatan';
+            const analysis = p.aiReadiness || '-';
+            
+            tableHTML += `<tr>
+                <td>${s.name}</td>
+                <td>${s.kelas || '-'}</td>
+                <td>${status}</td>
+                <td>${req}</td>
+                <td>${analysis}</td>
+            </tr>`;
+        }
+    });
+    
+    tableHTML += '</tbody></table>';
+    
+    if (!hasData) return alert('Belum ada data analisis AI untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Analisis_AI_Kesiapan');
 }
 
 function filterAssessmentApproval() {
