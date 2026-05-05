@@ -1,4 +1,4 @@
-global.DOMMatrix = class {}; // Mocks for pdf-parse in Node.js
+global.DOMMatrix = class {};
 global.DOMPoint = class {};
 global.DOMRect = class {};
 const Material = require('../models/Material');
@@ -7,7 +7,6 @@ const mammoth = require('mammoth');
 // pdf-parse v2 helper
 async function parsePdfBuffer(buffer) {
     const pdfModule = require('pdf-parse');
-    // v2.x exports PDFParse class
     if (pdfModule.PDFParse) {
         const parser = new pdfModule.PDFParse({});
         await parser.load(buffer);
@@ -15,7 +14,6 @@ async function parsePdfBuffer(buffer) {
         const info = parser.getInfo();
         return { text: text || '', numpages: info.pages || 1 };
     }
-    // v1.x fallback (direct function call)
     if (typeof pdfModule === 'function') {
         const data = await pdfModule(buffer);
         return { text: data.text || '', numpages: data.numpages || 1 };
@@ -77,16 +75,11 @@ exports.addMaterial = async (req, res) => {
                     const buffer = Buffer.from(base64Data, 'base64');
                     const data = await parsePdfBuffer(buffer);
                     materialData.content = data.text;
-                    console.log(`[Material] Extracted text from PDF: ${materialData.name} (${data.numpages} pages)`);
+                    console.log(`[Material] Extracted text from PDF: ${materialData.name} (${data.numpages} pages, ${(materialData.content || '').length} chars)`);
                 }
             } catch (parseErr) {
                 console.warn(`[Material] Failed to parse PDF text for ${materialData.name}:`, parseErr.message);
-            }
-
-            // Jika pdf-parse gagal ekstrak teks (PDF hasil scan), gunakan OCR dari frontend
-            if ((!materialData.content || !materialData.content.trim()) && materialData.ocrContent) {
-                console.log(`[Material] Menggunakan teks OCR dari frontend untuk ${materialData.name}`);
-                materialData.content = materialData.ocrContent;
+                materialData.content = '';
             }
         } 
         // Extract text content if it's a DOCX or DOC
@@ -101,16 +94,9 @@ exports.addMaterial = async (req, res) => {
                 }
             } catch (parseErr) {
                 console.warn(`[Material] Failed to parse DOCX text for ${materialData.name}:`, parseErr.message);
+                materialData.content = '';
             }
         }
-
-        // Validasi konten: tolak jika kosong
-        if (!materialData.content || !materialData.content.trim()) {
-            return res.status(400).json({ error: 'Gagal membaca teks dari dokumen. Pastikan file PDF/DOCX berisi teks yang bisa dibaca, atau coba upload ulang.' });
-        }
-
-        // Bersihkan field ocrContent agar tidak tersimpan ke DB
-        delete materialData.ocrContent;
 
         const newMaterial = new Material(materialData);
         await newMaterial.save();
