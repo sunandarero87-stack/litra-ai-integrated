@@ -243,6 +243,13 @@ function renderTahap1(main) {
                     <button style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
+            <div id="chat-material-selector-container" style="padding: 0.5rem 1rem; background: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem;">
+                <label style="font-size: 0.75rem; font-weight: 600; white-space: nowrap;"><i class="fas fa-book"></i> Bahas:</label>
+                <select id="chat-material-selector" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex: 1;" onchange="updateChatMaterial(this.value)">
+                    <option value="">-- Pilih Materi --</option>
+                    ${materials.map(m => `<option value="${m._id}">${m.name}</option>`).join('')}
+                </select>
+            </div>
             <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);user-select:none;-webkit-user-select:none;" oncopy="return false;" oncontextmenu="return false;"></div>
             <div id="quick-replies" style="padding:0.5rem 1rem; background:var(--bg-card); display:none; gap:0.5rem; justify-content:center; border-top:1px solid var(--border-color); flex-wrap: wrap;"></div>
             <div class="chat-input" style="padding:1rem;display:flex;gap:0.5rem;background:var(--bg-sidebar); pointer-events: auto;">
@@ -402,9 +409,11 @@ async function viewMaterial(id, type) {
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
 
-        // Update chatbot header subtitle
+        // Update chatbot header subtitle and selector
         const contextEl = document.getElementById('chat-material-context');
         if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
+        const chatSelector = document.getElementById('chat-material-selector');
+        if (chatSelector) chatSelector.value = material._id;
 
         const chatBox = document.getElementById('floating-chat-messages');
         chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
@@ -450,6 +459,56 @@ async function viewMaterial(id, type) {
         const materials = getMaterials();
         const mat = materials.find(m => m._id === id || m.name === id);
         if (contextEl && mat) contextEl.textContent = `Membahas: ${mat.name}`;
+        const chatSelector = document.getElementById('chat-material-selector');
+        if (chatSelector && mat) chatSelector.value = mat._id;
+    }
+}
+
+function updateChatMaterial(id) {
+    if (!id) {
+        currentMaterial = null;
+        const contextEl = document.getElementById('chat-material-context');
+        if (contextEl) contextEl.textContent = 'Membahas: Pilih Materi';
+        return;
+    }
+    
+    const materials = getMaterials();
+    const material = materials.find(m => m._id === id);
+    if (material) {
+        currentMaterial = id;
+        
+        // Update header UI
+        const contextEl = document.getElementById('chat-material-context');
+        if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
+        
+        // Load chat history for this specific material
+        const chatBox = document.getElementById('floating-chat-messages');
+        chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
+        
+        const users = getUsers();
+        const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+        const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+
+        fetch(`/api/chat/${currentUser.username}`)
+            .then(res => res.json())
+            .then(data => {
+                chatBox.innerHTML = '';
+                let history = [];
+                if (data.success && data.history) {
+                    history = data.history;
+                }
+
+                if (history.length === 0) {
+                    const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+                    appendFloatingMessage('bot', initialGreeting, teacherPhoto);
+                } else {
+                    history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
+                }
+            })
+            .catch(err => {
+                console.error('Failed to fetch chat history:', err);
+                chatBox.innerHTML = '';
+            });
     }
 }
 
