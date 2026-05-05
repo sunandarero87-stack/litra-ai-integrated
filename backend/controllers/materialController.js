@@ -67,19 +67,24 @@ exports.addMaterial = async (req, res) => {
                 console.warn(`[Material] Failed to parse PDF text for ${materialData.name}:`, parseErr.message);
             }
         } 
-        // Extract text content if it's a DOCX
-        else if (materialData.type === 'docx' && materialData.contentDataUrl) {
+        // Extract text content if it's a DOCX or DOC
+        else if ((materialData.type === 'docx' || materialData.type === 'doc') && materialData.contentDataUrl) {
             try {
                 const base64Data = materialData.contentDataUrl.split(',')[1];
                 if (base64Data) {
                     const buffer = Buffer.from(base64Data, 'base64');
                     const result = await mammoth.extractRawText({ buffer: buffer });
                     materialData.content = result.value;
-                    console.log(`[Material] Extracted text from DOCX: ${materialData.name}`);
+                    console.log(`[Material] Extracted text from DOCX/DOC: ${materialData.name}`);
                 }
             } catch (parseErr) {
                 console.warn(`[Material] Failed to parse DOCX text for ${materialData.name}:`, parseErr.message);
             }
+        }
+
+        // Validasi konten: tolak jika kosong
+        if (!materialData.content || !materialData.content.trim()) {
+            return res.status(400).json({ error: 'Gagal membaca teks dari dokumen. Pastikan file (PDF/DOCX) berisi teks tulisan asli dan BUKAN berupa gambar hasil scan foto.' });
         }
 
         const newMaterial = new Material(materialData);

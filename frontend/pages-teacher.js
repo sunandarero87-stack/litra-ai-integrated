@@ -593,7 +593,12 @@ function handleMaterialUpload(event) {
                 alert('✅ Materi berhasil diupload!');
                 renderMaterials(document.getElementById('main-content'));
             } else {
-                alert('Gagal upload materi ke server.');
+                let errMessage = 'Gagal upload materi ke server.';
+                try {
+                    const errData = await res.json();
+                    if (errData.error) errMessage = errData.error;
+                } catch(e) {}
+                alert(errMessage);
             }
         } catch (err) {
             console.error(err);
