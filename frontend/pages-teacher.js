@@ -623,6 +623,7 @@ async function deleteMaterial(id) {
 function renderAssessmentMgmt(main) {
     const settings = getAssessmentSettings();
     const approvals = getApprovals();
+    const results = getAssessmentResults();
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
     const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
@@ -673,7 +674,7 @@ function renderAssessmentMgmt(main) {
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
                 <input type="text" id="search-assessment-approval" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa..." onkeyup="filterAssessmentApproval()">
                 <button class="btn btn-success btn-sm" onclick="approveSelectedStudents()" id="btn-approve-bulk" style="display:none;"><i class="fas fa-check-double"></i> Setujui Masal (<span id="count-approve-selected">0</span>)</button>
-                <button class="btn btn-primary btn-sm" onclick="exportAIPreadinessToExcel()"><i class="fas fa-download"></i> Download Analisis AI (Kesiapan)</button>
+                <button class="btn btn-primary btn-sm" onclick="exportAIPreadinessToExcel()"><i class="fas fa-download"></i> Download Laporan Asesmen & Analisis AI</button>
             </div>
         </div>
         <div class="table-container">
@@ -684,12 +685,15 @@ function renderAssessmentMgmt(main) {
                     <th onclick="sortTable('table-assessment-approval', 2)" style="cursor:pointer" title="Klik untuk mengurutkan">Kelas <i class="fas fa-sort text-muted"></i></th>
                     <th onclick="sortTable('table-assessment-approval', 3)" style="cursor:pointer" title="Klik untuk mengurutkan">Progres <i class="fas fa-sort text-muted"></i></th>
                     <th onclick="sortTable('table-assessment-approval', 4)" style="cursor:pointer" title="Klik untuk mengurutkan">Analisis AI (Kesiapan) <i class="fas fa-sort text-muted"></i></th>
+                    <th onclick="sortTable('table-assessment-approval', 5)" style="cursor:pointer" title="Klik untuk mengurutkan">Jml Remedial <i class="fas fa-sort text-muted"></i></th>
                     <th>Aksi Approval</th>
                 </tr></thead>
                 <tbody>
                     ${students.map(s => {
         const p = getProgress(s.username);
         const approved = approvals[s.username];
+        const r = results[s.username];
+        const remedialCount = r ? (r.remedialCount || 0) : 0;
         const hasReflection = p.tahap2Complete;
         const aiAnalysis = p.aiReadiness || 'Belum ada refleksi';
         const readyColor = p.isReady ? 'var(--success)' : hasReflection ? 'var(--warning)' : 'var(--text-muted)';
@@ -720,6 +724,7 @@ function renderAssessmentMgmt(main) {
                                 </div>
                                 <small class="text-muted d-block" style="line-height:1.2">${aiAnalysis}</small>
                             </td>
+                            <td><span class="badge badge-info">${remedialCount}x</span></td>
                             <td>${actionButtons}</td>
                         </tr>`;
     }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada siswa</td></tr>'}
@@ -863,6 +868,7 @@ function saveRemedialMode() {
 function exportAIPreadinessToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
     const progresses = getStudentProgress();
+    const results = getAssessmentResults();
     
     let tableHTML = '<table><thead><tr>' +
         '<th style="background-color:#E2EFDA">Nama Siswa</th>' +
@@ -870,12 +876,16 @@ function exportAIPreadinessToExcel() {
         '<th style="background-color:#E2EFDA">Status Refleksi</th>' +
         '<th style="background-color:#E2EFDA">Rekomendasi Kesiapan</th>' +
         '<th style="background-color:#E2EFDA">Analisis AI (Kesiapan)</th>' +
+        '<th style="background-color:#FFF2CC">Jml Remedial (Tahap 3)</th>' +
         '</tr></thead><tbody>';
 
     let hasData = false;
     users.forEach(s => {
         const p = progresses[s.username] || {};
-        if (p.tahap2Complete || p.aiReadiness) {
+        const r = results[s.username];
+        const remedialCount = r ? (r.remedialCount || 0) : 0;
+
+        if (p.tahap2Complete || p.aiReadiness || r) {
             hasData = true;
             const status = p.tahap2Complete ? 'Selesai' : 'Belum';
             const req = p.isReady ? 'Direkomendasikan' : 'Perlu Penguatan';
@@ -887,14 +897,15 @@ function exportAIPreadinessToExcel() {
                 <td>${status}</td>
                 <td>${req}</td>
                 <td>${analysis}</td>
+                <td>${remedialCount}</td>
             </tr>`;
         }
     });
     
     tableHTML += '</tbody></table>';
     
-    if (!hasData) return alert('Belum ada data analisis AI untuk di-download.');
-    downloadExcelFile(tableHTML, 'Laporan_Analisis_AI_Kesiapan');
+    if (!hasData) return alert('Belum ada data untuk di-download.');
+    downloadExcelFile(tableHTML, 'Laporan_Asesmen_Analisis_AI');
 }
 
 function filterAssessmentApproval() {

@@ -274,7 +274,15 @@ function startStageTimer(page) {
         assessmentTimer = null;
     }
 
-    if (!STAGE_DURATION[page] || currentUser.role !== 'siswa') {
+    let durationSeconds = STAGE_DURATION[page];
+    if (page === 'tahap3') {
+        const settings = getAssessmentSettings();
+        if (settings && settings.duration) {
+            durationSeconds = settings.duration * 60;
+        }
+    }
+
+    if (!durationSeconds || currentUser.role !== 'siswa') {
         hideTimerDisplay();
         return;
     }
@@ -287,7 +295,7 @@ function startStageTimer(page) {
         return;
     }
 
-    assessmentTimeLeft = STAGE_DURATION[page];
+    assessmentTimeLeft = durationSeconds;
     showTimerDisplay();
     updateTimerDisplay();
 

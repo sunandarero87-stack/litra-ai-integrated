@@ -1290,7 +1290,14 @@ async function submitAssessment(autoRedirect = false) {
 
     // Save results
     const results = getAssessmentResults();
-    results[currentUser.username] = { score, total, literasi, numerasi, litTotal, numTotal, pct, pass, date: new Date().toISOString(), violations: tabViolationCount };
+    const existingResult = results[currentUser.username];
+    let remedialCount = existingResult ? (existingResult.remedialCount || 0) : 0;
+    
+    if (existingResult) {
+        remedialCount++;
+    }
+
+    results[currentUser.username] = { score, total, literasi, numerasi, litTotal, numTotal, pct, pass, date: new Date().toISOString(), violations: tabViolationCount, remedialCount };
     saveAssessmentResults(results);
 
 
