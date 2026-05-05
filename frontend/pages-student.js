@@ -1018,7 +1018,35 @@ function renderTahap3(main) {
         return;
     }
 
-async function startRemedialMandiri() {
+
+
+
+
+    // Show start screen
+    if (!assessmentActive) {
+        const settings = getAssessmentSettings();
+        main.innerHTML = `
+        <div class="card" style="max-width:600px;margin:0 auto;text-align:center;padding:2.5rem">
+            <div class="tahap-icon exam" style="margin:0 auto 1.5rem"><i class="fas fa-file-alt"></i></div>
+            <h2>Asesmen Utama</h2>
+            <p class="text-muted mt-1">Format TKA (Literasi & Numerasi)</p>
+            <div style="margin:1.5rem 0;text-align:left" class="card" style="background:var(--bg-input)">
+                <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> ${settings.questionAmount || 10} soal</p>
+                <p class="mt-1"><i class="fas fa-clock"></i> <strong>Waktu:</strong> ${settings.duration} menit</p>
+                <p class="mt-1"><i class="fas fa-pencil-alt" style="color:var(--info)"></i> <strong>Petunjuk:</strong> Jawab semua soal dengan teliti dan jujur.</p>
+                <p class="mt-1"><i class="fas fa-percentage"></i> <strong>KKM:</strong> 70%</p>
+            </div>
+            <button class="btn btn-danger btn-full" onclick="startAssessment()">
+                <i class="fas fa-play"></i> Mulai Asesmen
+            </button>
+        </div>`;
+        return;
+    }
+
+    showAssessmentQuestion(main);
+}
+
+window.startRemedialMandiri = async function() {
     if (!confirm('Apakah kamu yakin ingin memulai Remedial Mandiri sekarang? Soal baru akan disiapkan.')) return;
     
     const settings = getAssessmentSettings();
@@ -1058,32 +1086,6 @@ async function startRemedialMandiri() {
             btn.innerHTML = 'Mulai Remedial Mandiri';
         }
     }
-}
-
-
-
-    // Show start screen
-    if (!assessmentActive) {
-        const settings = getAssessmentSettings();
-        main.innerHTML = `
-        <div class="card" style="max-width:600px;margin:0 auto;text-align:center;padding:2.5rem">
-            <div class="tahap-icon exam" style="margin:0 auto 1.5rem"><i class="fas fa-file-alt"></i></div>
-            <h2>Asesmen Utama</h2>
-            <p class="text-muted mt-1">Format TKA (Literasi & Numerasi)</p>
-            <div style="margin:1.5rem 0;text-align:left" class="card" style="background:var(--bg-input)">
-                <p><i class="fas fa-list"></i> <strong>Jumlah Soal:</strong> ${settings.questionAmount || 10} soal</p>
-                <p class="mt-1"><i class="fas fa-clock"></i> <strong>Waktu:</strong> ${settings.duration} menit</p>
-                <p class="mt-1"><i class="fas fa-pencil-alt" style="color:var(--info)"></i> <strong>Petunjuk:</strong> Jawab semua soal dengan teliti dan jujur.</p>
-                <p class="mt-1"><i class="fas fa-percentage"></i> <strong>KKM:</strong> 70%</p>
-            </div>
-            <button class="btn btn-danger btn-full" onclick="startAssessment()">
-                <i class="fas fa-play"></i> Mulai Asesmen
-            </button>
-        </div>`;
-        return;
-    }
-
-    showAssessmentQuestion(main);
 }
 
 async function startAssessment() {
