@@ -219,11 +219,11 @@ function renderTahap1(main) {
                     Silakan pelajari dengan seksama dan gunakan Asisten NARA-AI di kanan bawah jika ada pertanyaan atau ingin berdiskusi.
                 </div>
             </div>
-            <div class="chat-complete-btn mt-2" style="text-align: right;">
-                <button id="btn-lanjut-tahap2" class="btn btn-success" style="display:none;" onclick="completeTahap1()">
-                    <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
-                </button>
-            </div>
+        </div>
+        <div class="chat-complete-btn mt-2" style="text-align: right; padding: 0 1rem 1rem;">
+            <button id="btn-lanjut-tahap2" class="btn btn-success" style="display:none;" onclick="completeTahap1()">
+                <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
+            </button>
         </div>
     </div>
 
@@ -868,6 +868,9 @@ function showTahap2Pointer() {
     const btn = document.getElementById('btn-lanjut-tahap2');
     if (!btn) return;
 
+    // Pastikan tombol terlihat
+    btn.style.display = 'inline-block';
+    
     // Scroll ke tombol agar terlihat
     btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
