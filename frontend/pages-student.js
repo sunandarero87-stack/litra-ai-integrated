@@ -221,7 +221,7 @@ function renderTahap1(main) {
             </div>
         </div>
         <div class="chat-complete-btn mt-2" style="text-align: right; padding: 0 1rem 1rem;">
-            <button id="btn-lanjut-tahap2" class="btn btn-success" style="display:none;" onclick="completeTahap1()">
+            <button id="btn-lanjut-tahap2" class="btn btn-success" style="display:${localStorage.getItem('tahap1_ready_' + currentUser.username) === 'true' ? 'inline-block' : 'none'};" onclick="completeTahap1()">
                 <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
             </button>
         </div>
@@ -760,6 +760,7 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
             // Tunjukkan tombol Lanjut ke Tahap 2 (Sekarang selalu muncul sesuai request)
             const btnLanjut = document.getElementById('btn-lanjut-tahap2');
             if (btnLanjut) btnLanjut.style.display = 'inline-block';
+            localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
 
             if (score >= 75) {
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#1a7a4a,#22c55e);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
@@ -870,6 +871,7 @@ function showTahap2Pointer() {
 
     // Pastikan tombol terlihat
     btn.style.display = 'inline-block';
+    localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
     
     // Scroll ke tombol agar terlihat
     btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1033,9 +1035,9 @@ async function completeTahap1() {
         });
     } catch (e) { console.error('End session failed', e); }
 
+    localStorage.removeItem('tahap1_ready_' + currentUser.username);
     updateProgress(currentUser.username, { tahap1Complete: true });
-    alert('🎉 Tahap 1 selesai! Sekarang kamu bisa mengerjakan Latihan Soal di Tahap 2.');
-    navigateTo('dashboard');
+    navigateTo('tahap2');
 }
 
 // ---- TAHAP 2: REFLEKSI (ESSAY) ----
