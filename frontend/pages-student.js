@@ -329,14 +329,21 @@ async function viewMaterial(id, type) {
 
     if (!material) return;
 
-    // Fetch full material content from backend (including text content)
     const wrapper = document.getElementById('viewer-content-wrapper');
-    wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
+    
+    // Default: Show PDF in iframe if it's a PDF
+    if (type === 'pdf') {
+        const urlObj = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
+        wrapper.innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none; background: white;"></iframe>`;
+        return;
+    }
 
+    // For non-PDF or fallback, show text content
     let textContent = material.content || '';
 
     // Jika content belum ada di cache, ambil dari backend
     if (!textContent && material._id) {
+        wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
         try {
             const res = await fetch(`/api/materials/${material._id}`);
             if (res.ok) {
@@ -351,10 +358,9 @@ async function viewMaterial(id, type) {
     }
 
     if (textContent && textContent.trim()) {
-        // Format teks menjadi HTML yang rapi
         const formattedHTML = formatMaterialContent(textContent, material.name);
         wrapper.innerHTML = `
-            <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary);">
+            <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
                 <div style="max-width:800px; margin:0 auto;">
                     <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
                         <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
@@ -363,15 +369,14 @@ async function viewMaterial(id, type) {
                 </div>
             </div>`;
     } else {
-        // Fallback: jika tidak ada content teks, tampilkan pesan
         wrapper.innerHTML = `
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center;">
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center; background: var(--bg-input);">
                 <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
                 <h4>${material.name}</h4>
                 <p class="text-muted">Format: ${type.toUpperCase()}</p>
                 <div class="mt-2" style="max-width: 60%; color: var(--text-muted)">
-                    Teks materi belum tersedia. Silakan minta guru untuk upload ulang materi ini.<br>
-                    Gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
+                    Tampilan preview tidak tersedia untuk format ini.<br>
+                    Silakan gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
                 </div>
             </div>`;
     }
