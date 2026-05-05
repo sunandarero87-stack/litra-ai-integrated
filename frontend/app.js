@@ -438,11 +438,20 @@ async function handleChangePassword(e) {
 
         const data = await res.json();
         currentUser = data.user;
+        sessionStorage.setItem('currentSession', JSON.stringify(currentUser));
 
         await syncData(); // update lokal
 
         document.getElementById('change-password-form').reset();
-        showAppShell();
+        
+        if (currentUser.role === 'siswa') {
+            showStudentOnboarding();
+        } else {
+            showAppShell();
+            requestAnimationFrame(() => {
+                navigateTo('dashboard');
+            });
+        }
     } catch (err) {
         showError('change-pwd-error', 'Server error!');
     }
