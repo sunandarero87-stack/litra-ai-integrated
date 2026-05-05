@@ -134,11 +134,7 @@ async function initApp() {
                         viewMaterial(viewMaterialId, 'pdf');
                     }, 500);
                 } else {
-                    let lastPage = localStorage.getItem('lastVisitedPage') || 'dashboard';
-                    // Jika siswa merefresh dashboard, arahkan langsung ke tahap 1 sesuai permintaan user
-                    if (currentUser.role === 'siswa' && lastPage === 'dashboard') {
-                        lastPage = 'tahap1';
-                    }
+                    const lastPage = localStorage.getItem('lastVisitedPage') || 'dashboard';
                     showAppShell();
                     navigateTo(lastPage);
                 }
