@@ -100,7 +100,7 @@ async function initApp() {
     }
 
     // Check session
-    const session = sessionStorage.getItem('currentSession');
+    const session = localStorage.getItem('currentSession');
     if (session) {
         try {
             const userData = JSON.parse(session);
@@ -122,14 +122,27 @@ async function initApp() {
             if (currentUser.mustChangePassword) {
                 showPage('page-change-password');
             } else {
-                const lastPage = localStorage.getItem('lastVisitedPage') || 'dashboard';
-                showAppShell();
-                navigateTo(lastPage);
+                // Handle direct material view from URL (for new tab support)
+                const urlParams = new URLSearchParams(window.location.search);
+                const viewMaterialId = urlParams.get('viewMaterial');
+                
+                if (viewMaterialId) {
+                    showAppShell();
+                    // Navigate to a special full-viewer mode
+                    setTimeout(() => {
+                        navigateTo('tahap1');
+                        viewMaterial(viewMaterialId, 'pdf');
+                    }, 500);
+                } else {
+                    const lastPage = localStorage.getItem('lastVisitedPage') || 'dashboard';
+                    showAppShell();
+                    navigateTo(lastPage);
+                }
             }
             return;
         } catch (e) {
             console.error('Session restore failed', e);
-            sessionStorage.removeItem('currentSession');
+            localStorage.removeItem('currentSession');
         }
     }
     showPage('page-login');
@@ -392,7 +405,7 @@ async function handleLogin(e) {
 
         const user = data.user;
         currentUser = user;
-        sessionStorage.setItem('currentSession', JSON.stringify(user));
+        localStorage.setItem('currentSession', JSON.stringify(user));
 
         // Sync data in background (non-blocking for faster transition)
         syncData();
@@ -446,7 +459,7 @@ async function handleChangePassword(e) {
 
         const data = await res.json();
         currentUser = data.user;
-        sessionStorage.setItem('currentSession', JSON.stringify(currentUser));
+        localStorage.setItem('currentSession', JSON.stringify(currentUser));
 
         await syncData(); // update lokal
 
@@ -468,7 +481,7 @@ async function handleChangePassword(e) {
 
 function handleLogout() {
     currentUser = null;
-    sessionStorage.removeItem('currentSession');
+    localStorage.removeItem('currentSession');
     if (assessmentTimer) { clearInterval(assessmentTimer); assessmentTimer = null; }
     showPage('page-login');
 }

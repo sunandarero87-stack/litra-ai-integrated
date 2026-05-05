@@ -192,18 +192,22 @@ function renderTahap1(main) {
                         <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
                     </div>
                     <div style="display: flex; gap: 0.5rem;" onclick="event.stopPropagation()">
-                        <button class="btn btn-outline btn-sm" onclick="downloadMaterial('${m._id}', '${m.name}', '${m.type}', event)" title="Download Materi"><i class="fas fa-download"></i> Download</button>
-                        <button class="btn btn-primary btn-sm" onclick="viewMaterial('${m._id}', '${m.type}')">Buka Materi</button>
+                        <button class="btn btn-outline btn-sm" onclick="downloadMaterial('${m._id}', '${m.name}', '${m.type}', event)" title="Download Materi"><i class="fas fa-download"></i></button>
+                        <a href="index.html?viewMaterial=${m._id}" target="_blank" class="btn btn-outline btn-sm" title="Buka di Tab Baru"><i class="fas fa-external-link-alt"></i></a>
+                        <button class="btn btn-primary btn-sm" onclick="viewMaterial('${m._id}', '${m.type}')">Buka</button>
                     </div>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi untuk dipelajari.</p>'}
         </div>
 
         <div id="material-viewer-container" style="display:none; margin-top: 1rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
-                <button class="btn btn-outline" onclick="closeMaterialViewer()"><i class="fas fa-arrow-left"></i> Kembali ke Daftar</button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-outline" onclick="closeMaterialViewer()"><i class="fas fa-arrow-left"></i> Kembali</button>
+                    <button id="btn-view-new-tab" class="btn btn-outline" title="Buka di Tab Baru"><i class="fas fa-external-link-alt"></i></button>
+                </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <label style="font-weight: 500;">Bahas Materi:</label>
-                    <select id="material-selector" class="form-input" style="padding: 0.4rem; min-width: 250px;" onchange="switchMaterial(this.value)"></select>
+                    <label style="font-weight: 500;">Materi:</label>
+                    <select id="material-selector" class="form-input" style="padding: 0.4rem; min-width: 200px;" onchange="switchMaterial(this.value)"></select>
                 </div>
             </div>
             <div id="viewer-content-wrapper" style="border: 1px solid var(--border-color); border-radius: 8px; height: 75vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-input); overflow: hidden;">
@@ -224,8 +228,8 @@ function renderTahap1(main) {
     </div>
 
     <!-- Floating Chatbot -->
-    <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 0; left: 0; padding: 0 20px; z-index: 1000; align-items: flex-end; flex-direction: column;">
-        <div id="chatbot-panel" style="display: none; width: 100%; max-width: 100vw; height: 75vh; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease;">
+    <div id="floating-chatbot-container" style="display:none; position: fixed; bottom: 20px; right: 0; left: 0; padding: 0 20px; z-index: 99999; align-items: flex-end; flex-direction: column; pointer-events: none;">
+        <div id="chatbot-panel" style="display: none; width: 100%; max-width: 100vw; height: 75vh; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease; pointer-events: auto;">
             <div class="chat-header" style="background: var(--gradient-primary); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
                 <div class="bot-avatar" style="width:40px;height:40px;border-radius:50%;background:white;color:var(--primary);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
                     ${teacherPhoto}
@@ -241,12 +245,12 @@ function renderTahap1(main) {
             </div>
             <div class="chat-messages" id="floating-chat-messages" style="flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:1rem;background:var(--bg-card);user-select:none;-webkit-user-select:none;" oncopy="return false;" oncontextmenu="return false;"></div>
             <div id="quick-replies" style="padding:0.5rem 1rem; background:var(--bg-card); display:none; gap:0.5rem; justify-content:center; border-top:1px solid var(--border-color); flex-wrap: wrap;"></div>
-            <div class="chat-input" style="padding:1rem;display:flex;gap:0.5rem;background:var(--bg-sidebar);">
+            <div class="chat-input" style="padding:1rem;display:flex;gap:0.5rem;background:var(--bg-sidebar); pointer-events: auto;">
                 <input type="text" id="floating-chat-input" placeholder="Ketik pertanyaanmu..." style="flex:1;padding:0.7rem 1rem;background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;" onkeypress="if(event.key==='Enter')sendFloatingChat()">
                 <button onclick="sendFloatingChat()" class="btn btn-primary" style="padding:0.7rem 1.2rem;"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
-        <button id="chatbot-toggle-btn" onclick="toggleChatbot()" style="width: 60px; height: 60px; border-radius: 50%; background: var(--gradient-primary); color: white; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid white; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'">
+        <button id="chatbot-toggle-btn" onclick="toggleChatbot()" style="width: 60px; height: 60px; border-radius: 50%; background: var(--gradient-primary); color: white; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid white; transition: transform 0.3s; pointer-events: auto;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'">
             <i class="fas fa-comment-dots"></i>
         </button>
     </div>
@@ -322,6 +326,12 @@ async function viewMaterial(id, type) {
     if (sel) {
         sel.innerHTML = materials.map(m => `<option value="${m._id}">${m.name}</option>`).join('');
         sel.value = id;
+    }
+
+    // Update "Buka di Tab Baru" button link
+    const newTabBtn = document.getElementById('btn-view-new-tab');
+    if (newTabBtn) {
+        newTabBtn.onclick = () => window.open(`index.html?viewMaterial=${id}`, '_blank');
     }
 
     // Find material in database to check if we have the content
