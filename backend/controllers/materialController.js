@@ -2,8 +2,26 @@ global.DOMMatrix = class {}; // Mocks for pdf-parse in Node.js
 global.DOMPoint = class {};
 global.DOMRect = class {};
 const Material = require('../models/Material');
-const pdf = require('pdf-parse');
 const mammoth = require('mammoth');
+
+// pdf-parse v2 helper
+async function parsePdfBuffer(buffer) {
+    const pdfModule = require('pdf-parse');
+    // v2.x exports PDFParse class
+    if (pdfModule.PDFParse) {
+        const parser = new pdfModule.PDFParse({});
+        await parser.load(buffer);
+        const text = parser.getText();
+        const info = parser.getInfo();
+        return { text: text || '', numpages: info.pages || 1 };
+    }
+    // v1.x fallback (direct function call)
+    if (typeof pdfModule === 'function') {
+        const data = await pdfModule(buffer);
+        return { text: data.text || '', numpages: data.numpages || 1 };
+    }
+    throw new Error('pdf-parse module format not recognized');
+}
 
 exports.getMaterials = async (req, res) => {
     try {
@@ -33,12 +51,10 @@ exports.getMaterialContent = async (req, res) => {
         const dataUrl = material.contentDataUrl;
         const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
         if (matches && matches.length === 3) {
-            const ext = material.type || 'pdf';
             const contentType = matches[1];
             const base64Data = matches[2];
             const buffer = Buffer.from(base64Data, 'base64');
             res.set('Content-Type', contentType);
-            // using inline to render within iframe instead of attach
             res.set('Content-Disposition', `inline; filename="${material.name}"`);
             res.send(buffer);
         } else {
@@ -59,7 +75,7 @@ exports.addMaterial = async (req, res) => {
                 const base64Data = materialData.contentDataUrl.split(',')[1];
                 if (base64Data) {
                     const buffer = Buffer.from(base64Data, 'base64');
-                    const data = await pdf(buffer);
+                    const data = await parsePdfBuffer(buffer);
                     materialData.content = data.text;
                     console.log(`[Material] Extracted text from PDF: ${materialData.name} (${data.numpages} pages)`);
                 }
