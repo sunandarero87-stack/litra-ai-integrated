@@ -83,6 +83,77 @@ function renderStudentDashboard(main) {
 
 let currentMaterial = null;
 
+/**
+ * Format teks mentah dari PDF/DOCX menjadi HTML yang rapi dan mudah dibaca
+ */
+function formatMaterialContent(rawText, title) {
+    if (!rawText) return '<p class="text-muted">Konten kosong.</p>';
+    
+    // Bersihkan whitespace berlebih dan split per baris
+    const lines = rawText.split('\n').map(l => l.trimEnd());
+    let html = '';
+    let inList = false;
+
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (!line) {
+            if (inList) { html += '</ul>'; inList = false; }
+            continue;
+        }
+
+        // Deteksi heading: baris pendek yang diikuti baris kosong atau awal dokumen, ALL CAPS atau diakhiri ':'
+        const isShortLine = line.length < 80;
+        const nextLineEmpty = !lines[i + 1] || !lines[i + 1].trim();
+        const isUpperCase = line === line.toUpperCase() && /[A-Z]/.test(line);
+        const isNumberedHeading = /^(BAB|Bab|BAGIAN|Bagian)\s/i.test(line) || /^[IVXLC]+\.\s/.test(line);
+        const endsWithColon = line.endsWith(':');
+
+        if (isNumberedHeading || (isShortLine && isUpperCase && line.length > 3)) {
+            if (inList) { html += '</ul>'; inList = false; }
+            html += `<h3 style="color:var(--primary); margin:1.5rem 0 0.75rem; font-size:1.15rem; font-weight:700;">${escapeHtml(line)}</h3>`;
+            continue;
+        }
+
+        if (isShortLine && endsWithColon && nextLineEmpty) {
+            if (inList) { html += '</ul>'; inList = false; }
+            html += `<h4 style="color:var(--text-primary); margin:1.2rem 0 0.5rem; font-weight:600;">${escapeHtml(line)}</h4>`;
+            continue;
+        }
+
+        // Deteksi list item: dimulai dengan -, •, *, atau angka.
+        const listMatch = line.match(/^(\d+[\.\)]\s|[-•*]\s)/);
+        if (listMatch) {
+            if (!inList) { html += '<ul style="margin:0.5rem 0 0.5rem 1.5rem; list-style:disc;">'; inList = true; }
+            const content = line.replace(/^(\d+[\.\)]\s|[-•*]\s)/, '');
+            html += `<li style="margin-bottom:0.3rem;">${escapeHtml(content)}</li>`;
+            continue;
+        }
+
+        // Deteksi list alfabet: a. b. c. dst.
+        const alphaMatch = line.match(/^[a-z][\.\)]\s/i);
+        if (alphaMatch) {
+            if (!inList) { html += '<ul style="margin:0.5rem 0 0.5rem 1.5rem; list-style:lower-alpha;">'; inList = true; }
+            const content = line.replace(/^[a-z][\.\)]\s/i, '');
+            html += `<li style="margin-bottom:0.3rem;">${escapeHtml(content)}</li>`;
+            continue;
+        }
+
+        if (inList) { html += '</ul>'; inList = false; }
+
+        // Paragraf biasa
+        html += `<p style="margin-bottom:0.75rem; text-align:justify;">${escapeHtml(line)}</p>`;
+    }
+
+    if (inList) html += '</ul>';
+    return html;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function renderTahap1(main) {
     let materials = getMaterials();
     // Filter materials by class: show if 'Semua Kelas' or matches student's base grade (e.g. 7.6 -> 7 matches 7.7 -> 7)
@@ -258,20 +329,51 @@ async function viewMaterial(id, type) {
 
     if (!material) return;
 
-    if (material && type === 'pdf') {
-        const urlObj = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
-        document.getElementById('viewer-content-wrapper').innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none;"></iframe>`;
+    // Fetch full material content from backend (including text content)
+    const wrapper = document.getElementById('viewer-content-wrapper');
+    wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
+
+    let textContent = material.content || '';
+
+    // Jika content belum ada di cache, ambil dari backend
+    if (!textContent && material._id) {
+        try {
+            const res = await fetch(`/api/materials/${material._id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.material && data.material.content) {
+                    textContent = data.material.content;
+                }
+            }
+        } catch(err) {
+            console.warn('Gagal fetch content materi:', err);
+        }
+    }
+
+    if (textContent && textContent.trim()) {
+        // Format teks menjadi HTML yang rapi
+        const formattedHTML = formatMaterialContent(textContent, material.name);
+        wrapper.innerHTML = `
+            <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary);">
+                <div style="max-width:800px; margin:0 auto;">
+                    <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
+                        <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
+                    </h2>
+                    <div class="material-text-content">${formattedHTML}</div>
+                </div>
+            </div>`;
     } else {
-        document.getElementById('viewer-content-wrapper').innerHTML = `
-            <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
-            <h4 id="viewer-title">${material.name}</h4>
-            <p class="text-muted" id="viewer-type">Format: ${type.toUpperCase()}</p>
-            <div class="mt-2 text-center" style="max-width: 60%; color: var(--text-muted)">
-                Materi ini sedang ditampilkan dalam mode Viewer.<br>
-                Silakan pelajari dengan seksama dan gunakan Asisten NARA-AI di kanan bawah jika ada pertanyaan atau ingin berdiskusi.<br>
-                <span style="font-size: 0.8rem; color: var(--primary-light)">(Tampilan halaman spesifik membutuhkan file PDF Baru yang diupload ulang oleh guru)</span>
-            </div>
-        `;
+        // Fallback: jika tidak ada content teks, tampilkan pesan
+        wrapper.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center;">
+                <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
+                <h4>${material.name}</h4>
+                <p class="text-muted">Format: ${type.toUpperCase()}</p>
+                <div class="mt-2" style="max-width: 60%; color: var(--text-muted)">
+                    Teks materi belum tersedia. Silakan minta guru untuk upload ulang materi ini.<br>
+                    Gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
+                </div>
+            </div>`;
     }
 
     // Avoid duplicate initialization if switching material inside the viewer
