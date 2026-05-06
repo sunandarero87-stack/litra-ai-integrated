@@ -1249,8 +1249,18 @@ async function renderBankSoal(main) {
             <button class="tab-button" onclick="initBankSoalTab('upload')">Tambah / Upload Soal</button>
         </div>
         <div id="bank-soal-list-tab" class="tab-content active">
-            <div style="margin-bottom: 0.5rem; display: flex; justify-content: flex-end;">
-                <button class="btn btn-danger btn-sm" id="btn-bulk-delete-soal" style="display:none;" onclick="bulkDeleteBankSoal()"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected-soal">0</span>)</button>
+            <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <button class="btn btn-danger btn-sm" id="btn-bulk-delete-soal" style="display:none;" onclick="bulkDeleteBankSoal()"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected-soal">0</span>)</button>
+                </div>
+                <div class="dropdown" style="position: relative; display: inline-block;">
+                    <button class="btn btn-outline btn-sm dropdown-toggle" onclick="toggleDownloadDropdown()"><i class="fas fa-download"></i> Unduh Bank Soal <i class="fas fa-caret-down"></i></button>
+                    <div id="download-dropdown-menu" style="display: none; position: absolute; right: 0; background-color: var(--bg-card); min-width: 160px; box-shadow: var(--shadow-md); border-radius: var(--radius-sm); z-index: 100; border: 1px solid var(--border-color); padding: 0.25rem 0;">
+                        <a href="javascript:void(0)" onclick="downloadBankSoal('excel')" style="display: block; padding: 0.5rem 1rem; color: var(--text-main); text-decoration: none; font-size: 0.9rem;"><i class="fas fa-file-excel" style="color: #217346; margin-right: 0.5rem;"></i> Excel (.xlsx)</a>
+                        <a href="javascript:void(0)" onclick="downloadBankSoal('pdf')" style="display: block; padding: 0.5rem 1rem; color: var(--text-main); text-decoration: none; font-size: 0.9rem;"><i class="fas fa-file-pdf" style="color: #e02424; margin-right: 0.5rem;"></i> PDF (.pdf)</a>
+                        <a href="javascript:void(0)" onclick="downloadBankSoal('word')" style="display: block; padding: 0.5rem 1rem; color: var(--text-main); text-decoration: none; font-size: 0.9rem;"><i class="fas fa-file-word" style="color: #2b579a; margin-right: 0.5rem;"></i> Word (.doc)</a>
+                    </div>
+                </div>
             </div>
             <div class="table-container">
                 <table id="table-bank-soal">
@@ -1478,29 +1488,7 @@ async function generateBankSoalAI() {
         if (res.ok) {
             alert(data.message || 'Soal otomatis berhasil dibuat!');
 
-            // Auto download excel
-            if (data.excelData) {
-                try {
-                    const byteCharacters = atob(data.excelData);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = 'Soal_AI_Generated.xlsx';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                } catch (e) {
-                    console.error("Gagal mendownload otomatis Excel:", e);
-                }
-            }
+            // Auto download disabled as requested by user
 
             renderBankSoal(document.getElementById('main-content'));
         } else {
@@ -1544,28 +1532,7 @@ async function generateBankSoalFromMaterial() {
         if (res.ok) {
             alert(data.message || 'Soal berhasil dibuat dari materi!');
 
-            if (data.excelData) {
-                try {
-                    const byteCharacters = atob(data.excelData);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = 'Soal_Materi_Generated.xlsx';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                } catch (e) {
-                    console.error("Gagal mendownload otomatis Excel:", e);
-                }
-            }
+            // Auto download disabled as requested by user
 
             renderBankSoal(document.getElementById('main-content'));
         } else {
@@ -2784,6 +2751,169 @@ function exportAttendanceReport() {
     link.href = URL.createObjectURL(blob);
     link.download = `Laporan_Absensi_${new Date().getTime()}.xls`;
     link.click();
+}
+
+function toggleDownloadDropdown() {
+    const menu = document.getElementById('download-dropdown-menu');
+    if (menu) {
+        menu.style.display = menu.style.display === 'none' || !menu.style.display ? 'block' : 'none';
+    }
+}
+
+// Close dropdown on outside click
+window.addEventListener('click', function(e) {
+    const menu = document.getElementById('download-dropdown-menu');
+    if (menu && !e.target.closest('.dropdown')) {
+        menu.style.display = 'none';
+    }
+});
+
+function downloadBankSoal(format) {
+    if (!_bankSoalCache || _bankSoalCache.length === 0) {
+        alert('Tidak ada soal untuk diunduh.');
+        return;
+    }
+
+    if (format === 'excel') {
+        let excelHtml = `
+        <table border="1">
+            <thead>
+                <tr style="background-color: #f1f5f9;">
+                    <th>Soal</th>
+                    <th>Opsi A</th>
+                    <th>Opsi B</th>
+                    <th>Opsi C</th>
+                    <th>Opsi D</th>
+                    <th>Kunci (A/B/C/D)</th>
+                    <th>Pembahasan</th>
+                    <th>Tipe</th>
+                    <th>Kelas</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${_bankSoalCache.map(q => `
+                    <tr>
+                        <td>${q.question}</td>
+                        <td>${q.options[0]}</td>
+                        <td>${q.options[1]}</td>
+                        <td>${q.options[2]}</td>
+                        <td>${q.options[3]}</td>
+                        <td>${['A', 'B', 'C', 'D'][q.correct]}</td>
+                        <td>${q.explanation}</td>
+                        <td>${q.type}</td>
+                        <td>${q.kelas || 'Semua Kelas'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>`;
+        const blob = new Blob(['\ufeff' + excelHtml], { type: 'application/vnd.ms-excel;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Bank_Soal_Export_${new Date().getTime()}.xls`;
+        link.click();
+    } else if (format === 'pdf') {
+        const element = document.createElement('div');
+        element.style.padding = '40px 50px';
+        element.style.fontFamily = "'Inter', sans-serif";
+        element.style.backgroundColor = '#ffffff';
+        element.style.color = '#000000';
+
+        let questionsHtml = '';
+        _bankSoalCache.forEach((q, index) => {
+            questionsHtml += `
+                <div style="margin-bottom: 25px; page-break-inside: avoid;">
+                    <p style="font-weight: 600; font-size: 1.05rem; margin-bottom: 8px;">${index + 1}. ${q.question}</p>
+                    <div style="margin-left: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>A. ${q.options[0]}</div>
+                        <div>B. ${q.options[1]}</div>
+                        <div>C. ${q.options[2]}</div>
+                        <div>D. ${q.options[3]}</div>
+                    </div>
+                    <div style="margin-top: 8px; margin-left: 20px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px 12px; border-left: 3px solid #1a73e8; border-radius: 4px;">
+                        <strong>Kunci Jawaban:</strong> ${['A', 'B', 'C', 'D'][q.correct]} <br>
+                        <strong>Pembahasan:</strong> ${q.explanation}
+                    </div>
+                </div>
+            `;
+        });
+
+        element.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; display: flex; flex-direction: column; justify-content: space-around; align-items: center; z-index: 0; opacity: 0.05;">
+                <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+                <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+            </div>
+            
+            <div style="position: relative; z-index: 1;">
+                <div style="display: flex; align-items: center; border-bottom: 3px double #1e293b; padding-bottom: 15px; margin-bottom: 30px;">
+                    <div style="width: 80px; height: 80px; margin-right: 20px; display: flex; align-items: center; justify-content: center;">
+                        <div style="width:70px; height:70px; border-radius:50%; background: linear-gradient(135deg, #1a73e8, #00bcd4); color: white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.8rem;">S</div>
+                    </div>
+                    <div style="flex: 1; text-align: center;">
+                        <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0; color: #0f172a;">SMP NEGERI 1 BALIKPAPAN</h1>
+                        <p style="font-size: 0.85rem; margin: 3px 0 0 0; color: #475569;">Pemerintah Kota Balikpapan • Dinas Pendidikan dan Kebudayaan</p>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0; color: #1e293b; text-transform: uppercase;">DAFTAR BANK SOAL ASESMEN</h2>
+                    <div style="width: 80px; height: 4px; background: #1a73e8; margin: 8px auto 0 auto; border-radius: 2px;"></div>
+                </div>
+
+                <div>
+                    ${questionsHtml}
+                </div>
+            </div>
+        `;
+
+        const opt = {
+            margin:       [15, 15, 15, 15],
+            filename:     `Bank_Soal_Export_${new Date().getTime()}.pdf`,
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    } else if (format === 'word') {
+        let wordHtml = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+            <title>Export Bank Soal</title>
+            <style>
+                body { font-family: 'Arial', sans-serif; }
+                .question { margin-bottom: 20px; }
+                .options { margin-left: 20px; margin-bottom: 10px; }
+                .answer { margin-left: 20px; font-weight: bold; color: #16a34a; }
+                .explanation { margin-left: 20px; font-style: italic; color: #4b5563; }
+            </style>
+        </head>
+        <body>
+            <h2 style="text-align: center;">DAFTAR BANK SOAL ASESMEN - SMP NEGERI 1 BALIKPAPAN</h2>
+            <hr/>
+            ${_bankSoalCache.map((q, index) => `
+                <div class="question">
+                    <p><strong>${index + 1}. ${q.question}</strong></p>
+                    <div class="options">
+                        A. ${q.options[0]} <br/>
+                        B. ${q.options[1]} <br/>
+                        C. ${q.options[2]} <br/>
+                        D. ${q.options[3]}
+                    </div>
+                    <p class="answer">Kunci Jawaban: ${['A', 'B', 'C', 'D'][q.correct]}</p>
+                    <p class="explanation">Pembahasan: ${q.explanation}</p>
+                </div>
+                <br/>
+            `).join('')}
+        </body>
+        </html>`;
+
+        const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `Bank_Soal_Export_${new Date().getTime()}.doc`;
+        link.click();
+    }
+    const menu = document.getElementById('download-dropdown-menu');
+    if (menu) menu.style.display = 'none';
 }
 
 function downloadDailyAttendancePDF() {
