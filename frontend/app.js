@@ -492,62 +492,72 @@ function showStudentOnboarding() {
 
     const overlay = document.createElement('div');
     overlay.id = 'student-onboarding-overlay';
-    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(8px); padding:20px;';
+    overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(5, 12, 24, 0.9); display:flex; align-items:center; justify-content:center; z-index:10000; backdrop-filter:blur(12px); padding:20px; transition: opacity 0.3s ease;';
 
     overlay.innerHTML = `
-    <div style="background:var(--bg-card); width:100%; max-width:600px; max-height:90vh; border-radius:24px; box-shadow:var(--shadow-lg); border:1px solid var(--border-color); display:flex; flex-direction:column; overflow:hidden; animation:slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
-        <div style="background:var(--gradient-primary); padding:2rem; text-align:center; color:white;">
-            <i class="fas fa-graduation-cap" style="font-size:3rem; margin-bottom:1rem; display:block;"></i>
-            <h2 style="font-size:1.5rem; font-weight:800;">Panduan Belajar NARA-AI</h2>
-            <p style="opacity:0.9; font-size:0.9rem;">Pahami alur pembelajaranmu bersama NARA-AI</p>
+    <div style="background:linear-gradient(145deg, var(--bg-card), #162444); width:100%; max-width:650px; max-height:92vh; border-radius:28px; box-shadow:0 24px 64px rgba(0, 0, 0, 0.6); border:1px solid rgba(255, 255, 255, 0.1); display:flex; flex-direction:column; overflow:hidden; animation:slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);">
+        <!-- Header Section with Modern Gradient & Glassmorphism -->
+        <div style="background: linear-gradient(135deg, #1a73e8 0%, #00bcd4 100%); padding: 2.25rem 2rem; text-align: center; color: white; position: relative; border-bottom: 1px solid rgba(255, 255, 255, 0.15);">
+            <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255, 255, 255, 0.1); border-radius: 50%; filter: blur(20px);"></div>
+            <div style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; background: rgba(0, 188, 212, 0.2); border-radius: 50%; filter: blur(15px);"></div>
+            <i class="fas fa-graduation-cap" style="font-size: 3.5rem; margin-bottom: 0.75rem; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.25));"></i>
+            <h2 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 0.25rem;">Sistem Alur Belajar NARA-AI</h2>
+            <p style="opacity: 0.95; font-size: 0.95rem; font-weight: 500;">Panduan resmi proses pembelajaran terintegrasi bertenaga AI</p>
         </div>
         
-        <div style="flex:1; overflow-y:auto; padding:2rem; display:flex; flex-direction:column; gap:1.5rem;">
-            <div style="display:flex; gap:1rem; align-items:flex-start;">
-                <div style="width:40px; height:40px; border-radius:12px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">1</div>
+        <!-- Content List with Premium Stage Design -->
+        <div style="flex:1; overflow-y:auto; padding:2.25rem; display:flex; flex-direction:column; gap:1.75rem;">
+            <!-- Stage 1 -->
+            <div style="display:flex; gap:1.25rem; align-items:flex-start; transition: transform 0.2s ease;">
+                <div style="width:46px; height:46px; border-radius:14px; background:linear-gradient(135deg, #1a73e8, #00bcd4); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; font-size:1.15rem; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);">1</div>
                 <div>
-                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 1: Eksplorasi & Diskusi</h4>
-                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Pelajari materi dan diskusikan dengan <strong>NARA-AI</strong>. Kamu bisa mengklik "Sudah Paham" dan menjawab pertanyaan uji pemahaman untuk lanjut Ke tahap 2.</p>
+                    <h4 style="font-size:1.1rem; font-weight: 700; margin-bottom:0.25rem; color: #fff;">Tahap 1: Eksplorasi & Diskusi Interaktif</h4>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.55;">Membaca modul belajar terintegrasi dan berdiskusi aktif dengan asisten virtual <strong>NARA-AI</strong>. Klik tombol <strong>"Sudah Paham"</strong> untuk memicu <strong>1 Pertanyaan Uji Pemahaman</strong> dari AI agar dapat membuka gerbang menuju Tahap 2.</p>
                 </div>
             </div>
             
-            <div style="display:flex; gap:1rem; align-items:flex-start;">
-                <div style="width:40px; height:40px; border-radius:12px; background:var(--accent-light); color:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">2</div>
+            <!-- Stage 2 -->
+            <div style="display:flex; gap:1.25rem; align-items:flex-start; transition: transform 0.2s ease;">
+                <div style="width:46px; height:46px; border-radius:14px; background:linear-gradient(135deg, #00bcd4, #4caf50); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; font-size:1.15rem; box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);">2</div>
                 <div>
-                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 2: Refleksi Mandiri</h4>
-                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Jawab 5 pertanyaan refleksi berdasarkan hasil diskusimu. <strong>Anti-cheat aktif:</strong> Dilarang copy-paste atau klik kanan.</p>
+                    <h4 style="font-size:1.1rem; font-weight: 700; margin-bottom:0.25rem; color: #fff;">Tahap 2: Refleksi Belajar Mandiri</h4>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.55;">Menjawab <strong>5 pertanyaan refleksi esai</strong> yang dirumuskan personal oleh AI berdasarkan riwayat belajarmu di Tahap 1. <span style="color: var(--warning); font-weight:600;"><i class="fas fa-shield-alt"></i> Anti-Cheat Aktif:</span> Pembatasan copy-paste dan klik kanan diberlakukan secara ketat.</p>
                 </div>
             </div>
             
-            <div style="display:flex; gap:1rem; align-items:flex-start;">
-                <div style="width:40px; height:40px; border-radius:12px; background:var(--danger-light); color:var(--danger); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">3</div>
+            <!-- Stage 3 -->
+            <div style="display:flex; gap:1.25rem; align-items:flex-start; transition: transform 0.2s ease;">
+                <div style="width:46px; height:46px; border-radius:14px; background:linear-gradient(135deg, #ff9800, #f44336); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; font-size:1.15rem; box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);">3</div>
                 <div>
-                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 3: Asesmen Utama</h4>
-                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Ujian utama dengan pengawasan ketat. Membutuhkan persetujuan guru, mode layar penuh, dan deteksi perpindahan tab.</p>
+                    <h4 style="font-size:1.1rem; font-weight: 700; margin-bottom:0.25rem; color: #fff;">Tahap 3: Asesmen Utama (TKA - HOTS)</h4>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.55;">Ujian komprehensif berbasis pilihan ganda berstandar ANBK (Literasi & Numerasi) dengan KKM <strong>70%</strong>. <span style="color: var(--danger); font-weight:600;"><i class="fas fa-desktop"></i> Exambrowser Aktif:</span> Memaksa layar penuh (fullscreen) dan mendeteksi serta mencatat setiap aktivitas tab out.</p>
                 </div>
             </div>
             
-            <div style="display:flex; gap:1rem; align-items:flex-start;">
-                <div style="width:40px; height:40px; border-radius:12px; background:var(--success-light); color:var(--success); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800;">4</div>
+            <!-- Stage 4 -->
+            <div style="display:flex; gap:1.25rem; align-items:flex-start; transition: transform 0.2s ease;">
+                <div style="width:46px; height:46px; border-radius:14px; background:linear-gradient(135deg, #4caf50, #00bcd4); color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; font-size:1.15rem; box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);">4</div>
                 <div>
-                    <h4 style="font-size:1.05rem; margin-bottom:0.3rem;">Tahap 4: Pembentukan Karakter</h4>
-                    <p style="font-size:0.88rem; color:var(--text-secondary); line-height:1.5;">Refleksi 7 Kebiasaan Hebat Anak Indonesia untuk membangun pribadi yang lebih baik.</p>
+                    <h4 style="font-size:1.1rem; font-weight: 700; margin-bottom:0.25rem; color: #fff;">Tahap 4: Pembentukan Karakter Unggul</h4>
+                    <p style="font-size:0.9rem; color:var(--text-secondary); line-height:1.55;">Mengisi esai refleksi pengamalan <strong>7 Kebiasaan Hebat Anak Indonesia</strong> untuk dianalisis oleh kecerdasan buatan, guna melatih kedisiplinan dan pembentukan karakter generasi gemilang.</p>
                 </div>
             </div>
 
-            <div style="background:var(--bg-input); padding:1rem; border-radius:12px; border:1px dashed var(--border-color);">
-                <h5 style="font-size:0.9rem; color:var(--danger); margin-bottom:0.5rem;"><i class="fas fa-exclamation-triangle"></i> Aturan Penting:</h5>
-                <ul style="font-size:0.8rem; color:var(--text-secondary); padding-left:1.2rem; line-height:1.4;">
-                    <li>Satu akun hanya boleh digunakan di <strong>satu perangkat</strong>.</li>
-                    <li>Segala bentuk kecurangan (copy-paste, dsb) akan terekam oleh sistem.</li>
-                    <li>Gunakan bahasa yang sopan saat berdiskusi dengan NARA-AI.</li>
+            <!-- Important Regulations Container -->
+            <div style="background: rgba(244, 67, 54, 0.08); padding:1.25rem; border-radius:16px; border:1px dashed rgba(244, 67, 54, 0.3);">
+                <h5 style="font-size:0.95rem; font-weight:700; color:var(--danger); margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;"><i class="fas fa-exclamation-triangle"></i> Prosedur & Aturan Penting:</h5>
+                <ul style="font-size:0.85rem; color:var(--text-secondary); padding-left:1.25rem; line-height:1.5; display:flex; flex-direction:column; gap:0.25rem;">
+                    <li>Setiap akun terikat pada sesi aktif dan dilarang digunakan di <strong>perangkat berbeda secara bersamaan</strong>.</li>
+                    <li>Sistem mendeteksi dan menyimpan log kecurangan secara otomatis yang dapat ditinjau langsung oleh Guru.</li>
+                    <li>Gunakan etika komunikasi yang baik dan sopan selama berinteraksi dengan asisten virtual NARA-AI.</li>
                 </ul>
             </div>
         </div>
         
-        <div style="padding:1.5rem 2rem; background:var(--bg-sidebar); border-top:1px solid var(--border-color); text-align:center;">
-            <button class="btn btn-primary btn-full" style="padding:1rem; font-size:1.1rem; font-weight:700; border-radius:12px;" onclick="closeStudentOnboarding()">
-                <i class="fas fa-check-circle"></i> Saya Mengerti & Siap Belajar
+        <!-- Action Button -->
+        <div style="padding:1.5rem 2.25rem; background:var(--bg-sidebar); border-top:1px solid var(--border-color); text-align:center;">
+            <button class="btn btn-primary btn-full" style="padding:1rem; font-size:1.1rem; font-weight:700; border-radius:14px; transition: transform 0.2s, box-shadow 0.2s;" onclick="closeStudentOnboarding()">
+                <i class="fas fa-check-circle" style="margin-right: 0.5rem;"></i> Saya Mengerti & Siap Mulai Belajar
             </button>
         </div>
     </div>`;
@@ -669,9 +679,9 @@ function navigateTo(page) {
         'dashboard': 'Dashboard',
         'profile': 'Profil Saya',
         'tahap1': 'Tahap 1 - Materi Pembelajaran',
-        'tahap2': 'Tahap 2 - Latihan Soal',
+        'tahap2': 'Tahap 2 - Refleksi Mandiri',
         'tahap3': 'Tahap 3 - Asesmen Utama',
-        'tahap4': 'Tahap 4 - 7 Kebiasaan Hebat',
+        'tahap4': 'Tahap 4 - Refleksi 7 Kebiasaan Hebat',
         'student-results': 'Hasil Penilaian Siswa',
         'materials': 'Manajemen Materi',
         'assessment-mgmt': 'Manajemen Asesmen',
