@@ -2526,7 +2526,8 @@ function renderStudentAttendance(main) {
                         ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                     <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:180px; padding:0.4rem;" placeholder="Cari Nama..." onkeyup="filterAttendanceInput()">
-                    <button class="btn btn-success" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan Absensi</button>
+                    <button class="btn btn-outline" onclick="downloadDailyAttendancePDF()" style="border-color: #ef4444; color: #ef4444;"><i class="fas fa-file-pdf"></i> Download PDF</button>
+                    <button class="btn btn-success" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan</button>
                 </div>
             </div>
             <div class="table-container">
@@ -2783,6 +2784,115 @@ function exportAttendanceReport() {
     link.href = URL.createObjectURL(blob);
     link.download = `Laporan_Absensi_${new Date().getTime()}.xls`;
     link.click();
+}
+
+function downloadDailyAttendancePDF() {
+    const dateInput = document.getElementById('attendance-date-input').value;
+    const dateLabel = new Date(dateInput).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const classFilter = document.getElementById('attendance-class-filter-input').value;
+    const className = classFilter === 'all' ? 'Semua Kelas' : classFilter;
+
+    const rows = document.querySelectorAll('#table-attendance tbody tr');
+    let tableRowsHtml = '';
+    let totalHadir = 0, totalSakit = 0, totalIzin = 0, totalAlpha = 0;
+    let no = 1;
+
+    rows.forEach(row => {
+        if (row.style.display === 'none') return;
+        if (row.cells.length < 6) return;
+
+        const name = row.cells[1].innerText;
+        const kelas = row.cells[2].innerText;
+        let status = 'Alpha';
+        let statusColor = '#ef4444';
+
+        const radios = row.querySelectorAll('input[type="radio"]');
+        for (const r of radios) {
+            if (r.checked) {
+                status = r.value.toUpperCase();
+                if (r.value === 'hadir') { totalHadir++; statusColor = '#10b981'; }
+                else if (r.value === 'sakit') { totalSakit++; statusColor = '#2196f3'; }
+                else if (r.value === 'izin') { totalIzin++; statusColor = '#ff9800'; }
+                else { totalAlpha++; }
+                break;
+            }
+        }
+
+        tableRowsHtml += `
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px; text-align: center; color: #475569;">${no++}</td>
+                <td style="padding: 10px; font-weight: 600; color: #0f172a;">${name}</td>
+                <td style="padding: 10px; text-align: center; color: #475569;">${kelas}</td>
+                <td style="padding: 10px; text-align: center; font-weight: 700; color: ${statusColor};">${status}</td>
+            </tr>
+        `;
+    });
+
+    const element = document.createElement('div');
+    element.style.padding = '40px 50px';
+    element.style.fontFamily = "'Inter', sans-serif";
+    element.style.backgroundColor = '#ffffff';
+    
+    element.innerHTML = `
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; display: flex; flex-direction: column; justify-content: space-around; align-items: center; z-index: 0; opacity: 0.05;">
+            <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+            <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+            <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+        </div>
+        
+        <div style="position: relative; z-index: 1;">
+            <div style="display: flex; align-items: center; border-bottom: 3px double #1e293b; padding-bottom: 15px; margin-bottom: 30px;">
+                <div style="width: 80px; height: 80px; margin-right: 20px; display: flex; align-items: center; justify-content: center;">
+                    <div style="width:70px; height:70px; border-radius:50%; background: linear-gradient(135deg, #1a73e8, #00bcd4); color: white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.8rem;">S</div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0; color: #0f172a;">SMP NEGERI 1 BALIKPAPAN</h1>
+                    <p style="font-size: 0.85rem; margin: 3px 0 0 0; color: #475569;">Pemerintah Kota Balikpapan • Dinas Pendidikan dan Kebudayaan</p>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0; color: #1e293b; text-transform: uppercase;">LAPORAN ABSENSI HARIAN SISWA</h2>
+                <div style="width: 80px; height: 4px; background: #1a73e8; margin: 8px auto 0 auto; border-radius: 2px;"></div>
+            </div>
+
+            <table style="width: 100%; font-size: 0.95rem; margin-bottom: 20px;">
+                <tr><td width="15%" style="font-weight:600;">Tanggal</td><td width="2%">:</td><td>${dateLabel}</td></tr>
+                <tr><td style="font-weight:600;">Kelas</td><td>:</td><td>${className}</td></tr>
+                <tr><td style="font-weight:600;">Pencatat</td><td>:</td><td>${currentUser.name} (${currentUser.role === 'admin' ? 'Administrator' : 'Guru'})</td></tr>
+            </table>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                <div style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; flex: 1; text-align: center; border-bottom: 3px solid #10b981;"><strong>Hadir:</strong> ${totalHadir}</div>
+                <div style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; flex: 1; text-align: center; border-bottom: 3px solid #2196f3;"><strong>Sakit:</strong> ${totalSakit}</div>
+                <div style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; flex: 1; text-align: center; border-bottom: 3px solid #ff9800;"><strong>Izin:</strong> ${totalIzin}</div>
+                <div style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; flex: 1; text-align: center; border-bottom: 3px solid #ef4444;"><strong>Alpha:</strong> ${totalAlpha}</div>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                <thead style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <tr>
+                        <th style="padding: 12px 10px; text-align: center;">No</th>
+                        <th style="padding: 12px 10px; text-align: left;">Nama Siswa</th>
+                        <th style="padding: 12px 10px; text-align: center;">Kelas</th>
+                        <th style="padding: 12px 10px; text-align: center;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tableRowsHtml || '<tr><td colspan="4" class="text-center text-muted" style="padding:15px;">Tidak ada data siswa.</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `Histori_Absensi_${dateInput}_${className}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
 }
 
 // ---- TEACHER JOURNAL ----

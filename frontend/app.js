@@ -693,7 +693,8 @@ function navigateTo(page) {
         'teacher-journal': 'Jurnal Harian Guru',
 
         'kisi-kisi': 'Pembuatan Kisi-kisi Soal',
-        'violation-data': 'Data Pelanggaran Siswa'
+        'violation-data': 'Data Pelanggaran Siswa',
+        'student-attendance': 'Manajemen Absensi Siswa'
     };
     document.getElementById('topbar-title').textContent = titles[page] || 'Dashboard';
 
