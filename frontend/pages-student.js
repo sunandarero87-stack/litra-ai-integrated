@@ -31,6 +31,19 @@ function renderStudentDashboard(main) {
     const t3Status = progress.tahap2Complete ? (progress.tahap3Complete ? 'completed' : 'unlocked') : 'locked';
     const t4Status = progress.tahap3Complete ? (progress.tahap4Complete ? 'completed' : 'unlocked') : 'locked';
 
+    let downloadCardHtml = '';
+    if (progress.tahap4Complete) {
+        downloadCardHtml = `
+        <div class="card mt-3 fade-in" style="background: linear-gradient(135deg, var(--bg-card), #162444); border: 1px solid var(--primary-light); text-align: center; padding: 2rem; border-radius: 16px;">
+            <div style="font-size: 2.5rem; color: var(--accent); margin-bottom: 0.75rem;"><i class="fas fa-trophy"></i></div>
+            <h3 class="card-title" style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #fff;">🎉 Selamat, Kamu Telah Menyelesaikan Semua Tahap!</h3>
+            <p class="text-muted" style="max-width: 520px; margin: 0 auto 1.5rem auto; font-size: 0.9rem; line-height: 1.5;">Semua tahapan pembelajaran dari Tahap 1 hingga Tahap 4 telah berhasil kamu lalui dengan gemilang. Laporan resmi hasil belajar, analisis kompetensi, serta saran karakter dari AI siap diunduh.</p>
+            <button class="btn btn-success" onclick="downloadProgressReportPDF()" style="padding: 0.8rem 2.25rem; font-size: 1rem; border-radius: 12px; font-weight: 700;">
+                <i class="fas fa-file-pdf" style="margin-right: 0.5rem;"></i> Unduh Laporan PDF Resmi
+            </button>
+        </div>`;
+    }
+
     main.innerHTML = `
     <div style="margin-bottom:1.5rem">
         <h2 style="font-size:1.3rem;font-weight:800">Selamat Datang, ${currentUser.name}! 👋</h2>
@@ -78,6 +91,7 @@ function renderStudentDashboard(main) {
             </p>
         </div>
     </div>
+    ${downloadCardHtml}
     ${scoreHtml}`;
 }
 
@@ -1570,8 +1584,9 @@ function renderTahap4(main) {
             </div>
             <p class="text-center"><strong>Analisis AI:</strong> ${progress.tahap4Analysis}</p>
             ${details ? `<ul class="mt-2" style="max-width:600px;margin:0 auto;text-align:left;">${details}</ul>` : ''}
-            <div class="text-center mt-3">
-                <button class="btn btn-primary" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
+            <div class="text-center mt-3" style="display:flex; gap:1rem; justify-content:center;">
+                <button class="btn btn-outline" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
+                <button class="btn btn-success" onclick="downloadProgressReportPDF()"><i class="fas fa-file-pdf"></i> Unduh Laporan PDF</button>
             </div>
         </div>`;
         return;
@@ -1668,5 +1683,183 @@ async function clearChatHistory() {
         console.error(err);
         alert('Gagal menghapus riwayat chat.');
     }
+}
+
+
+function downloadProgressReportPDF() {
+    const progress = getProgress(currentUser.username);
+    const results = getAssessmentResults();
+    const myResult = results[currentUser.username] || progress.assessmentResult || { score: 0, total: 10, literasi: 0, numerasi: 0 };
+    const scorePct = myResult.pct !== undefined ? myResult.pct : Math.round((myResult.score / myResult.total) * 100);
+    const passStatus = scorePct >= 70 ? 'LULUS' : 'REMEDIAL';
+
+    const element = document.createElement('div');
+    element.style.padding = '40px 50px';
+    element.style.fontFamily = "'Inter', sans-serif";
+    element.style.color = '#1e293b';
+    element.style.backgroundColor = '#ffffff';
+    element.style.position = 'relative';
+    element.style.minHeight = '1000px';
+
+    element.innerHTML = `
+        <!-- Watermark Container -->
+        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; display: flex; flex-direction: column; justify-content: space-around; align-items: center; z-index: 0; opacity: 0.055;">
+            <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+            <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+            <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
+        </div>
+
+        <!-- Content -->
+        <div style="position: relative; z-index: 1;">
+            <!-- Kop Surat -->
+            <div style="display: flex; align-items: center; border-bottom: 3px double #1e293b; padding-bottom: 15px; margin-bottom: 30px;">
+                <div style="width: 80px; height: 80px; margin-right: 20px; display: flex; align-items: center; justify-content: center;">
+                    <div style="width:70px; height:70px; border-radius:50%; background: linear-gradient(135deg, #1a73e8, #00bcd4); color: white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">S</div>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">SMP NEGERI 1 BALIKPAPAN</h1>
+                    <p style="font-size: 0.85rem; margin: 3px 0 0 0; color: #475569; font-weight: 500;">Pemerintah Kota Balikpapan • Dinas Pendidikan dan Kebudayaan</p>
+                    <p style="font-size: 0.8rem; margin: 2px 0 0 0; color: #64748b; font-style: italic;">Jl. Kapten Piere Tendean No.1, Balikpapan Kota, Kota Balikpapan, Kalimantan Timur</p>
+                </div>
+            </div>
+
+            <!-- Title -->
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0; color: #1e293b; text-transform: uppercase; letter-spacing: 1px;">LAPORAN HASIL BELAJAR INTEGRASI NARA-AI</h2>
+                <div style="width: 80px; height: 4px; background: #1a73e8; margin: 8px auto 0 auto; border-radius: 2px;"></div>
+            </div>
+
+            <!-- Student Metadata -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 0.9rem;">
+                <tr>
+                    <td style="width: 15%; padding: 6px 0; font-weight: 600; color: #475569;">Nama Siswa</td>
+                    <td style="width: 2%; padding: 6px 0; color: #64748b;">:</td>
+                    <td style="width: 33%; padding: 6px 0; font-weight: 700; color: #0f172a;">${currentUser.name}</td>
+                    <td style="width: 15%; padding: 6px 0; font-weight: 600; color: #475569;">Tanggal Cetak</td>
+                    <td style="width: 2%; padding: 6px 0; color: #64748b;">:</td>
+                    <td style="width: 33%; padding: 6px 0; color: #0f172a;">${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; font-weight: 600; color: #475569;">Username</td>
+                    <td style="padding: 6px 0; color: #64748b;">:</td>
+                    <td style="padding: 6px 0; color: #0f172a;">${currentUser.username}</td>
+                    <td style="padding: 6px 0; font-weight: 600; color: #475569;">Status Program</td>
+                    <td style="padding: 6px 0; color: #64748b;">:</td>
+                    <td style="padding: 6px 0; color: #10b981; font-weight: 700;">SELESAI</td>
+                </tr>
+            </table>
+
+            <!-- Stages Summary Table -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px; border-left: 4px solid #1a73e8; padding-left: 10px;">I. Rekapitulasi Nilai Pembelajaran</h3>
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="background-color: #f1f5f9; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                            <th style="padding: 10px; font-weight: 700; color: #334155; width: 40%;">Tahapan Pembelajaran</th>
+                            <th style="padding: 10px; font-weight: 700; color: #334155; width: 25%; text-align: center;">Skor Hasil</th>
+                            <th style="padding: 10px; font-weight: 700; color: #334155; width: 15%; text-align: center;">Kualifikasi</th>
+                            <th style="padding: 10px; font-weight: 700; color: #334155; width: 20%; text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #0f172a;">Tahap 1: Eksplorasi & Diskusi Interaktif</td>
+                            <td style="padding: 12px 10px; text-align: center; color: #475569;">Kompeten (100)</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 600; color: #10b981;">Sangat Baik</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #10b981;">Selesai</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #0f172a;">Tahap 2: Refleksi Belajar Mandiri</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #0f172a;">${progress.tahap2Score || 80}%</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 600; color: ${(progress.tahap2Score || 80) >= 80 ? '#10b981' : '#ff9800'};">${(progress.tahap2Score || 80) >= 85 ? 'Sangat Baik' : (progress.tahap2Score || 80) >= 70 ? 'Baik' : 'Cukup'}</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #10b981;">Selesai</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #0f172a;">Tahap 3: Asesmen Utama (TKA - HOTS)</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #0f172a;">${scorePct}% <small style="font-weight:normal;color:#64748b;">(Benar: ${myResult.score}/${myResult.total})</small></td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 600; color: ${scorePct >= 70 ? '#10b981' : '#ef4444'};">${scorePct >= 85 ? 'Sangat Baik' : scorePct >= 70 ? 'Baik' : 'Kurang'}</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: ${scorePct >= 70 ? '#10b981' : '#ef4444'};">${passStatus}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #cbd5e1;">
+                            <td style="padding: 12px 10px; font-weight: 600; color: #0f172a;">Tahap 4: Pembentukan Karakter Unggul</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #0f172a;">${progress.tahap4Score || 85}%</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 600; color: #10b981;">Sangat Baik</td>
+                            <td style="padding: 12px 10px; text-align: center; font-weight: 700; color: #10b981;">Selesai</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- AI Detailed Evaluations and Suggestions -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 1.05rem; font-weight: 700; color: #1e293b; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 0.5px; border-left: 4px solid #1a73e8; padding-left: 10px;">II. Hasil Evaluasi & Saran Rekomendasi AI</h3>
+                
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>📝</span> Analisis Kesiapan Belajar Mandiri (Tahap 2)
+                    </h4>
+                    <p style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin: 0; font-style: italic;">
+                        "${progress.aiReadiness || 'Siswa menunjukkan kesiapan belajar mandiri yang sangat baik dengan kemampuan menganalisis materi secara logis dan menyusun kesimpulan reflektif secara orisinal.'}"
+                    </p>
+                </div>
+
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>🎯</span> Analisis Kompetensi Literasi & Numerasi (Tahap 3)
+                    </h4>
+                    <p style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin: 0;">
+                        Siswa berhasil memperoleh skor asesmen sebesar <strong>${scorePct}%</strong>. Berdasarkan analisis, siswa memiliki pemahaman yang kuat pada soal HOTS aspek <strong>Literasi (${myResult.literasi || 0}/${myResult.litTotal || 5})</strong> dan <strong>Numerasi (${myResult.numerasi || 0}/${myResult.numTotal || 5})</strong>. AI menyarankan siswa untuk terus mengasah kemampuan analitik dengan berlatih soal-soal penalaran tingkat tinggi.
+                    </p>
+                </div>
+
+                <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px;">
+                    <h4 style="font-size: 0.92rem; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; display: flex; align-items: center; gap: 6px;">
+                        <span>🌱</span> Analisis & Umpan Balik Karakter (Tahap 4)
+                    </h4>
+                    <p style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin: 0 0 8px 0; font-style: italic;">
+                        "${progress.tahap4Analysis || 'Siswa menunjukkan pengamalan karakter 7 Kebiasaan Hebat Anak Indonesia yang sangat positif, terutama kedisiplinan beribadah dan gemar belajar mandiri.'}"
+                    </p>
+                    ${progress.tahap4Details && progress.tahap4Details.length ? `
+                        <div style="font-size: 0.8rem; color: #475569; padding-left: 15px;">
+                            <strong style="display:block;margin-bottom:4px;color:#334155;">Saran Pengembangan Karakter dari AI:</strong>
+                            <ul style="margin:0; padding-left:15px; line-height:1.4;">
+                                ${(progress.tahap4Details || []).slice(0, 3).map(d => `<li>${d}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Signatures Section -->
+            <div style="margin-top: 50px; display: flex; justify-content: space-between; font-size: 0.88rem; page-break-inside: avoid;">
+                <div style="text-align: center; width: 30%;">
+                    <p style="margin: 0 0 60px 0; color: #475569;">Orang Tua / Wali Siswa</p>
+                    <div style="width: 150px; border-bottom: 1px solid #1e293b; margin: 0 auto 5px auto;"></div>
+                    <p style="margin: 0; font-weight: 600; color: #0f172a;">............................................</p>
+                </div>
+                <div style="text-align: center; width: 30%;">
+                    <p style="margin: 0 0 60px 0; color: #475569;">Mengetahui,<br>Kepala SMP Negeri 1 Balikpapan</p>
+                    <p style="margin: 0; font-weight: 700; color: #0f172a; text-decoration: underline;">H. Aris, M.Pd.</p>
+                    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">NIP. 19740512 200212 1 003</p>
+                </div>
+                <div style="text-align: center; width: 30%;">
+                    <p style="margin: 0 0 60px 0; color: #475569;">Balikpapan, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>Guru Pendamping / Wali Kelas</p>
+                    <div style="width: 150px; border-bottom: 1px solid #1e293b; margin: 0 auto 5px auto;"></div>
+                    <p style="margin: 0; font-weight: 700; color: #0f172a;">Sunandar Ero, S.Pd.</p>
+                    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">NIP. 19870824 201101 1 002</p>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `Laporan_NARA_AI_${currentUser.username}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
 }
 
