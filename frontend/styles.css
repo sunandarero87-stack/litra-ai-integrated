@@ -2246,3 +2246,26 @@ tr:hover td {
     from { transform: scale(0.9); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+
+/* ============= RESPONSIVE LEARNING MATERIALS (MOBILE & TABLET) ============= */
+.material-text-content img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 12px;
+    margin: 1.5rem auto !important;
+    display: block;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    object-fit: cover;
+}
+
+.material-text-content iframe {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 16/9 !important;
+    border-radius: 12px;
+    margin: 1.5rem auto !important;
+    display: block;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
