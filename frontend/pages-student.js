@@ -409,6 +409,7 @@ async function viewMaterial(id, type) {
                     <div class="material-text-content">${htmlContent}</div>
                 </div>
             </div>`;
+        return;
     }
 
     // For non-PDF or fallback, show text content
