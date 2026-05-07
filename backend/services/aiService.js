@@ -446,15 +446,23 @@ PENTING - Desain Visual HTML (Gaya Premium):
   - Gunakan warna-warna harmonis seperti biru cerah, hijau segar, atau orange hangat untuk header (contoh: <h3 style="color: var(--primary); margin-top: 1.5rem; margin-bottom: 0.75rem;">).
   - Gunakan blockquote menarik untuk highlight: <blockquote style="border-left: 4px solid var(--primary); padding-left: 1rem; margin: 1rem 0; font-style: italic; color: var(--text-secondary);">
 
-Penyisipan Gambar:
-- Sisipkan tepat 2 atau 3 gambar relevan di dalam materi menggunakan tag <img> dengan style inline yang rapi:
+Penyisipan Gambar (Sesuai Isi & Kontekstual):
+- JANGAN menumpuk atau mengelompokkan semua gambar di satu tempat (misalnya di awal atau akhir saja).
+- Sisipkan tepat 2 atau 3 gambar secara menyebar dan berurutan, langsung diletakkan TEPAT di bawah paragraf, sub-heading, atau kalimat spesifik yang sedang membahas topik gambar tersebut.
+- Gunakan tag <img> dengan style inline yang rapi:
   <img src="URL_GAMBAR" style="display: block; margin: 1.5rem auto; max-width: 100%; width: 600px; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" alt="Deskripsi Gambar">
-  <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); font-style: italic; margin-top: -1rem; margin-bottom: 1.5rem;">[Deskripsi/Caption Gambar Relevan]</p>
+  <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); font-style: italic; margin-top: -1rem; margin-bottom: 1.5rem;">[Deskripsi/Caption Gambar Relevan yang menjelaskan isi paragraf di atasnya]</p>
 - Aturan URL_GAMBAR berdasarkan Sumber Gambar ("${sumberGambar}"):
-  - Jika sumberGambar adalah "AI" atau "Kedua-duanya", gunakan generator gambar Pollinations AI dengan prompt artistik dan deskriptif bahasa Inggris yang di-encode ke URL (contoh: https://image.pollinations.ai/prompt/scientific_illustration_of_photosynthesis_drawn_by_professional_artist_3d_render?width=800&height=500&nologo=true)
-  - Jika sumberGambar adalah "Internet" atau "Kedua-duanya", gunakan URL pencari gambar LoremFlickr dengan kata kunci bahasa Inggris yang sangat spesifik dan relevan (contoh: https://loremflickr.com/800/500/photosynthesis atau https://loremflickr.com/800/500/green_leaves)
-  - JANGAN sekali-kali menggunakan source.unsplash.com karena domain tersebut sudah dihentikan dan tidak berfungsi. Gunakan loremflickr.com sebagai gantinya untuk gambar internet.
-  - Pastikan URL gambar valid, lengkap, dan tidak rusak.
+  - Jika sumberGambar adalah "AI" atau "Kedua-duanya", gunakan generator gambar Pollinations AI dengan prompt bahasa Inggris yang sangat detail, artistik, dan relevan dengan paragraf tersebut (contoh: jika membahas stomata, gunakan: https://image.pollinations.ai/prompt/detailed_botany_illustration_of_leaf_stomata_microscopic_view?width=800&height=500&nologo=true)
+  - Jika sumberGambar adalah "Internet" atau "Kedua-duanya", gunakan URL pencari gambar LoremFlickr dengan kata kunci bahasa Inggris yang sangat spesifik dan relevan dengan bahasan paragraf tersebut (contoh: jika membahas kloroplas, gunakan: https://loremflickr.com/800/500/chloroplast atau jika membahas sel tumbuhan gunakan: https://loremflickr.com/800/500/plant_cell)
+  - JANGAN gunakan kata kunci umum atau source.unsplash.com karena domain tersebut sudah mati. Gunakan loremflickr.com untuk gambar internet yang andal.
+
+Penyisipan Video Pendukung (YouTube Embedded):
+- Sisipkan tepat 1 buah video edukasi YouTube yang sangat relevan dengan topik pembelajaran ini di bagian tengah atau menjelang akhir materi.
+- Untuk memastikan video selalu aktif, berfungsi, dan relevan tanpa risiko link rusak, gunakan format pencarian otomatis resmi YouTube Player berikut:
+  <iframe src="https://www.youtube.com/embed?listType=search&list=belajar+KATA_KUNCI_PENCARIAN" style="display: block; margin: 1.5rem auto; width: 100%; max-width: 700px; height: 400px; border-radius: 12px; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" allowfullscreen></iframe>
+  <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); font-style: italic; margin-top: -1rem; margin-bottom: 2rem;">[Video Pendukung: Tonton video edukatif ini untuk memperdalam pemahaman materi]</p>
+- Ganti KATA_KUNCI_PENCARIAN dengan topik materi spesifik menggunakan tanda tambah (+) sebagai spasi (contoh: jika materinya Fotosintesis, ganti menjadi: proses+fotosintesis+smp. Jika Aljabar, ganti menjadi: konsep+dasar+aljabar+smp).
 
 Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan menyertakan tanda kutip markdown \`\`\`html di awal dan di akhir, cukup teks HTML murni.`;
 
