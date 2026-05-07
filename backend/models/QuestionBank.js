@@ -46,6 +46,12 @@ const questionBankSchema = new mongoose.Schema({
         enum: ['LOTS', 'MOTS', 'HOTS'],
         default: 'HOTS'
     },
+    penalaranLogis: {
+        type: Number,
+        min: 1,
+        max: 5,
+        default: 1
+    },
     image: {
         type: String,
         default: null

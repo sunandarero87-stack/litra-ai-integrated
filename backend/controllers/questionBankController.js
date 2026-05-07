@@ -230,17 +230,18 @@ exports.downloadTemplate = (req, res) => {
 
 exports.generateFromAI = async (req, res) => {
     try {
-        const { objectives, amount, indicatorType, indicatorValue, kelas } = req.body;
+        const { objectives, amount, indicatorType, indicatorValue, kelas, penalaranLogis } = req.body;
 
         if (!objectives || !Array.isArray(objectives) || objectives.length === 0) {
             return res.status(400).json({ error: 'Tujuan Pembelajaran wajib diisi.' });
         }
 
         const questionAmount = amount ? parseInt(amount) : 10;
+        const levelPenalaran = penalaranLogis ? parseInt(penalaranLogis) : 3;
 
         // Memanggil aiService
         const aiService = require('../services/aiService');
-        const generatedQuestions = await aiService.generateBankSoal(objectives, questionAmount, indicatorType, indicatorValue);
+        const generatedQuestions = await aiService.generateBankSoal(objectives, questionAmount, indicatorType, indicatorValue, levelPenalaran);
 
         if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
             return res.status(500).json({ error: 'AI gagal menghasilkan array soal yang valid.' });
@@ -256,6 +257,7 @@ exports.generateFromAI = async (req, res) => {
             grade: '7 SMP',
             curriculum: 'Fase D',
             difficulty: 'HOTS',
+            penalaranLogis: levelPenalaran,
             kelas: kelas || 'Semua Kelas'
         }));
 
@@ -318,7 +320,7 @@ exports.generateFromAI = async (req, res) => {
 
 exports.generateFromMaterial = async (req, res) => {
     try {
-        const { materialId, amount, indicatorType, indicatorValue, kelas } = req.body;
+        const { materialId, amount, indicatorType, indicatorValue, kelas, penalaranLogis } = req.body;
         const Material = require('../models/Material');
 
         if (!materialId) {
@@ -332,9 +334,10 @@ exports.generateFromMaterial = async (req, res) => {
         }
 
         const questionAmount = amount ? parseInt(amount) : 10;
+        const levelPenalaran = penalaranLogis ? parseInt(penalaranLogis) : 3;
         const aiService = require('../services/aiService');
         
-        const generatedQuestions = await aiService.generateBankSoalFromMaterial(material.content, questionAmount, indicatorType, indicatorValue);
+        const generatedQuestions = await aiService.generateBankSoalFromMaterial(material.content, questionAmount, indicatorType, indicatorValue, levelPenalaran);
 
         if (!Array.isArray(generatedQuestions) || generatedQuestions.length === 0) {
             return res.status(500).json({ error: 'AI gagal menghasilkan array soal yang valid.' });
@@ -350,6 +353,7 @@ exports.generateFromMaterial = async (req, res) => {
             grade: '7 SMP',
             curriculum: 'Fase D',
             difficulty: 'HOTS',
+            penalaranLogis: levelPenalaran,
             kelas: kelas || 'Semua Kelas'
         }));
 

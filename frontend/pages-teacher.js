@@ -1600,6 +1600,16 @@ async function renderBankSoal(main) {
                             ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
                         </select>
                     </div>
+                    <div class="form-group mb-2">
+                        <label>Tingkat Penalaran Logis (Level 1-5)</label>
+                        <select id="ai-penalaran-logis" class="form-control">
+                            <option value="1">Level 1 - Pengenalan Dasar / Logika Sederhana</option>
+                            <option value="2">Level 2 - Pemahaman & Hubungan Sebab-Akibat</option>
+                            <option value="3" selected>Level 3 - Analisis & Pola Logis</option>
+                            <option value="4">Level 4 - Evaluasi & Penalaran Kritis</option>
+                            <option value="5">Level 5 - Sintesis Kreatif & Logika Kompleks</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Jumlah Tujuan Pembelajaran (Maks: 10)</label>
                         <input type="number" id="ai-objective-count" min="1" max="10" value="1" onchange="renderObjectiveInputs()" oninput="renderObjectiveInputs()">
@@ -1629,6 +1639,16 @@ async function renderBankSoal(main) {
                         <select id="ai-material-id" class="form-control">
                             <option value="">-- Pilih Materi --</option>
                             ${materials.map(m => `<option value="${m._id}">${m.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group mb-2">
+                        <label>Tingkat Penalaran Logis (Level 1-5)</label>
+                        <select id="ai-material-penalaran-logis" class="form-control">
+                            <option value="1">Level 1 - Pengenalan Dasar / Logika Sederhana</option>
+                            <option value="2">Level 2 - Pemahaman & Hubungan Sebab-Akibat</option>
+                            <option value="3" selected>Level 3 - Analisis & Pola Logis</option>
+                            <option value="4">Level 4 - Evaluasi & Penalaran Kritis</option>
+                            <option value="5">Level 5 - Sintesis Kreatif & Logika Kompleks</option>
                         </select>
                     </div>
                     <button class="btn btn-primary w-100" id="btn-generate-material" onclick="generateBankSoalFromMaterial()"><i class="fas fa-file-alt"></i> Buat Soal dari Materi</button>
@@ -1696,6 +1716,7 @@ async function generateBankSoalAI() {
     const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
     const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
     const kelas = document.getElementById('ai-kelas') ? document.getElementById('ai-kelas').value : 'Semua Kelas';
+    const penalaranLogis = document.getElementById('ai-penalaran-logis') ? parseInt(document.getElementById('ai-penalaran-logis').value) : 3;
 
     const btn = document.getElementById('btn-generate-ai');
     btn.disabled = true;
@@ -1705,7 +1726,14 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ objectives: objectives, amount: parseInt(document.getElementById('ai-question-amount').value) || 10, indicatorType: indicatorType, indicatorValue: indicatorValue, kelas: kelas })
+            body: JSON.stringify({ 
+                objectives: objectives, 
+                amount: parseInt(document.getElementById('ai-question-amount').value) || 10, 
+                indicatorType: indicatorType, 
+                indicatorValue: indicatorValue, 
+                kelas: kelas,
+                penalaranLogis: penalaranLogis
+            })
         });
 
         const data = await res.json();
@@ -1739,6 +1767,7 @@ async function generateBankSoalFromMaterial() {
     const indicatorType = document.getElementById('ai-indicator-type') ? document.getElementById('ai-indicator-type').value : null;
     const indicatorValue = indicatorType === 'literasi' ? document.getElementById('ai-literasi-indicator').value : (indicatorType === 'numerasi' ? document.getElementById('ai-numerasi-indicator').value : null);
     const kelas = document.getElementById('ai-material-kelas') ? document.getElementById('ai-material-kelas').value : 'Semua Kelas';
+    const penalaranLogis = document.getElementById('ai-material-penalaran-logis') ? parseInt(document.getElementById('ai-material-penalaran-logis').value) : 3;
 
     const btn = document.getElementById('btn-generate-material');
     const originalText = btn.innerHTML;
@@ -1749,7 +1778,14 @@ async function generateBankSoalFromMaterial() {
         const res = await fetch('/api/question-bank/generate-from-material', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ materialId, amount: parseInt(document.getElementById('ai-material-amount').value) || 10, indicatorType, indicatorValue, kelas })
+            body: JSON.stringify({ 
+                materialId, 
+                amount: parseInt(document.getElementById('ai-material-amount').value) || 10, 
+                indicatorType, 
+                indicatorValue, 
+                kelas,
+                penalaranLogis: penalaranLogis
+            })
         });
 
         const data = await res.json();
