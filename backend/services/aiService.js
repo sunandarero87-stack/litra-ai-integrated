@@ -415,11 +415,12 @@ async function analyzeUnderstanding(username, originalExplanation, studentAnswer
     }
 }
 
-async function generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar = 'AI', jumlahTujuan = 3, jumlahHalaman = 3) {
+async function generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar = 'AI', jumlahTujuan = 3, jumlahHalaman = 3, judul = '') {
     const prompt = `Kamu adalah AI Pakar Pedagogi dan Guru Kreatif yang ahli dalam merancang materi pembelajaran berkualitas tinggi, interaktif, dan premium.
 Tugasmu adalah menyusun materi pembelajaran lengkap, mendalam, dan menarik yang cocok untuk siswa tingkat/kelas: "${kelas}".
 
 Materi harus disusun berdasarkan indikator:
+- Judul Materi Pembelajaran: "${judul}" (Wajib gunakan judul ini sebagai tajuk utama/heading 1 materi Anda)
 - Tujuan Pembelajaran Utama: "${tujuanPembelajaran}"
 - Jumlah Rincian Tujuan Pembelajaran: ${jumlahTujuan} (Harap pecah dan rumuskan tepat ${jumlahTujuan} tujuan pembelajaran khusus yang terperinci di dalam materi)
 - Target Panjang Materi: Setara dengan ${jumlahHalaman} Halaman cetak A4 (buat materi sangat mendalam, berbobot, dan kaya informasi yang sesuai dengan panjang ${jumlahHalaman} halaman, jangan buat materi pendek)

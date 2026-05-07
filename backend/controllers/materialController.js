@@ -119,15 +119,15 @@ exports.deleteMaterial = async (req, res) => {
 
 exports.generateMaterialFromAI = async (req, res) => {
     try {
-        const { tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman } = req.body;
-        if (!tujuanPembelajaran || !kelas) {
-            return res.status(400).json({ error: 'Tujuan Pembelajaran dan Kelas wajib diisi.' });
+        const { judul, tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman } = req.body;
+        if (!judul || !tujuanPembelajaran || !kelas) {
+            return res.status(400).json({ error: 'Judul, Tujuan Pembelajaran, dan Kelas wajib diisi.' });
         }
 
-        console.log(`[AI Material] Generating material for Class: ${kelas}, Objective: ${tujuanPembelajaran}, Image Source: ${sumberGambar}, Objectives Count: ${jumlahTujuan}, Pages Count: ${jumlahHalaman}`);
+        console.log(`[AI Material] Generating material: "${judul}" for Class: ${kelas}, Objective: ${tujuanPembelajaran}, Image Source: ${sumberGambar}, Objectives Count: ${jumlahTujuan}, Pages Count: ${jumlahHalaman}`);
         
         // Call AI Service to generate HTML content
-        const htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman);
+        const htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman, judul);
 
         // Strip HTML tags to get clean plain text content for search / chatbot context
         const plainTextContent = htmlContent
@@ -138,7 +138,7 @@ exports.generateMaterialFromAI = async (req, res) => {
             .trim();
 
         // Create Mongoose Document
-        const materialName = `Materi AI: ${tujuanPembelajaran.substring(0, 50)}${tujuanPembelajaran.length > 50 ? '...' : ''}`;
+        const materialName = judul;
         
         // Base64 encode htmlContent to satisfy contentDataUrl requirement
         const base64Content = Buffer.from(htmlContent).toString('base64');

@@ -544,6 +544,10 @@ function renderMaterials(main) {
 
             <!-- AI Generator Tab Content -->
             <div id="tab-content-ai" style="display:none;">
+                <div class="form-group mb-2">
+                    <label>Judul Materi</label>
+                    <input type="text" id="ai-material-title" class="form-control" placeholder="Contoh: Pengenalan Fotosintesis pada Tumbuhan" style="width:100%;">
+                </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
                     <div class="form-group">
                         <label>Tujuan Kelas</label>
@@ -650,11 +654,17 @@ window.switchMaterialTab = function (tab) {
 }
 
 window.generateMaterialWithAI = async function () {
+    const title = document.getElementById('ai-material-title').value.trim();
     const objective = document.getElementById('ai-material-objective').value.trim();
     const kelas = document.getElementById('ai-material-target-kelas').value;
     const imageSource = document.getElementById('ai-material-image-source').value;
     const jumlahTujuan = document.getElementById('ai-material-objectives-count').value;
     const jumlahHalaman = document.getElementById('ai-material-pages-count').value;
+
+    if (!title) {
+        alert('Judul Materi wajib diisi!');
+        return;
+    }
 
     if (!objective) {
         alert('Tujuan Pembelajaran wajib diisi!');
@@ -673,6 +683,7 @@ window.generateMaterialWithAI = async function () {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                judul: title,
                 tujuanPembelajaran: objective,
                 kelas: kelas,
                 sumberGambar: imageSource,
