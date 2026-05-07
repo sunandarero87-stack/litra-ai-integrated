@@ -1868,11 +1868,11 @@ async function generateBankSoalAI() {
         const res = await fetch('/api/question-bank/generate-ai', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                objectives: objectives, 
-                amount: parseInt(document.getElementById('ai-question-amount').value) || 10, 
-                indicatorType: indicatorType, 
-                indicatorValue: indicatorValue, 
+            body: JSON.stringify({
+                objectives: objectives,
+                amount: parseInt(document.getElementById('ai-question-amount').value) || 10,
+                indicatorType: indicatorType,
+                indicatorValue: indicatorValue,
                 kelas: kelas,
                 penalaranLogis: penalaranLogis
             })
@@ -1920,11 +1920,11 @@ async function generateBankSoalFromMaterial() {
         const res = await fetch('/api/question-bank/generate-from-material', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                materialId, 
-                amount: parseInt(document.getElementById('ai-material-amount').value) || 10, 
-                indicatorType, 
-                indicatorValue, 
+            body: JSON.stringify({
+                materialId,
+                amount: parseInt(document.getElementById('ai-material-amount').value) || 10,
+                indicatorType,
+                indicatorValue,
                 kelas,
                 penalaranLogis: penalaranLogis
             })
