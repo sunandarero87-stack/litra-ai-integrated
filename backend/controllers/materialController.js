@@ -194,3 +194,36 @@ exports.generateMaterialFromAI = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+exports.updateMaterial = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { htmlContent, name } = req.body;
+
+        const material = await Material.findById(id);
+        if (!material) return res.status(404).json({ error: 'Material not found' });
+
+        if (name) material.name = name;
+
+        if (htmlContent) {
+            // Base64 encode htmlContent to satisfy contentDataUrl requirement
+            const base64Content = Buffer.from(htmlContent).toString('base64');
+            material.contentDataUrl = `data:text/html;base64,${base64Content}`;
+
+            // Strip HTML tags to get clean plain text content for search / chatbot context
+            const plainTextContent = htmlContent
+                .replace(/<style([\s\S]*?)<\/style>/gi, '')
+                .replace(/<script([\s\S]*?)<\/script>/gi, '')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            material.content = plainTextContent;
+            material.size = Buffer.byteLength(htmlContent);
+        }
+
+        await material.save();
+        res.json({ success: true, material });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};

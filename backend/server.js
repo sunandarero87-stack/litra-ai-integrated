@@ -124,6 +124,7 @@ app.get('/api/materials/:id', materialController.getMaterialById);
 app.post('/api/materials/generate-ai', materialController.generateMaterialFromAI);
 app.post('/api/materials', materialController.addMaterial);
 app.delete('/api/materials/:id', materialController.deleteMaterial);
+app.put('/api/materials/:id', materialController.updateMaterial);
 
 // Attendance
 app.post('/api/attendance', attendanceController.saveAttendance);

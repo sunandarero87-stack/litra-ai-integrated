@@ -788,6 +788,8 @@ window.viewMaterialTeacher = async function (id) {
     const material = materials.find(m => m._id === id);
     if (!material) return;
 
+    let isEditing = false;
+
     // Create or get modal element
     let modal = document.getElementById('teacher-material-modal');
     if (!modal) {
@@ -802,7 +804,12 @@ window.viewMaterialTeacher = async function (id) {
         <div style="background:var(--bg-card); width:90%; max-width:850px; height:85%; border-radius:16px; display:flex; flex-direction:column; box-shadow:0 10px 35px rgba(0,0,0,0.25); border:1px solid var(--border-color); overflow:hidden;">
             <div style="padding:1.2rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
                 <h3 style="margin:0; font-size:1.25rem; display:flex; align-items:center; gap:0.5rem; color:var(--primary);"><i class="fas fa-book-open"></i> Preview: ${material.name}</h3>
-                <button onclick="document.getElementById('teacher-material-modal').style.display='none'" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;"><i class="fas fa-times"></i></button>
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    ${material.type === 'html' || material.type === 'ai' ? `
+                        <button id="btn-edit-material" class="btn btn-sm btn-primary" style="display:flex; align-items:center; gap:0.35rem;"><i class="fas fa-edit"></i> Edit Materi</button>
+                    ` : ''}
+                    <button onclick="document.getElementById('teacher-material-modal').style.display='none'" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <div id="teacher-material-viewer-content" style="flex:1; overflow-y:auto; padding:2rem; background:var(--bg-input);">
                 <div style="display:flex; align-items:center; justify-content:center; height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem; color:var(--primary);"></i></div>
@@ -828,6 +835,7 @@ window.viewMaterialTeacher = async function (id) {
             }
         }
 
+        let htmlContent = '';
         if (completeMat.contentDataUrl) {
             try {
                 const base64Data = completeMat.contentDataUrl.split(',')[1];
@@ -837,13 +845,134 @@ window.viewMaterialTeacher = async function (id) {
                 for (let i = 0; i < binaryStr.length; i++) {
                     bytes[i] = binaryStr.charCodeAt(i);
                 }
-                const htmlContent = utf8Decoder.decode(bytes);
-                contentWrapper.innerHTML = `<div style="background:var(--bg-card); padding:2rem; border-radius:12px; box-shadow:var(--shadow-sm); border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;">${htmlContent}</div>`;
+                htmlContent = utf8Decoder.decode(bytes);
             } catch (e) {
                 contentWrapper.innerHTML = `<p class="text-danger">Gagal memuat materi HTML: ${e.message}</p>`;
+                return;
             }
         } else {
-            contentWrapper.innerHTML = `<div style="background:var(--bg-card); padding:2rem; border-radius:12px; border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;">${completeMat.content || 'Konten kosong.'}</div>`;
+            htmlContent = completeMat.content || 'Konten kosong.';
+        }
+
+        contentWrapper.innerHTML = `<div id="teacher-material-viewer-html-content" style="background:var(--bg-card); padding:2rem; border-radius:12px; box-shadow:var(--shadow-sm); border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;">${htmlContent}</div>`;
+
+        const btnEdit = document.getElementById('btn-edit-material');
+        if (btnEdit) {
+            btnEdit.onclick = async function () {
+                const container = document.getElementById('teacher-material-viewer-html-content');
+                if (!container) return;
+
+                if (!isEditing) {
+                    isEditing = true;
+                    btnEdit.innerHTML = '<i class="fas fa-save"></i> Simpan';
+                    btnEdit.className = 'btn btn-sm btn-success';
+                    container.contentEditable = 'true';
+                    container.focus();
+                    container.style.border = '2px dashed var(--primary)';
+                    container.style.borderRadius = '12px';
+                    container.style.outline = 'none';
+
+                    // Show instruction banner
+                    let banner = document.getElementById('edit-material-banner');
+                    if (!banner) {
+                        banner = document.createElement('div');
+                        banner.id = 'edit-material-banner';
+                        banner.style.cssText = 'background:var(--primary); color:white; padding:0.75rem 1.2rem; border-radius:8px; margin-bottom:1.5rem; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem; line-height:1.4;';
+                        banner.innerHTML = '<i class="fas fa-info-circle"></i> <span><strong>Mode Edit Aktif:</strong> Silakan edit teks langsung di bawah. <strong>Double-klik gambar</strong> untuk ganti URL gambar, atau <strong>Double-klik video</strong> untuk mengganti link YouTube.</span>';
+                        container.parentNode.insertBefore(banner, container);
+                    } else {
+                        banner.style.display = 'flex';
+                    }
+
+                    // Attach handlers to elements
+                    const updateHandlers = () => {
+                        const images = container.querySelectorAll('img');
+                        images.forEach(img => {
+                            img.style.cursor = 'pointer';
+                            img.title = 'Double-klik untuk mengganti gambar';
+                            img.ondblclick = function (e) {
+                                e.stopPropagation();
+                                const newUrl = prompt('Masukkan URL Gambar Baru dari Internet:', img.src);
+                                if (newUrl) img.src = newUrl;
+                            };
+                        });
+
+                        const iframes = container.querySelectorAll('iframe');
+                        iframes.forEach(iframe => {
+                            iframe.style.cursor = 'pointer';
+                            iframe.title = 'Double-klik untuk mengganti video YouTube';
+                            iframe.ondblclick = function (e) {
+                                e.stopPropagation();
+                                const newUrl = prompt('Masukkan Link YouTube Baru (contoh: https://www.youtube.com/watch?v=VIDEO_ID):', iframe.src);
+                                if (newUrl) {
+                                    let finalUrl = newUrl;
+                                    if (newUrl.includes('youtube.com/watch?v=')) {
+                                        const videoId = newUrl.split('v=')[1].split('&')[0];
+                                        finalUrl = `https://www.youtube.com/embed/${videoId}`;
+                                    } else if (newUrl.includes('youtu.be/')) {
+                                        const videoId = newUrl.split('youtu.be/')[1].split('?')[0];
+                                        finalUrl = `https://www.youtube.com/embed/${videoId}`;
+                                    } else if (!newUrl.includes('/embed/')) {
+                                        finalUrl = `https://www.youtube.com/embed/${newUrl}`;
+                                    }
+                                    iframe.src = finalUrl;
+                                }
+                            };
+                        });
+                    };
+
+                    updateHandlers();
+
+                    // Periodically re-attach handlers in case elements are added/re-edited
+                    container.oninput = updateHandlers;
+                } else {
+                    btnEdit.disabled = true;
+                    btnEdit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+                    container.contentEditable = 'false';
+                    container.style.border = '1px solid var(--border-color)';
+
+                    const banner = document.getElementById('edit-material-banner');
+                    if (banner) banner.style.display = 'none';
+
+                    const updatedHtml = container.innerHTML;
+
+                    try {
+                        const res = await fetch(`/api/materials/${material._id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ htmlContent: updatedHtml })
+                        });
+
+                        if (res.ok) {
+                            alert('Perubahan materi berhasil disimpan!');
+                            isEditing = false;
+                            btnEdit.disabled = false;
+                            btnEdit.innerHTML = '<i class="fas fa-edit"></i> Edit Materi';
+                            btnEdit.className = 'btn btn-sm btn-primary';
+                            await syncData();
+                        } else {
+                            const data = await res.json();
+                            alert(data.error || 'Gagal menyimpan perubahan.');
+                            btnEdit.disabled = false;
+                            btnEdit.innerHTML = '<i class="fas fa-save"></i> Simpan';
+                            btnEdit.className = 'btn btn-sm btn-success';
+                            container.contentEditable = 'true';
+                            container.style.border = '2px dashed var(--primary)';
+                            if (banner) banner.style.display = 'flex';
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('Error saat menghubungi server.');
+                        btnEdit.disabled = false;
+                        btnEdit.innerHTML = '<i class="fas fa-save"></i> Simpan';
+                        btnEdit.className = 'btn btn-sm btn-success';
+                        container.contentEditable = 'true';
+                        container.style.border = '2px dashed var(--primary)';
+                        if (banner) banner.style.display = 'flex';
+                    }
+                }
+            };
         }
     } else {
         contentWrapper.innerHTML = `<div style="background:var(--bg-card); padding:2rem; border-radius:12px; border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;"><h4 style="margin-bottom:1rem; color:var(--primary);">${material.name}</h4><p>${material.content || 'Preview tidak tersedia untuk tipe dokumen ini. Silakan download untuk melihat.'}</p></div>`;
