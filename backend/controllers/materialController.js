@@ -35,6 +35,21 @@ exports.getMaterialById = async (req, res) => {
     try {
         const material = await Material.findById(req.params.id);
         if (!material) return res.status(404).json({ error: 'Material not found' });
+        
+        // Hot-fix old deprecated source.unsplash.com links
+        if (material.type === 'html' && material.contentDataUrl && material.contentDataUrl.includes('source.unsplash.com')) {
+            const matches = material.contentDataUrl.match(/^data:(.+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const contentType = matches[1];
+                const base64Data = matches[2];
+                let html = Buffer.from(base64Data, 'base64').toString('utf8');
+                html = html.replace(/source\.unsplash\.com\/featured\/800x500\/\?([a-zA-Z0-9,_]+)/gi, 'loremflickr.com/800/500/$1');
+                html = html.replace(/source\.unsplash\.com/gi, 'loremflickr.com');
+                const newBase64 = Buffer.from(html).toString('base64');
+                material.contentDataUrl = `data:${contentType};base64,${newBase64}`;
+            }
+        }
+
         res.json({ success: true, material });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -47,7 +62,23 @@ exports.getMaterialContent = async (req, res) => {
         if (!material || !material.contentDataUrl) {
             return res.status(404).json({ error: 'Material not found' });
         }
-        const dataUrl = material.contentDataUrl;
+        
+        let dataUrl = material.contentDataUrl;
+
+        // Hot-fix old deprecated source.unsplash.com links
+        if (material.type === 'html' && dataUrl.includes('source.unsplash.com')) {
+            const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
+            if (matches && matches.length === 3) {
+                const contentType = matches[1];
+                const base64Data = matches[2];
+                let html = Buffer.from(base64Data, 'base64').toString('utf8');
+                html = html.replace(/source\.unsplash\.com\/featured\/800x500\/\?([a-zA-Z0-9,_]+)/gi, 'loremflickr.com/800/500/$1');
+                html = html.replace(/source\.unsplash\.com/gi, 'loremflickr.com');
+                const newBase64 = Buffer.from(html).toString('base64');
+                dataUrl = `data:${contentType};base64,${newBase64}`;
+            }
+        }
+
         const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
         if (matches && matches.length === 3) {
             const contentType = matches[1];

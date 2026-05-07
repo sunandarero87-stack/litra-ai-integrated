@@ -452,7 +452,8 @@ Penyisipan Gambar:
   <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); font-style: italic; margin-top: -1rem; margin-bottom: 1.5rem;">[Deskripsi/Caption Gambar Relevan]</p>
 - Aturan URL_GAMBAR berdasarkan Sumber Gambar ("${sumberGambar}"):
   - Jika sumberGambar adalah "AI" atau "Kedua-duanya", gunakan generator gambar Pollinations AI dengan prompt artistik dan deskriptif bahasa Inggris yang di-encode ke URL (contoh: https://image.pollinations.ai/prompt/scientific_illustration_of_photosynthesis_drawn_by_professional_artist_3d_render?width=800&height=500&nologo=true)
-  - Jika sumberGambar adalah "Internet" atau "Kedua-duanya", gunakan URL Unsplash dengan keyword relevan dalam bahasa Inggris (contoh: https://images.unsplash.com/photo-1507413245164-6160d8298b31?q=80&w=800 atau https://source.unsplash.com/featured/800x500/?photosynthesis,leaves)
+  - Jika sumberGambar adalah "Internet" atau "Kedua-duanya", gunakan URL pencari gambar LoremFlickr dengan kata kunci bahasa Inggris yang sangat spesifik dan relevan (contoh: https://loremflickr.com/800/500/photosynthesis atau https://loremflickr.com/800/500/green_leaves)
+  - JANGAN sekali-kali menggunakan source.unsplash.com karena domain tersebut sudah dihentikan dan tidak berfungsi. Gunakan loremflickr.com sebagai gantinya untuk gambar internet.
   - Pastikan URL gambar valid, lengkap, dan tidak rusak.
 
 Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan menyertakan tanda kutip markdown \`\`\`html di awal dan di akhir, cukup teks HTML murni.`;
