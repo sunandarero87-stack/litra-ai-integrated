@@ -119,15 +119,15 @@ exports.deleteMaterial = async (req, res) => {
 
 exports.generateMaterialFromAI = async (req, res) => {
     try {
-        const { tujuanPembelajaran, kelas, sumberGambar } = req.body;
+        const { tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman } = req.body;
         if (!tujuanPembelajaran || !kelas) {
             return res.status(400).json({ error: 'Tujuan Pembelajaran dan Kelas wajib diisi.' });
         }
 
-        console.log(`[AI Material] Generating material for Class: ${kelas}, Objective: ${tujuanPembelajaran}, Image Source: ${sumberGambar}`);
+        console.log(`[AI Material] Generating material for Class: ${kelas}, Objective: ${tujuanPembelajaran}, Image Source: ${sumberGambar}, Objectives Count: ${jumlahTujuan}, Pages Count: ${jumlahHalaman}`);
         
         // Call AI Service to generate HTML content
-        const htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar);
+        const htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman);
 
         // Strip HTML tags to get clean plain text content for search / chatbot context
         const plainTextContent = htmlContent

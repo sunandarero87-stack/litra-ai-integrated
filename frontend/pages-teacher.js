@@ -309,7 +309,7 @@ function filterResultsByClass() {
         // index 0 = checkbox, 1 = nama, 2 = kelas
         const studentName = row.cells[1].innerText.toLowerCase();
         const studentClass = row.cells[2].innerText.toLowerCase();
-        
+
         const matchClass = (classFilter === 'all' || studentClass === classFilter);
         const matchSearch = studentName.includes(searchFilter);
 
@@ -382,7 +382,7 @@ async function resetStage3Selected() {
 function exportProgressToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
     const results = getAssessmentResults();
-    
+
     let tableHTML = '<table><thead><tr>' +
         '<th style="background-color:#E2EFDA">Nama Siswa</th><th style="background-color:#E2EFDA">Kelas</th><th style="background-color:#E2EFDA">Tahap Pembelajaran</th><th style="background-color:#E2EFDA">Rekomendasi AI</th><th style="background-color:#E2EFDA">Status Hasil</th>' +
         '</tr></thead><tbody>';
@@ -395,7 +395,7 @@ function exportProgressToExcel() {
         const stage = p.tahap4Complete ? 'Selesai' : p.tahap3Complete ? 'Tahap 4' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
         const badge = r ? (r.pass ? 'Lulus' : 'Tidak Lulus') : 'Proses';
         const aiRec = p.tahap2Complete ? (p.isReady ? 'SIAP' : 'PERLU BIMBINGAN') : '-';
-        
+
         tableHTML += `<tr>
             <td>${s.name}</td>
             <td>${s.kelas || '-'}</td>
@@ -404,9 +404,9 @@ function exportProgressToExcel() {
             <td>${badge}</td>
         </tr>`;
     });
-    
+
     tableHTML += '</tbody></table>';
-    
+
     if (!hasData) return alert('Belum ada data progres siswa untuk di-download.');
     downloadExcelFile(tableHTML, 'Laporan_Progres_Siswa');
 }
@@ -561,6 +561,33 @@ function renderMaterials(main) {
                         </select>
                     </div>
                 </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div class="form-group">
+                        <label>Jumlah Tujuan Pembelajaran (Maks. 5)</label>
+                        <select id="ai-material-objectives-count" class="form-control">
+                            <option value="1">1 Tujuan Pembelajaran</option>
+                            <option value="2">2 Tujuan Pembelajaran</option>
+                            <option value="3" selected>3 Tujuan Pembelajaran</option>
+                            <option value="4">4 Tujuan Pembelajaran</option>
+                            <option value="5">5 Tujuan Pembelajaran</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Jumlah Halaman (Maks. 10)</label>
+                        <select id="ai-material-pages-count" class="form-control">
+                            <option value="1">1 Halaman</option>
+                            <option value="2">2 Halaman</option>
+                            <option value="3" selected>3 Halaman</option>
+                            <option value="4">4 Halaman</option>
+                            <option value="5">5 Halaman</option>
+                            <option value="6">6 Halaman</option>
+                            <option value="7">7 Halaman</option>
+                            <option value="8">8 Halaman</option>
+                            <option value="9">9 Halaman</option>
+                            <option value="10">10 Halaman</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="form-group mb-2">
                     <label>Tujuan Pembelajaran</label>
                     <textarea id="ai-material-objective" class="form-control" rows="3" placeholder="Contoh: Siswa dapat memahami proses Fotosintesis pada tumbuhan, termasuk reaksi terang dan gelap, serta faktor yang mempengaruhinya." style="resize:vertical;"></textarea>
@@ -580,13 +607,16 @@ function renderMaterials(main) {
                             ${new Date(m.date).toLocaleDateString('id-ID')}
                         </div>
                     </div>
-                    <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m._id}')"><i class="fas fa-trash"></i></button>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-sm btn-outline btn-primary" onclick="viewMaterialTeacher('${m._id}')"><i class="fas fa-eye"></i> Buka</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteMaterial('${m._id}')"><i class="fas fa-trash"></i></button>
+                    </div>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi diupload</p>'}
         </div>
     </div>`;
 }
 
-window.switchMaterialTab = function(tab) {
+window.switchMaterialTab = function (tab) {
     const btnUpload = document.getElementById('btn-tab-upload');
     const btnAI = document.getElementById('btn-tab-ai');
     const tabUpload = document.getElementById('tab-content-upload');
@@ -598,7 +628,7 @@ window.switchMaterialTab = function(tab) {
         btnUpload.classList.add('active');
         btnUpload.style.color = 'var(--primary)';
         btnUpload.style.borderBottom = '3px solid var(--primary)';
-        
+
         btnAI.classList.remove('active');
         btnAI.style.color = 'var(--text-secondary)';
         btnAI.style.borderBottom = '3px solid transparent';
@@ -609,7 +639,7 @@ window.switchMaterialTab = function(tab) {
         btnAI.classList.add('active');
         btnAI.style.color = 'var(--primary)';
         btnAI.style.borderBottom = '3px solid var(--primary)';
-        
+
         btnUpload.classList.remove('active');
         btnUpload.style.color = 'var(--text-secondary)';
         btnUpload.style.borderBottom = '3px solid transparent';
@@ -619,10 +649,12 @@ window.switchMaterialTab = function(tab) {
     }
 }
 
-window.generateMaterialWithAI = async function() {
+window.generateMaterialWithAI = async function () {
     const objective = document.getElementById('ai-material-objective').value.trim();
     const kelas = document.getElementById('ai-material-target-kelas').value;
     const imageSource = document.getElementById('ai-material-image-source').value;
+    const jumlahTujuan = document.getElementById('ai-material-objectives-count').value;
+    const jumlahHalaman = document.getElementById('ai-material-pages-count').value;
 
     if (!objective) {
         alert('Tujuan Pembelajaran wajib diisi!');
@@ -631,7 +663,7 @@ window.generateMaterialWithAI = async function() {
 
     const btn = document.getElementById('btn-generate-ai-material');
     if (!btn) return;
-    
+
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang meracik materi belajar terbaik dengan AI... (Mungkin perlu 1-2 menit)';
@@ -643,7 +675,9 @@ window.generateMaterialWithAI = async function() {
             body: JSON.stringify({
                 tujuanPembelajaran: objective,
                 kelas: kelas,
-                sumberGambar: imageSource
+                sumberGambar: imageSource,
+                jumlahTujuan: jumlahTujuan,
+                jumlahHalaman: jumlahHalaman
             })
         });
 
@@ -711,7 +745,7 @@ function handleMaterialUpload(event) {
                 try {
                     const errData = await res.json();
                     if (errData.error) errMessage = errData.error;
-                } catch(e) {}
+                } catch (e) { }
                 alert(errMessage);
             }
         } catch (err) {
@@ -737,6 +771,73 @@ async function deleteMaterial(id) {
         alert('Server error.');
     }
 }
+
+window.viewMaterialTeacher = async function (id) {
+    const materials = getMaterials();
+    const material = materials.find(m => m._id === id);
+    if (!material) return;
+
+    // Create or get modal element
+    let modal = document.getElementById('teacher-material-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'teacher-material-modal';
+        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:10000;';
+        document.body.appendChild(modal);
+    }
+
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div style="background:var(--bg-card); width:90%; max-width:850px; height:85%; border-radius:16px; display:flex; flex-direction:column; box-shadow:0 10px 35px rgba(0,0,0,0.25); border:1px solid var(--border-color); overflow:hidden;">
+            <div style="padding:1.2rem 1.5rem; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:1.25rem; display:flex; align-items:center; gap:0.5rem; color:var(--primary);"><i class="fas fa-book-open"></i> Preview: ${material.name}</h3>
+                <button onclick="document.getElementById('teacher-material-modal').style.display='none'" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="teacher-material-viewer-content" style="flex:1; overflow-y:auto; padding:2rem; background:var(--bg-input);">
+                <div style="display:flex; align-items:center; justify-content:center; height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem; color:var(--primary);"></i></div>
+            </div>
+        </div>`;
+
+    const contentWrapper = document.getElementById('teacher-material-viewer-content');
+
+    if (material.type === 'pdf') {
+        const urlObj = `/api/materials/content/${material._id}`;
+        contentWrapper.innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none; background:white; border-radius:8px;"></iframe>`;
+    } else if (material.type === 'html' || material.type === 'ai') {
+        let completeMat = material;
+        if (!completeMat.contentDataUrl) {
+            try {
+                const res = await fetch(`/api/materials/${material._id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.material) completeMat = data.material;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        if (completeMat.contentDataUrl) {
+            try {
+                const base64Data = completeMat.contentDataUrl.split(',')[1];
+                const utf8Decoder = new TextDecoder('utf-8');
+                const binaryStr = atob(base64Data);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }
+                const htmlContent = utf8Decoder.decode(bytes);
+                contentWrapper.innerHTML = `<div style="background:var(--bg-card); padding:2rem; border-radius:12px; box-shadow:var(--shadow-sm); border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;">${htmlContent}</div>`;
+            } catch (e) {
+                contentWrapper.innerHTML = `<p class="text-danger">Gagal memuat materi HTML: ${e.message}</p>`;
+            }
+        } else {
+            contentWrapper.innerHTML = `<div style="background:var(--bg-card); padding:2rem; border-radius:12px; border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;">${completeMat.content || 'Konten kosong.'}</div>`;
+        }
+    } else {
+        contentWrapper.innerHTML = `<div style="background:var(--bg-card); padding:2rem; border-radius:12px; border:1px solid var(--border-color); color:var(--text-primary); max-width:800px; margin:0 auto; line-height:1.8;"><h4 style="margin-bottom:1rem; color:var(--primary);">${material.name}</h4><p>${material.content || 'Preview tidak tersedia untuk tipe dokumen ini. Silakan download untuk melihat.'}</p></div>`;
+    }
+};
 
 // ---- ASSESSMENT MANAGEMENT ----
 function renderAssessmentMgmt(main) {
@@ -884,20 +985,20 @@ function renderScheduleMgmt(main) {
                 </thead>
                 <tbody id="schedule-body">
                     ${classes.map(c => {
-                        const classSchedule = (settings.classSchedules || {})[c] || {};
-                        const stage = window.currentScheduleStage || 'tahap2';
-                        
-                        // Fallback logic for old data format
-                        const t1 = classSchedule.tahap1 || { start: classSchedule.start || '00:00', end: classSchedule.end || '23:59', active: classSchedule.active || false };
-                        const t2 = classSchedule.tahap2 || { start: '00:00', end: '23:59', active: false };
-                        const t3 = classSchedule.tahap3 || { start: '00:00', end: '23:59', active: false };
-                        
-                        let sched;
-                        if (stage === 'tahap1') sched = t1;
-                        else if (stage === 'tahap2') sched = t2;
-                        else if (stage === 'tahap3') sched = t3;
+        const classSchedule = (settings.classSchedules || {})[c] || {};
+        const stage = window.currentScheduleStage || 'tahap2';
 
-                        return `
+        // Fallback logic for old data format
+        const t1 = classSchedule.tahap1 || { start: classSchedule.start || '00:00', end: classSchedule.end || '23:59', active: classSchedule.active || false };
+        const t2 = classSchedule.tahap2 || { start: '00:00', end: '23:59', active: false };
+        const t3 = classSchedule.tahap3 || { start: '00:00', end: '23:59', active: false };
+
+        let sched;
+        if (stage === 'tahap1') sched = t1;
+        else if (stage === 'tahap2') sched = t2;
+        else if (stage === 'tahap3') sched = t3;
+
+        return `
                         <tr>
                             <td><strong>${c}</strong></td>
                             <td><input type="time" id="start-${c}" class="form-control" style="margin-bottom:0" value="${sched.start}"></td>
@@ -912,12 +1013,12 @@ function renderScheduleMgmt(main) {
                                 <button class="btn btn-sm btn-primary" onclick="saveSchedule('${c}')"><i class="fas fa-save"></i> Simpan</button>
                             </td>
                         </tr>`;
-                    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada kelas terdaftar</td></tr>'}
+    }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada kelas terdaftar</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
-    
+
     // update state so it remembers selection when rerendered
     const select = document.getElementById('schedule-stage-filter');
     if (select) {
@@ -935,12 +1036,12 @@ async function saveSchedule(kelas) {
 
     const settings = getAssessmentSettings();
     const schedules = settings.classSchedules || {};
-    
+
     // Ensure class obj exists
     if (!schedules[kelas]) {
         schedules[kelas] = {};
     }
-    
+
     // Migrate old data if necessary
     if (!schedules[kelas].tahap1 && schedules[kelas].start) {
         schedules[kelas].tahap1 = { start: schedules[kelas].start, end: schedules[kelas].end, active: schedules[kelas].active };
@@ -948,7 +1049,7 @@ async function saveSchedule(kelas) {
         delete schedules[kelas].end;
         delete schedules[kelas].active;
     }
-    
+
     if (!schedules[kelas].tahap1) schedules[kelas].tahap1 = { start: '00:00', end: '23:59', active: false };
     if (!schedules[kelas].tahap2) schedules[kelas].tahap2 = { start: '00:00', end: '23:59', active: false };
     if (!schedules[kelas].tahap3) schedules[kelas].tahap3 = { start: '00:00', end: '23:59', active: false };
@@ -988,7 +1089,7 @@ function exportAIPreadinessToExcel() {
     const users = getUsers().filter(u => u.role === 'siswa');
     const progresses = getStudentProgress();
     const results = getAssessmentResults();
-    
+
     let tableHTML = '<table><thead><tr>' +
         '<th style="background-color:#E2EFDA">Nama Siswa</th>' +
         '<th style="background-color:#E2EFDA">Kelas</th>' +
@@ -1009,7 +1110,7 @@ function exportAIPreadinessToExcel() {
             const status = p.tahap2Complete ? 'Selesai' : 'Belum';
             const req = p.isReady ? 'Direkomendasikan' : 'Perlu Penguatan';
             const analysis = p.aiReadiness || '-';
-            
+
             tableHTML += `<tr>
                 <td>${s.name}</td>
                 <td>${s.kelas || '-'}</td>
@@ -1020,9 +1121,9 @@ function exportAIPreadinessToExcel() {
             </tr>`;
         }
     });
-    
+
     tableHTML += '</tbody></table>';
-    
+
     if (!hasData) return alert('Belum ada data untuk di-download.');
     downloadExcelFile(tableHTML, 'Laporan_Asesmen_Analisis_AI');
 }
@@ -1036,7 +1137,7 @@ function filterAssessmentApproval() {
         if (row.cells.length < 3) return;
         const studentName = row.cells[1].innerText.toLowerCase();
         const studentClass = row.cells[2].innerText.toLowerCase();
-        
+
         const matchClass = (classFilter === 'all' || studentClass === classFilter);
         const matchSearch = studentName.includes(searchFilter);
 
@@ -1102,7 +1203,7 @@ async function approveSelectedStudents() {
             });
 
             if (!genRes.ok) throw new Error("Gagal generate");
-            
+
             const genData = await genRes.json();
             progress.generatedAssessment = genData.questions;
             updateProgress(username, progress);
@@ -1166,7 +1267,7 @@ async function approveStudent(username, btnElement) {
 
 async function approveRemedial(username, btnElement) {
     if (!confirm("Setujui siswa ini untuk melakukan Remedial? Soal baru akan digenerate dari Bank Soal.")) return;
-    
+
     if (btnElement) {
         btnElement.disabled = true;
         btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyiapkan...';
@@ -2438,10 +2539,10 @@ async function renderMonitoring(main) {
 function switchMonitoringTab(tab, btn) {
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    
+
     btn.classList.add('active');
     document.getElementById(`monitoring-${tab}-tab`).classList.add('active');
-    
+
     if (tab === 'violations') {
         loadViolationsReport();
     }
@@ -2452,7 +2553,7 @@ async function loadViolationsReport() {
     try {
         const res = await fetch('/api/violations');
         const data = await res.json();
-        
+
         if (data.success) {
             const v = data.violations;
             container.innerHTML = `
@@ -2497,7 +2598,7 @@ function exportViolationsToExcel() {
 
 async function clearAllViolations() {
     if (!confirm('Apakah Anda yakin ingin menghapus SEMUA data pelanggaran? Tindakan ini tidak dapat dibatalkan.')) return;
-    
+
     try {
         const res = await fetch('/api/violations/all', { method: 'DELETE' });
         const data = await res.json();
@@ -2528,7 +2629,7 @@ async function triggerDataSimulation() {
         console.error(err);
         alert('Server error saat simulasi data.');
     }
-} 
+}
 
 
 // Secret shortcut to show simulation button (Ctrl + Shift)
@@ -2546,11 +2647,11 @@ document.addEventListener('keydown', (e) => {
 async function triggerResetStage2() {
     const selected = Array.from(document.querySelectorAll('.student-select:checked')).map(cb => cb.value);
     const mode = selected.length > 0 ? 'siswa yang dipilih' : 'seluruh siswa';
-    
+
     if (!confirm(`Apakah Anda yakin ingin mereset Tahap 2 (Refleksi) untuk ${mode}? Ini akan menghapus jawaban refleksi yang sudah ada agar AI bisa membangkitkan pertanyaan baru yang lebih relevan dengan chat terbaru mereka.`)) return;
-    
+
     try {
-        const res = await fetch('/api/progress/reset-stage2', { 
+        const res = await fetch('/api/progress/reset-stage2', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ usernames: selected.length > 0 ? selected : null })
@@ -2567,7 +2668,7 @@ async function triggerResetStage2() {
         console.error(err);
         alert('Server error saat mereset Tahap 2.');
     }
-} 
+}
 
 
 function toggleAllResults() {
@@ -2694,10 +2795,10 @@ function renderStudentAttendance(main) {
 function switchAttendanceTab(tab, btn) {
     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    
+
     btn.classList.add('active');
     document.getElementById(`attendance-${tab}-tab`).classList.add('active');
-    
+
     if (tab === 'report') {
         updateAttendanceReport();
     }
@@ -2713,7 +2814,7 @@ async function loadAttendanceForDate(date) {
     try {
         const res = await fetch(`/api/attendance?date=${date}`);
         const data = await res.json();
-        
+
         if (data.success && data.records.length > 0) {
             data.records.forEach(r => {
                 const radios = document.getElementsByName(`att-${r.username}`);
@@ -2742,7 +2843,7 @@ function filterAttendanceInput() {
     rows.forEach(row => {
         const studentName = row.cells[1].innerText.toLowerCase();
         const studentClass = row.cells[2].innerText.toLowerCase();
-        
+
         const matchClass = (classFilter === 'all' || studentClass === classFilter);
         const matchSearch = studentName.includes(searchFilter);
 
@@ -2815,7 +2916,7 @@ async function updateAttendanceReport() {
 
         if (data.success) {
             const s = data.summary;
-            
+
             // Render Summary Cards
             summaryDiv.innerHTML = `
             <div class="grid-4">
@@ -2874,7 +2975,7 @@ function toggleDownloadDropdown() {
 }
 
 // Close dropdown on outside click
-window.addEventListener('click', function(e) {
+window.addEventListener('click', function (e) {
     const menu = document.getElementById('download-dropdown-menu');
     if (menu && !e.target.closest('.dropdown')) {
         menu.style.display = 'none';
@@ -2979,11 +3080,11 @@ function downloadBankSoal(format) {
         `;
 
         const opt = {
-            margin:       [15, 15, 15, 15],
-            filename:     `Bank_Soal_Export_${new Date().getTime()}.pdf`,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            margin: [15, 15, 15, 15],
+            filename: `Bank_Soal_Export_${new Date().getTime()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         html2pdf().set(opt).from(element).save();
     } else if (format === 'word') {
@@ -3075,7 +3176,7 @@ function downloadDailyAttendancePDF() {
     element.style.padding = '40px 50px';
     element.style.fontFamily = "'Inter', sans-serif";
     element.style.backgroundColor = '#ffffff';
-    
+
     element.innerHTML = `
         <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; display: flex; flex-direction: column; justify-content: space-around; align-items: center; z-index: 0; opacity: 0.05;">
             <div style="transform: rotate(-35deg); font-size: 4rem; font-weight: 800; color: #1a73e8; white-space: nowrap; margin: 80px 0;">SMP NEGERI 1 BALIKPAPAN</div>
@@ -3129,11 +3230,11 @@ function downloadDailyAttendancePDF() {
     `;
 
     const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `Histori_Absensi_${dateInput}_${className}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: [10, 10, 10, 10],
+        filename: `Histori_Absensi_${dateInput}_${className}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(element).save();
 }
@@ -3141,7 +3242,7 @@ function downloadDailyAttendancePDF() {
 // ---- TEACHER JOURNAL ----
 function renderTeacherJournal(main) {
     const journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
-    
+
     main.innerHTML = `
     <div class="grid-2">
         <div class="card">
@@ -3187,7 +3288,7 @@ function renderTeacherJournal(main) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${journals.sort((a,b) => new Date(b.date) - new Date(a.date)).map(j => `
+                        ${journals.sort((a, b) => new Date(b.date) - new Date(a.date)).map(j => `
                             <tr>
                                 <td>${new Date(j.date).toLocaleDateString('id-ID')}</td>
                                 <td>${j.class}</td>
@@ -3235,13 +3336,13 @@ function initDashboardCharts() {
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
     const results = getAssessmentResults();
-    
+
     let lulus = 0;
     let perluPenguatan = 0;
 
     students.forEach(s => {
         if (classFilter !== 'all' && (s.kelas || 'Tanpa Kelas') !== classFilter) return;
-        
+
         const r = results[s.username];
         if (r && r.pass) {
             lulus++;
@@ -3255,7 +3356,7 @@ function initDashboardCharts() {
     const penguatanPct = 100 - lulusPct;
 
     const ctx = document.getElementById('chart-attainment').getContext('2d');
-    
+
     if (window.attainmentChart) window.attainmentChart.destroy();
 
     window.attainmentChart = new Chart(ctx, {
@@ -3274,17 +3375,17 @@ function initDashboardCharts() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    position: 'bottom', 
-                    labels: { 
+                legend: {
+                    position: 'bottom',
+                    labels: {
                         color: '#e8eaf6',
                         padding: 20,
                         font: { size: 14, weight: '600' }
-                    } 
+                    }
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                             const val = context.raw;
                             const pct = Math.round((val / total) * 100);
                             return ` ${context.label.split(' ')[0]}: ${val} Siswa (${pct}%)`;
@@ -3312,7 +3413,7 @@ function updateAttendanceChart() {
 
     students.forEach(s => {
         if (classFilter !== 'all' && (s.kelas || 'Tanpa Kelas') !== classFilter) return;
-        
+
         const record = todayData[s.username];
         if (record) {
             if (record.status === 'hadir') hadir++;
@@ -3350,15 +3451,15 @@ function renderJournalSummary() {
     const journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
     const container = document.getElementById('journal-summary-content');
     if (!container) return;
-    
+
     if (journals.length === 0) {
         container.innerHTML = '<p class="text-muted text-center">Belum ada jurnal yang tercatat.</p>';
         return;
     }
 
     // Get last 3 journals
-    const latest = journals.sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
-    
+    const latest = journals.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+
     container.innerHTML = `
         <div class="grid-3">
             ${latest.map(j => `
@@ -3633,7 +3734,7 @@ async function editBankSoal(id) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.id = 'edit-soal-modal';
-        
+
         const students = getUsers().filter(u => u.role === 'siswa');
         const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
 
@@ -3738,7 +3839,7 @@ async function handleUpdateSoal(e, id) {
         if (data.success) {
             alert('✅ Soal berhasil diperbarui!');
             document.getElementById('edit-soal-modal').remove();
-            
+
             // Refresh current view
             const activeTab = document.querySelector('.tabs .tab-button.active');
             if (activeTab) {
@@ -3760,9 +3861,9 @@ window.tempEditImage = null;
 function previewEditImage(input) {
     const file = input.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         window.tempEditImage = e.target.result;
         const preview = document.getElementById('edit-ms-image-preview');
         preview.innerHTML = `
@@ -3814,7 +3915,7 @@ function handlePasteImage(e, previewId, mode) {
 
 function processImageFile(file, previewId, mode) {
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         const base64 = e.target.result;
         if (mode === 'manual') window.tempManualImage = base64;
         else window.tempEditImage = base64;
@@ -3878,7 +3979,7 @@ async function loadViolationData(kelas) {
     try {
         const res = await fetch('/api/violations');
         const data = await res.json();
-        
+
         if (data.success) {
             let v = data.violations;
             if (kelas !== 'all') {
@@ -3912,4 +4013,4 @@ async function loadViolationData(kelas) {
     } catch (err) {
         container.innerHTML = '<div class="error-msg">Gagal memuat data pelanggaran.</div>';
     }
-}
+}

@@ -102,7 +102,7 @@ let currentMaterial = null;
  */
 function formatMaterialContent(rawText, title) {
     if (!rawText) return '<p class="text-muted">Konten kosong.</p>';
-    
+
     // Bersihkan whitespace berlebih dan split per baris
     const lines = rawText.split('\n').map(l => l.trimEnd());
     let html = '';
@@ -174,16 +174,16 @@ function renderTahap1(main) {
     materials = materials.filter(m => {
         if (!m.kelas || m.kelas === 'Semua Kelas') return true;
         if (m.kelas === currentUser.kelas) return true;
-        
+
         const getGrade = (kelasStr) => {
             if (!kelasStr) return null;
             const match = kelasStr.match(/^\d+/);
             return match ? match[0] : kelasStr;
         };
-        
+
         const mGrade = getGrade(m.kelas);
         const userGrade = getGrade(currentUser.kelas);
-        
+
         return mGrade && userGrade && mGrade === userGrade;
     });
 
@@ -361,11 +361,12 @@ async function viewMaterial(id, type) {
     if (!material) return;
 
     const wrapper = document.getElementById('viewer-content-wrapper');
-    
+
     // Default: Show PDF in iframe if it's a PDF
     if (type === 'pdf') {
         const urlObj = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
         wrapper.innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none; background: white;"></iframe>`;
+        return;
     } else if (type === 'html' || type === 'ai') {
         let currentMatData = material;
         if (!currentMatData.contentDataUrl) {
@@ -408,49 +409,49 @@ async function viewMaterial(id, type) {
                     <div class="material-text-content">${htmlContent}</div>
                 </div>
             </div>`;
-    } else {
-        // For non-PDF or fallback, show text content
-        let textContent = material.content || '';
+    }
 
-        // Jika content belum ada di cache, ambil dari backend
-        if (!textContent && material._id) {
-            wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
-            try {
-                const res = await fetch(`/api/materials/${material._id}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success && data.material && data.material.content) {
-                        textContent = data.material.content;
-                    }
+    // For non-PDF or fallback, show text content
+    let textContent = material.content || '';
+
+    // Jika content belum ada di cache, ambil dari backend
+    if (!textContent && material._id) {
+        wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
+        try {
+            const res = await fetch(`/api/materials/${material._id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.material && data.material.content) {
+                    textContent = data.material.content;
                 }
-            } catch(err) {
-                console.warn('Gagal fetch content materi:', err);
             }
+        } catch (err) {
+            console.warn('Gagal fetch content materi:', err);
         }
+    }
 
-        if (textContent && textContent.trim()) {
-            const formattedHTML = formatMaterialContent(textContent, material.name);
-            wrapper.innerHTML = `
-                <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
-                    <div style="max-width:800px; margin:0 auto;">
-                        <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
-                            <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
-                        </h2>
-                        <div class="material-text-content">${formattedHTML}</div>
-                    </div>
-                </div>`;
-        } else {
-            wrapper.innerHTML = `
-                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center; background: var(--bg-input);">
-                    <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
-                    <h4>${material.name}</h4>
-                    <p class="text-muted">Format: ${type.toUpperCase()}</p>
-                    <div class="mt-2" style="max-width: 60%; color: var(--text-muted)">
-                        Tampilan preview tidak tersedia untuk format ini.<br>
-                        Silakan gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
-                    </div>
-                </div>`;
-        }
+    if (textContent && textContent.trim()) {
+        const formattedHTML = formatMaterialContent(textContent, material.name);
+        wrapper.innerHTML = `
+            <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
+                <div style="max-width:800px; margin:0 auto;">
+                    <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
+                        <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
+                    </h2>
+                    <div class="material-text-content">${formattedHTML}</div>
+                </div>
+            </div>`;
+    } else {
+        wrapper.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center; background: var(--bg-input);">
+                <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
+                <h4>${material.name}</h4>
+                <p class="text-muted">Format: ${type.toUpperCase()}</p>
+                <div class="mt-2" style="max-width: 60%; color: var(--text-muted)">
+                    Tampilan preview tidak tersedia untuk format ini.<br>
+                    Silakan gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
+                </div>
+            </div>`;
     }
 
     // Avoid duplicate initialization if switching material inside the viewer
@@ -472,7 +473,7 @@ async function viewMaterial(id, type) {
 
         const chatBox = document.getElementById('floating-chat-messages');
         chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
-        
+
         const users = getUsers();
         const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
         const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
@@ -493,7 +494,7 @@ async function viewMaterial(id, type) {
                 } else {
                     history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
                 }
-                
+
                 // Update local storage
                 const histories = getChatHistories();
                 histories[currentUser.username] = history;
@@ -509,7 +510,7 @@ async function viewMaterial(id, type) {
         // Even if same material, ensure chatbot is visible and context is set
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
-        
+
         const contextEl = document.getElementById('chat-material-context');
         const materials = getMaterials();
         const mat = materials.find(m => m._id === id || m.name === id);
@@ -526,20 +527,20 @@ function updateChatMaterial(id) {
         if (contextEl) contextEl.textContent = 'Membahas: Pilih Materi';
         return;
     }
-    
+
     const materials = getMaterials();
     const material = materials.find(m => m._id === id);
     if (material) {
         currentMaterial = id;
-        
+
         // Update header UI
         const contextEl = document.getElementById('chat-material-context');
         if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
-        
+
         // Load chat history for this specific material
         const chatBox = document.getElementById('floating-chat-messages');
         chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
-        
+
         const users = getUsers();
         const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
         const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
@@ -866,7 +867,7 @@ function startChatbotCountdown(score) {
     overlay.style.cssText = 'position:absolute; top:35%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:280px; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); color:white; z-index:100; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:1.5rem; text-align:center; transition:all 0.3s; border:1px solid rgba(255,255,255,0.1);';
 
     let seconds = 10;
-    
+
     // Tombol batal jika skor < 75
     let cancelBtnHTML = '';
     if (score !== undefined && score < 75) {
@@ -927,7 +928,7 @@ function showTahap2Pointer() {
     // Pastikan tombol terlihat
     btn.style.display = 'inline-block';
     localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
-    
+
     // Scroll ke tombol agar terlihat
     btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
@@ -977,7 +978,7 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
 
     const chatBox = document.getElementById('floating-chat-messages');
-    
+
     // Tampilkan pesan di UI hanya jika tidak silent
     if (!isSilent) {
         appendFloatingMessage('user', msg, teacherPhoto);
@@ -1245,7 +1246,7 @@ function renderTahap3(main) {
         if (r) {
             const pct = Math.round((r.score / r.total) * 100);
             const pass = pct >= 70;
-            
+
             let remedialInfo = '';
             if (!pass) {
                 const settings = getAssessmentSettings();
@@ -1295,9 +1296,9 @@ function renderTahap3(main) {
     showAssessmentQuestion(main);
 }
 
-window.startRemedialMandiri = async function() {
+window.startRemedialMandiri = async function () {
     if (!confirm('Apakah kamu yakin ingin memulai Remedial Mandiri sekarang? Soal baru akan disiapkan.')) return;
-    
+
     const settings = getAssessmentSettings();
     const amount = settings.questionAmount || 50;
 
@@ -1325,9 +1326,9 @@ window.startRemedialMandiri = async function() {
         progress.tahap3Complete = false;
         progress.remedialStatus = 'approved';
         updateProgress(currentUser.username, progress);
-        
+
         renderTahap3(document.getElementById('main-content'));
-    } catch(err) {
+    } catch (err) {
         console.error(err);
         alert(err.message || 'Gagal menyiapkan soal Remedial Mandiri!');
         if (btn) {
@@ -1357,7 +1358,7 @@ async function startAssessment() {
             body: JSON.stringify({ username: currentUser.username, amount: settings.questionAmount || 10 })
         });
         const data = await res.json();
-        
+
         if (data.success && data.questions && data.questions.length > 0) {
             const progress = getProgress(currentUser.username);
             progress.generatedAssessment = data.questions;
@@ -1371,7 +1372,7 @@ async function startAssessment() {
             assessmentActive = false;
             return;
         }
-    } catch(err) {
+    } catch (err) {
         alert('Gagal menghubungi server untuk mengambil soal.');
         if (btn) {
             btn.disabled = false;
@@ -1541,7 +1542,7 @@ async function submitAssessment(autoRedirect = false) {
     const results = getAssessmentResults();
     const existingResult = results[currentUser.username];
     let remedialCount = existingResult ? (existingResult.remedialCount || 0) : 0;
-    
+
     if (existingResult) {
         remedialCount++;
     }
@@ -1894,11 +1895,11 @@ function downloadProgressReportPDF() {
     `;
 
     const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `Laporan_NARA_AI_${currentUser.username}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: [10, 10, 10, 10],
+        filename: `Laporan_NARA_AI_${currentUser.username}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save();
