@@ -3,6 +3,7 @@ global.DOMPoint = class {};
 global.DOMRect = class {};
 const Material = require('../models/Material');
 const mammoth = require('mammoth');
+const aiService = require('../services/aiService');
 
 // pdf-parse v2 helper
 async function parsePdfBuffer(buffer) {
@@ -112,6 +113,53 @@ exports.deleteMaterial = async (req, res) => {
         await Material.findByIdAndDelete(id);
         res.json({ success: true });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.generateMaterialFromAI = async (req, res) => {
+    try {
+        const { tujuanPembelajaran, kelas, sumberGambar } = req.body;
+        if (!tujuanPembelajaran || !kelas) {
+            return res.status(400).json({ error: 'Tujuan Pembelajaran dan Kelas wajib diisi.' });
+        }
+
+        console.log(`[AI Material] Generating material for Class: ${kelas}, Objective: ${tujuanPembelajaran}, Image Source: ${sumberGambar}`);
+        
+        // Call AI Service to generate HTML content
+        const htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar);
+
+        // Strip HTML tags to get clean plain text content for search / chatbot context
+        const plainTextContent = htmlContent
+            .replace(/<style([\s\S]*?)<\/style>/gi, '')
+            .replace(/<script([\s\S]*?)<\/script>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // Create Mongoose Document
+        const materialName = `Materi AI: ${tujuanPembelajaran.substring(0, 50)}${tujuanPembelajaran.length > 50 ? '...' : ''}`;
+        
+        // Base64 encode htmlContent to satisfy contentDataUrl requirement
+        const base64Content = Buffer.from(htmlContent).toString('base64');
+        const contentDataUrl = `data:text/html;base64,${base64Content}`;
+
+        const newMaterial = new Material({
+            name: materialName,
+            type: 'html', // save as html type
+            date: new Date(),
+            size: Buffer.byteLength(htmlContent),
+            contentDataUrl: contentDataUrl,
+            content: plainTextContent, // store full text for chatbot/search context
+            kelas: kelas
+        });
+
+        await newMaterial.save();
+        console.log(`[AI Material] Successfully generated and saved: ${materialName}`);
+
+        res.json({ success: true, material: newMaterial });
+    } catch (err) {
+        console.error('[AI Material] Error generating material:', err);
         res.status(500).json({ error: err.message });
     }
 };

@@ -520,26 +520,59 @@ function renderMaterials(main) {
         </div>
         
         <div style="padding:1.5rem; border-bottom:1px solid var(--border-color); background:var(--bg-input);">
-            <h4 style="margin-bottom:1rem">📤 Upload Materi Baru</h4>
-            <div class="form-group mb-2">
-                <label>Target Kelas</label>
-                <select id="material-target-kelas" class="form-control">
-                    <option value="Semua Kelas">Semua Kelas</option>
-                    ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
-                </select>
+            <div style="display:flex; gap:1rem; border-bottom:1px solid var(--border-color); margin-bottom:1.5rem;">
+                <button class="tab-btn active" id="btn-tab-upload" onclick="switchMaterialTab('upload')" style="background:none; border:none; padding:0.75rem 1.5rem; color:var(--primary); border-bottom:3px solid var(--primary); font-weight:600; cursor:pointer;">📤 Upload Manual</button>
+                <button class="tab-btn" id="btn-tab-ai" onclick="switchMaterialTab('ai')" style="background:none; border:none; padding:0.75rem 1.5rem; color:var(--text-secondary); border-bottom:3px solid transparent; font-weight:600; cursor:pointer;"><i class="fas fa-robot"></i> Buat dengan AI</button>
             </div>
-            <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <p>Klik untuk upload materi (PDF, DOC, DOCX)</p>
-                <p class="text-muted" style="font-size:0.8rem">Siswa kelas terpilih akan membaca materi ini di Tahap 1</p>
-                <input type="file" id="material-upload" accept=".pdf,.doc,.docx" style="display:none" onchange="handleMaterialUpload(event)">
+
+            <!-- Upload Tab Content -->
+            <div id="tab-content-upload">
+                <div class="form-group mb-2">
+                    <label>Target Kelas</label>
+                    <select id="material-target-kelas" class="form-control">
+                        <option value="Semua Kelas">Semua Kelas</option>
+                        ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Klik untuk upload materi (PDF, DOC, DOCX)</p>
+                    <p class="text-muted" style="font-size:0.8rem">Siswa kelas terpilih akan membaca materi ini di Tahap 1</p>
+                    <input type="file" id="material-upload" accept=".pdf,.doc,.docx" style="display:none" onchange="handleMaterialUpload(event)">
+                </div>
+            </div>
+
+            <!-- AI Generator Tab Content -->
+            <div id="tab-content-ai" style="display:none;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div class="form-group">
+                        <label>Tujuan Kelas</label>
+                        <select id="ai-material-target-kelas" class="form-control">
+                            <option value="Semua Kelas">Semua Kelas</option>
+                            ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Sumber Gambar</label>
+                        <select id="ai-material-image-source" class="form-control">
+                            <option value="AI">Dihasilkan AI (Pollinations)</option>
+                            <option value="Internet">Diambil dari Internet (Unsplash)</option>
+                            <option value="Kedua-duanya">Kedua-duanya (AI & Internet)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group mb-2">
+                    <label>Tujuan Pembelajaran</label>
+                    <textarea id="ai-material-objective" class="form-control" rows="3" placeholder="Contoh: Siswa dapat memahami proses Fotosintesis pada tumbuhan, termasuk reaksi terang dan gelap, serta faktor yang mempengaruhinya." style="resize:vertical;"></textarea>
+                </div>
+                <button id="btn-generate-ai-material" class="btn btn-primary" onclick="generateMaterialWithAI()" style="width:100%; padding:0.8rem; background:var(--gradient-primary); font-weight:600;"><i class="fas fa-magic"></i> Racik Materi Pembelajaran dengan AI</button>
             </div>
         </div>
 
         <div class="material-list" id="material-list" style="padding:1rem">
             ${materials.map((m) => `
                 <div class="material-item" data-kelas="${m.kelas || 'Semua Kelas'}">
-                    <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}"></i>
+                    <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : m.type === 'html' || m.type === 'ai' ? 'fa-robot' : 'fa-file-word'}"></i>
                     <div style="flex:1">
                         <div style="font-weight:600">${m.name}</div>
                         <div style="font-size:0.75rem" class="text-muted">
@@ -551,6 +584,86 @@ function renderMaterials(main) {
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi diupload</p>'}
         </div>
     </div>`;
+}
+
+window.switchMaterialTab = function(tab) {
+    const btnUpload = document.getElementById('btn-tab-upload');
+    const btnAI = document.getElementById('btn-tab-ai');
+    const tabUpload = document.getElementById('tab-content-upload');
+    const tabAI = document.getElementById('tab-content-ai');
+
+    if (!btnUpload || !btnAI || !tabUpload || !tabAI) return;
+
+    if (tab === 'upload') {
+        btnUpload.classList.add('active');
+        btnUpload.style.color = 'var(--primary)';
+        btnUpload.style.borderBottom = '3px solid var(--primary)';
+        
+        btnAI.classList.remove('active');
+        btnAI.style.color = 'var(--text-secondary)';
+        btnAI.style.borderBottom = '3px solid transparent';
+
+        tabUpload.style.display = 'block';
+        tabAI.style.display = 'none';
+    } else {
+        btnAI.classList.add('active');
+        btnAI.style.color = 'var(--primary)';
+        btnAI.style.borderBottom = '3px solid var(--primary)';
+        
+        btnUpload.classList.remove('active');
+        btnUpload.style.color = 'var(--text-secondary)';
+        btnUpload.style.borderBottom = '3px solid transparent';
+
+        tabUpload.style.display = 'none';
+        tabAI.style.display = 'block';
+    }
+}
+
+window.generateMaterialWithAI = async function() {
+    const objective = document.getElementById('ai-material-objective').value.trim();
+    const kelas = document.getElementById('ai-material-target-kelas').value;
+    const imageSource = document.getElementById('ai-material-image-source').value;
+
+    if (!objective) {
+        alert('Tujuan Pembelajaran wajib diisi!');
+        return;
+    }
+
+    const btn = document.getElementById('btn-generate-ai-material');
+    if (!btn) return;
+    
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sedang meracik materi belajar terbaik dengan AI... (Mungkin perlu 1-2 menit)';
+
+    try {
+        const res = await fetch('/api/materials/generate-ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                tujuanPembelajaran: objective,
+                kelas: kelas,
+                sumberGambar: imageSource
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert('🎉 Sukses! Materi belajar AI berhasil diracik dan disimpan!');
+            await syncData();
+            renderMaterials(document.getElementById('main-content'));
+        } else {
+            alert('Gagal meracik materi: ' + (data.error || 'Unknown error'));
+        }
+    } catch (err) {
+        console.error('Error generating AI material:', err);
+        alert('Server error saat meracik materi AI.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
 }
 
 function filterMaterialsByClass() {

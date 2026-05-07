@@ -201,7 +201,7 @@ function renderTahap1(main) {
             ${materials.map((m, i) => `
                 <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="viewMaterial('${m._id}', '${m.type}')">
                     <div>
-                        <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle;"></i>
+                        <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : m.type === 'html' || m.type === 'ai' ? 'fa-robot' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle;"></i>
                         <span style="font-weight: 500;">${m.name}</span>
                         <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
                     </div>
@@ -366,50 +366,91 @@ async function viewMaterial(id, type) {
     if (type === 'pdf') {
         const urlObj = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
         wrapper.innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none; background: white;"></iframe>`;
-        return;
-    }
-
-    // For non-PDF or fallback, show text content
-    let textContent = material.content || '';
-
-    // Jika content belum ada di cache, ambil dari backend
-    if (!textContent && material._id) {
-        wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
-        try {
-            const res = await fetch(`/api/materials/${material._id}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.material && data.material.content) {
-                    textContent = data.material.content;
+    } else if (type === 'html' || type === 'ai') {
+        let currentMatData = material;
+        if (!currentMatData.contentDataUrl) {
+            wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
+            try {
+                const res = await fetch(`/api/materials/${material._id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.material) {
+                        currentMatData = data.material;
+                    }
                 }
+            } catch (err) {
+                console.warn('Gagal fetch material:', err);
             }
-        } catch(err) {
-            console.warn('Gagal fetch content materi:', err);
         }
-    }
+        
+        let htmlContent = '';
+        if (currentMatData.contentDataUrl) {
+            try {
+                const base64Data = currentMatData.contentDataUrl.split(',')[1];
+                const utf8Decoder = new TextDecoder('utf-8');
+                const binaryStr = atob(base64Data);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }
+                htmlContent = utf8Decoder.decode(bytes);
+            } catch (e) {
+                console.error('Failed to decode HTML content:', e);
+                htmlContent = currentMatData.content || '<p class="text-muted">Gagal memuat format HTML.</p>';
+            }
+        } else {
+            htmlContent = currentMatData.content || '<p class="text-muted">Konten kosong.</p>';
+        }
 
-    if (textContent && textContent.trim()) {
-        const formattedHTML = formatMaterialContent(textContent, material.name);
         wrapper.innerHTML = `
             <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
                 <div style="max-width:800px; margin:0 auto;">
-                    <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
-                        <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
-                    </h2>
-                    <div class="material-text-content">${formattedHTML}</div>
+                    <div class="material-text-content">${htmlContent}</div>
                 </div>
             </div>`;
     } else {
-        wrapper.innerHTML = `
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center; background: var(--bg-input);">
-                <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
-                <h4>${material.name}</h4>
-                <p class="text-muted">Format: ${type.toUpperCase()}</p>
-                <div class="mt-2" style="max-width: 60%; color: var(--text-muted)">
-                    Tampilan preview tidak tersedia untuk format ini.<br>
-                    Silakan gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
-                </div>
-            </div>`;
+        // For non-PDF or fallback, show text content
+        let textContent = material.content || '';
+
+        // Jika content belum ada di cache, ambil dari backend
+        if (!textContent && material._id) {
+            wrapper.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;"><i class="fas fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i><p style="margin-left:1rem;">Memuat materi...</p></div>';
+            try {
+                const res = await fetch(`/api/materials/${material._id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.material && data.material.content) {
+                        textContent = data.material.content;
+                    }
+                }
+            } catch(err) {
+                console.warn('Gagal fetch content materi:', err);
+            }
+        }
+
+        if (textContent && textContent.trim()) {
+            const formattedHTML = formatMaterialContent(textContent, material.name);
+            wrapper.innerHTML = `
+                <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
+                    <div style="max-width:800px; margin:0 auto;">
+                        <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
+                            <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
+                        </h2>
+                        <div class="material-text-content">${formattedHTML}</div>
+                    </div>
+                </div>`;
+        } else {
+            wrapper.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center; background: var(--bg-input);">
+                    <i class="fas fa-file-alt" style="font-size: 4rem; color: var(--primary-light); margin-bottom: 1rem;"></i>
+                    <h4>${material.name}</h4>
+                    <p class="text-muted">Format: ${type.toUpperCase()}</p>
+                    <div class="mt-2" style="max-width: 60%; color: var(--text-muted)">
+                        Tampilan preview tidak tersedia untuk format ini.<br>
+                        Silakan gunakan tombol <strong>Download</strong> untuk membaca file aslinya.
+                    </div>
+                </div>`;
+        }
     }
 
     // Avoid duplicate initialization if switching material inside the viewer

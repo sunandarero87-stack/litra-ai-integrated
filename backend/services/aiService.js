@@ -415,6 +415,62 @@ async function analyzeUnderstanding(username, originalExplanation, studentAnswer
     }
 }
 
+async function generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar = 'AI') {
+    const prompt = `Kamu adalah AI Pakar Pedagogi dan Guru Kreatif yang ahli dalam merancang materi pembelajaran berkualitas tinggi, interaktif, dan premium.
+Tugasmu adalah menyusun materi pembelajaran lengkap, mendalam, dan menarik yang cocok untuk siswa tingkat/kelas: "${kelas}".
+
+Materi harus disusun berdasarkan indikator:
+- Tujuan Pembelajaran: "${tujuanPembelajaran}"
+- Sumber Gambar: "${sumberGambar}"
+
+PENTING - Gaya Penulisan Konten:
+1. Materi harus sangat lengkap, berbobot, terperinci, terstruktur dengan sub-heading yang jelas, mudah dipahami siswa, serta memikat secara visual. Jangan buat materi yang singkat atau malas. Berikan materi yang kaya informasi dan penjelasannya detail.
+2. Gunakan Bahasa Indonesia baku sesuai Ejaan Yang Disempurnakan (EYD) yang santun dan menarik bagi siswa.
+3. Struktur materi wajib meliputi:
+   - Judul Materi (menarik & edukatif)
+   - Pendahuluan (motivasi, apa relevansi materi ini dalam kehidupan sehari-hari)
+   - Pembahasan Utama (jelaskan konsep-konsep kunci dengan contoh nyata dan analogi yang seru)
+   - Bagian Penting (gunakan info box atau sorotan teks)
+   - Ringkasan / Kesimpulan
+
+PENTING - Desain Visual HTML (Gaya Premium):
+- Tulis materi dalam bentuk kode HTML murni yang rapi (TANPA menyertakan tag <html>, <head>, atau <body> utama, cukup elemen-elemen kontennya saja yang dibungkus dalam sebuah <div style="...">).
+- Gunakan style inline untuk mempercantik tampilan elemen:
+  - Gunakan card bergaya modern, glassmorphism, atau border tipis yang estetik: <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: var(--shadow-sm);">
+  - Gunakan warna-warna harmonis seperti biru cerah, hijau segar, atau orange hangat untuk header (contoh: <h3 style="color: var(--primary); margin-top: 1.5rem; margin-bottom: 0.75rem;">).
+  - Gunakan blockquote menarik untuk highlight: <blockquote style="border-left: 4px solid var(--primary); padding-left: 1rem; margin: 1rem 0; font-style: italic; color: var(--text-secondary);">
+
+Penyisipan Gambar:
+- Sisipkan tepat 2 atau 3 gambar relevan di dalam materi menggunakan tag <img> dengan style inline yang rapi:
+  <img src="URL_GAMBAR" style="display: block; margin: 1.5rem auto; max-width: 100%; width: 600px; height: auto; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" alt="Deskripsi Gambar">
+  <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); font-style: italic; margin-top: -1rem; margin-bottom: 1.5rem;">[Deskripsi/Caption Gambar Relevan]</p>
+- Aturan URL_GAMBAR berdasarkan Sumber Gambar ("${sumberGambar}"):
+  - Jika sumberGambar adalah "AI" atau "Kedua-duanya", gunakan generator gambar Pollinations AI dengan prompt artistik dan deskriptif bahasa Inggris yang di-encode ke URL (contoh: https://image.pollinations.ai/prompt/scientific_illustration_of_photosynthesis_drawn_by_professional_artist_3d_render?width=800&height=500&nologo=true)
+  - Jika sumberGambar adalah "Internet" atau "Kedua-duanya", gunakan URL Unsplash dengan keyword relevan dalam bahasa Inggris (contoh: https://images.unsplash.com/photo-1507413245164-6160d8298b31?q=80&w=800 atau https://source.unsplash.com/featured/800x500/?photosynthesis,leaves)
+  - Pastikan URL gambar valid, lengkap, dan tidak rusak.
+
+Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan menyertakan tanda kutip markdown \`\`\`html di awal dan di akhir, cukup teks HTML murni.`;
+
+    const payload = {
+        messages: [
+            { role: "system", content: "Kamu adalah AI asisten pembuat materi pembelajaran HTML interaktif dan estetik." },
+            { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 3500
+    };
+
+    const response = await requestWithFallback(payload);
+    let htmlContent = response.data.choices[0].message.content;
+    
+    // Clean if AI wrapped it in markdown code block anyway
+    if (htmlContent.startsWith("```")) {
+        htmlContent = htmlContent.replace(/^```html\s*/i, "").replace(/```$/, "").trim();
+    }
+    
+    return htmlContent;
+}
+
 module.exports = {
     generateResponse,
     generateReflections,
@@ -423,5 +479,6 @@ module.exports = {
     analyzeHabits,
     generateBankSoal,
     generateBankSoalFromMaterial,
-    analyzeUnderstanding
+    analyzeUnderstanding,
+    generateLearningMaterial
 };

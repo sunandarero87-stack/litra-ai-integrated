@@ -121,6 +121,7 @@ app.delete('/api/violations/all', progressController.clearViolations);
 app.get('/api/materials', materialController.getMaterials);
 app.get('/api/materials/content/:id', materialController.getMaterialContent);
 app.get('/api/materials/:id', materialController.getMaterialById);
+app.post('/api/materials/generate-ai', materialController.generateMaterialFromAI);
 app.post('/api/materials', materialController.addMaterial);
 app.delete('/api/materials/:id', materialController.deleteMaterial);
 
