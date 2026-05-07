@@ -878,7 +878,7 @@ window.viewMaterialTeacher = async function (id) {
                         banner = document.createElement('div');
                         banner.id = 'edit-material-banner';
                         banner.style.cssText = 'background:var(--primary); color:white; padding:0.75rem 1.2rem; border-radius:8px; margin-bottom:1.5rem; font-size:0.85rem; display:flex; align-items:center; gap:0.5rem; line-height:1.4;';
-                        banner.innerHTML = '<i class="fas fa-info-circle"></i> <span><strong>Mode Edit Aktif:</strong> Silakan edit teks langsung di bawah. <strong>Double-klik gambar</strong> untuk ganti URL gambar, atau <strong>Double-klik video</strong> untuk mengganti link YouTube.</span>';
+                        banner.innerHTML = '<i class="fas fa-info-circle"></i> <span><strong>Mode Edit Aktif:</strong> Silakan edit teks langsung di bawah. <strong>Double-klik gambar</strong> untuk ganti URL gambar, atau <strong>Klik tombol merah</strong> di atas video untuk mengganti link YouTube.</span>';
                         container.parentNode.insertBefore(banner, container);
                     } else {
                         banner.style.display = 'flex';
@@ -899,9 +899,19 @@ window.viewMaterialTeacher = async function (id) {
 
                         const iframes = container.querySelectorAll('iframe');
                         iframes.forEach(iframe => {
-                            iframe.style.cursor = 'pointer';
-                            iframe.title = 'Double-klik untuk mengganti video YouTube';
-                            iframe.ondblclick = function (e) {
+                            // Check if edit button already exists next to this iframe
+                            let btnVideo = iframe.previousElementSibling;
+                            if (!btnVideo || !btnVideo.classList.contains('edit-video-btn')) {
+                                btnVideo = document.createElement('button');
+                                btnVideo.className = 'edit-video-btn btn btn-sm btn-danger';
+                                btnVideo.contentEditable = 'false'; // prevent editing button text directly
+                                btnVideo.style.cssText = 'display:block; margin: 1rem auto 0.5rem auto; font-weight:600; font-size:0.8rem;';
+                                btnVideo.innerHTML = '<i class="fab fa-youtube"></i> Ganti Link Video YouTube';
+                                iframe.parentNode.insertBefore(btnVideo, iframe);
+                            }
+
+                            btnVideo.onclick = function (e) {
+                                e.preventDefault();
                                 e.stopPropagation();
                                 const newUrl = prompt('Masukkan Link YouTube Baru (contoh: https://www.youtube.com/watch?v=VIDEO_ID):', iframe.src);
                                 if (newUrl) {
@@ -934,6 +944,9 @@ window.viewMaterialTeacher = async function (id) {
 
                     const banner = document.getElementById('edit-material-banner');
                     if (banner) banner.style.display = 'none';
+
+                    // Remove edit-video-btn elements so they aren't stored in the database
+                    container.querySelectorAll('.edit-video-btn').forEach(btn => btn.remove());
 
                     const updatedHtml = container.innerHTML;
 
