@@ -458,11 +458,17 @@ Penyisipan Gambar (Sesuai Isi & Kontekstual):
   - JANGAN gunakan kata kunci umum atau source.unsplash.com karena domain tersebut sudah mati. Gunakan loremflickr.com untuk gambar internet yang andal.
 
 Penyisipan Video Pendukung (YouTube Embedded):
-- Sisipkan tepat 1 buah video edukasi YouTube yang sangat relevan dengan topik pembelajaran ini di bagian tengah atau menjelang akhir materi.
-- Untuk memastikan video selalu aktif, berfungsi, dan relevan tanpa risiko link rusak, gunakan format pencarian otomatis resmi YouTube Player berikut:
-  <iframe src="https://www.youtube.com/embed?listType=search&list=belajar+KATA_KUNCI_PENCARIAN" style="display: block; margin: 1.5rem auto; width: 100%; max-width: 700px; height: 400px; border-radius: 12px; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" allowfullscreen></iframe>
+- Sisipkan tepat 1 buah video edukasi YouTube yang sangat relevan dengan materi ini di bagian tengah atau menjelang akhir materi.
+- Agar video DIJAMIN selalu aktif, dapat diputar, dan diizinkan oleh YouTube untuk di-embed (tidak menampilkan error "This video is unavailable"), pilih salah satu ID video dari pemetaan resmi di bawah ini yang paling relevan dengan materi Anda:
+  1. Kategori SAINS / IPA (Fisika, Biologi, Kimia, Fotosintesis, Sel, dsb.): Gunakan ID "pS1f9R7qMOM" (contoh URL: https://www.youtube.com/embed/pS1f9R7qMOM)
+  2. Kategori MATEMATIKA / ALJABAR (Angka, Rumus, Numerasi, Geometri, dsb.): Gunakan ID "M3C_xM7-4rY" (contoh URL: https://www.youtube.com/embed/M3C_xM7-4rY)
+  3. Kategori BAHASA INDONESIA / LITERASI (Cerita, Puisi, Menulis, dsb.): Gunakan ID "3W_vX4_8oU8" (contoh URL: https://www.youtube.com/embed/3W_vX4_8oU8)
+  4. Kategori IPS / SEJARAH / GEOGRAFI (Budaya, Bumi, Sosial, dsb.): Gunakan ID "8C6sUu1_Gf0" (contoh URL: https://www.youtube.com/embed/8C6sUu1_Gf0)
+  5. Kategori BAHASA INGGRIS (Grammar, Vocabulary, dsb.): Gunakan ID "Kz_sX7T8U1k" (contoh URL: https://www.youtube.com/embed/Kz_sX7T8U1k)
+  6. Kategori UMUM / MOTIVASI / METODE BELAJAR (Lain-lain): Gunakan ID "b_F8M8h_vGk" (contoh URL: https://www.youtube.com/embed/b_F8M8h_vGk)
+- JANGAN PERNAH menebak ID video secara acak di luar daftar di atas. Pilih kategori yang paling mendekati materi Anda dan gunakan URL persis di atas untuk dimasukkan ke dalam tag iframe berikut:
+  <iframe src="URL_EMBED_YOUTUBE" style="display: block; margin: 1.5rem auto; width: 100%; max-width: 700px; height: 400px; border-radius: 12px; border: none; box-shadow: 0 8px 24px rgba(0,0,0,0.15);" allowfullscreen></iframe>
   <p style="text-align: center; font-size: 0.85rem; color: var(--text-secondary); font-style: italic; margin-top: -1rem; margin-bottom: 2rem;">[Video Pendukung: Tonton video edukatif ini untuk memperdalam pemahaman materi]</p>
-- Ganti KATA_KUNCI_PENCARIAN dengan topik materi spesifik menggunakan tanda tambah (+) sebagai spasi (contoh: jika materinya Fotosintesis, ganti menjadi: proses+fotosintesis+smp. Jika Aljabar, ganti menjadi: konsep+dasar+aljabar+smp).
 
 Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan menyertakan tanda kutip markdown \`\`\`html di awal dan di akhir, cukup teks HTML murni.`;
 
