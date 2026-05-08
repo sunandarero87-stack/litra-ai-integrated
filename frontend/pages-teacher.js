@@ -2897,7 +2897,7 @@ function renderStudentAttendance(main) {
                     </select>
                     <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:180px; padding:0.4rem;" placeholder="Cari Nama..." onkeyup="filterAttendanceInput()">
                     <button class="btn btn-outline" onclick="downloadDailyAttendancePDF()" style="border-color: #ef4444; color: #ef4444;"><i class="fas fa-file-pdf"></i> Download PDF</button>
-                    <button class="btn btn-success" onclick="saveAttendance()"><i class="fas fa-save"></i> Simpan</button>
+                    <button class="btn btn-success" onclick="saveAttendance(event)"><i class="fas fa-save"></i> Simpan</button>
                 </div>
             </div>
             <div class="table-container">
@@ -3000,6 +3000,13 @@ async function loadAttendanceForDate(date) {
         label.innerText = `Presensi: ${d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}`;
     }
 
+    // Always reset all radio buttons to "hadir" first to ensure a clean state
+    const allRadios = document.querySelectorAll('input[type="radio"][name^="att-"]');
+    allRadios.forEach(rd => {
+        if (rd.value === 'hadir') rd.checked = true;
+        else rd.checked = false;
+    });
+
     try {
         const res = await fetch(`/api/attendance?date=${date}`);
         const data = await res.json();
@@ -3010,13 +3017,6 @@ async function loadAttendanceForDate(date) {
                 radios.forEach(rd => {
                     if (rd.value === r.status) rd.checked = true;
                 });
-            });
-        } else {
-            // Reset to "hadir"
-            const allRadios = document.querySelectorAll('input[type="radio"][name^="att-"]');
-            allRadios.forEach(rd => {
-                if (rd.value === 'hadir') rd.checked = true;
-                else rd.checked = false;
             });
         }
     } catch (err) {
@@ -3045,12 +3045,14 @@ function filterAttendanceInput() {
 }
 
 
-async function saveAttendance() {
+async function saveAttendance(event) {
     const date = document.getElementById('attendance-date-input').value;
-    const btn = event.target.closest('button');
-    const originalContent = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    const btn = event ? event.currentTarget || event.target.closest('button') : null;
+    const originalContent = btn ? btn.innerHTML : '<i class="fas fa-save"></i> Simpan';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+    }
 
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
@@ -3085,8 +3087,10 @@ async function saveAttendance() {
         console.error(err);
         alert('Gagal menyimpan absensi ke server.');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
     }
 }
 
