@@ -28,7 +28,7 @@ function renderStudentDashboard(main) {
 
     const t1Status = progress.tahap1Complete ? 'completed' : 'unlocked';
     const t2Status = progress.tahap1Complete ? (progress.tahap2Complete ? 'completed' : 'unlocked') : 'locked';
-    const t3Status = progress.tahap2Complete ? (progress.tahap3Complete ? 'completed' : 'unlocked') : 'locked';
+    const t3Status = (progress.tahap2Complete && progress.isReady) ? (progress.tahap3Complete ? 'completed' : 'unlocked') : 'locked';
     const t4Status = progress.tahap3Complete ? (progress.tahap4Complete ? 'completed' : 'unlocked') : 'locked';
 
     let downloadCardHtml = '';
@@ -1111,13 +1111,110 @@ async function renderTahap2(main) {
 
     const progress = getProgress(currentUser.username);
     if (progress.tahap2Complete) {
+        const isReady = progress.isReady;
+        const statusClass = isReady ? 'pass' : 'fail';
+        const statusLabel = isReady ? 'SIAP ASESMEN' : 'BELUM SIAP';
+        const statusIcon = isReady ? '🎉' : '⚠️';
+
+        let answersHtml = '';
+        if (progress.reflectionAnswers && progress.reflectionAnswers.length > 0) {
+            answersHtml = `
+            <div class="card mt-3" style="padding: 1.5rem; border-radius: 16px; text-align: left; background: var(--bg-sidebar); border: 1px solid var(--border-color);">
+                <h4 style="margin-bottom: 1rem; color: var(--text-primary); font-size: 1.1rem; font-weight: 700;">
+                    <i class="fas fa-history" style="color: var(--primary);"></i> Jawaban Refleksi Kamu:
+                </h4>
+                ${progress.reflectionAnswers.map((ans, idx) => `
+                    <div style="margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-top: 1rem;">
+                        <p style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">${idx + 1}. ${ans.question}</p>
+                        <p style="margin-top: 0.4rem; color: var(--text-secondary); background: var(--bg-input); padding: 0.75rem 1rem; border-radius: 8px; font-style: italic; font-size: 0.88rem; line-height: 1.5; border: 1px solid rgba(255,255,255,0.05);">"${ans.answer}"</p>
+                    </div>
+                `).join('')}
+            </div>`;
+        }
+
+        let actionButtonHtml = '';
+        if (isReady) {
+            actionButtonHtml = `
+                <button class="btn btn-success mt-2" style="padding: 0.8rem 2rem; font-weight: 700; border-radius: 12px;" onclick="navigateTo('tahap3')">
+                    <i class="fas fa-arrow-right"></i> Lanjut ke Tahap 3
+                </button>
+                <button class="btn btn-outline mt-2" style="padding: 0.8rem 2rem; border-radius: 12px;" onclick="navigateTo('dashboard')">
+                    Kembali ke Dashboard
+                </button>`;
+        } else {
+            actionButtonHtml = `
+                <button class="btn btn-danger mt-2" style="padding: 0.8rem 2rem; font-weight: 700; border-radius: 12px;" id="btn-reset-tahap1">
+                    <i class="fas fa-redo"></i> Ulangi Pembelajaran dari Tahap 1
+                </button>
+                <button class="btn btn-outline mt-2" style="padding: 0.8rem 2rem; border-radius: 12px;" onclick="navigateTo('dashboard')">
+                    Kembali ke Dashboard
+                </button>`;
+        }
+
         main.innerHTML = `
-        <div class="score-display">
-            <div class="score-circle pass">✅<small>SELESAI</small></div>
-            <p>Kamu sudah menyelesaikan Tahap 2: Refleksi!</p>
-            <p>Status: SIAP ASESMEN</p>
-            <button class="btn btn-primary mt-2" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
+        <div class="score-display" style="max-width: 700px; margin: 0 auto; padding: 2rem;">
+            <div class="score-circle ${statusClass}" style="margin: 0 auto 1.5rem auto; width: 100px; height: 100px; font-size: 2rem; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                ${statusIcon}
+            </div>
+            <h2 style="font-weight: 800; font-size: 1.6rem; color: var(--text-primary); margin-bottom: 0.5rem;">Tahap 2 Selesai!</h2>
+            <div style="display: inline-block; padding: 0.4rem 1.2rem; border-radius: 50px; font-weight: 800; font-size: 0.9rem; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 1.5rem; background: ${isReady ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'}; color: ${isReady ? 'var(--success)' : 'var(--danger)'}; border: 1px solid ${isReady ? 'var(--success-light)' : 'var(--danger-light)'};">
+                Status: ${statusLabel}
+            </div>
+
+            <div class="card mt-2" style="border: 1px solid ${isReady ? 'var(--success-light)' : 'var(--danger-light)'}; background: ${isReady ? 'rgba(34, 197, 94, 0.02)' : 'rgba(239, 68, 68, 0.02)'}; padding: 1.5rem; border-radius: 16px; text-align: left; margin-bottom: 1.5rem;">
+                <h4 style="color: ${isReady ? 'var(--success)' : 'var(--danger)'}; margin-bottom: 0.75rem; font-size: 1.1rem; font-weight: 700;">
+                    <i class="fas fa-robot"></i> Rekomendasi & Analisis AI:
+                </h4>
+                <p style="line-height: 1.6; text-align: justify; color: var(--text-primary); font-size: 0.95rem; font-weight: 500;">
+                    ${progress.aiReadiness || 'Analisis tidak tersedia.'}
+                </p>
+                <div class="mt-2" style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;">
+                    <strong>Skor Kesiapan Belajar:</strong> ${progress.tahap2Score || 0}%
+                </div>
+            </div>
+
+            ${!isReady ? `
+                <div class="alert alert-danger" style="background: rgba(239, 68, 68, 0.08); border-left: 4px solid var(--danger); padding: 1rem; border-radius: 8px; color: var(--text-primary); text-align: left; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.5;">
+                    <p style="font-weight: 700; margin-bottom: 0.25rem;"><i class="fas fa-lock"></i> Akses Tahap 3 Terkunci</p>
+                    <p>Karena rekomendasi AI menyatakan kamu belum siap, kamu diwajibkan mengulang pembelajaran materi dan berdiskusi kembali dengan NARA-AI di Tahap 1. Klik tombol di bawah untuk menyetel ulang progresmu secara otomatis.</p>
+                </div>
+            ` : ''}
+
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                ${actionButtonHtml}
+            </div>
+
+            ${answersHtml}
         </div>`;
+
+        if (!isReady) {
+            const btnReset = document.getElementById('btn-reset-tahap1');
+            if (btnReset) {
+                btnReset.addEventListener('click', async () => {
+                    if (!confirm('Apakah kamu siap memulai ulang pembelajaran dari Tahap 1? Seluruh progres Tahap 1 dan Tahap 2 kamu akan di-reset.')) return;
+                    btnReset.disabled = true;
+                    btnReset.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menghapus Progres...';
+                    try {
+                        const res = await fetch('/api/progress/reset', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ usernames: [currentUser.username] })
+                        });
+                        if (res.ok) {
+                            alert('🔄 Progres berhasil di-reset! Silakan ulangi pembelajaran Tahap 1.');
+                            await syncData(); // Sync local cache from database
+                            navigateTo('dashboard');
+                        } else {
+                            throw new Error('Gagal menghubungi server untuk mereset progres.');
+                        }
+                    } catch (err) {
+                        alert(err.message || 'Gagal menyetel ulang progres.');
+                        btnReset.disabled = false;
+                        btnReset.innerHTML = '<i class="fas fa-redo"></i> Ulangi Pembelajaran dari Tahap 1';
+                    }
+                });
+            }
+        }
         return;
     }
 
@@ -1222,7 +1319,7 @@ async function renderTahap2(main) {
             // Notify Guru Recommendation in background (handled by progress object usually)
 
             alert('🎉 Refleksi berhasil dikirim! AI telah menganalisis kesiapanmu.');
-            navigateTo('dashboard');
+            renderTahap2(document.getElementById('main-content'));
         } catch (err) {
             console.error(err);
             alert('Gagal mengirim refleksi. Silakan coba lagi.');

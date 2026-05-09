@@ -125,7 +125,7 @@ async function initApp() {
                 // Handle direct material view from URL (for new tab support)
                 const urlParams = new URLSearchParams(window.location.search);
                 const viewMaterialId = urlParams.get('viewMaterial');
-                
+
                 if (viewMaterialId) {
                     showAppShell();
                     // Navigate to a special full-viewer mode
@@ -464,7 +464,7 @@ async function handleChangePassword(e) {
         await syncData(); // update lokal
 
         document.getElementById('change-password-form').reset();
-        
+
         if (currentUser.role === 'siswa') {
             showStudentOnboarding();
         } else {
@@ -649,12 +649,12 @@ function navigateTo(page) {
             const schedules = settings.classSchedules || {};
             const myClass = currentUser.kelas || 'Tanpa Kelas';
             const classSchedule = schedules[myClass] || {};
-            
+
             // Fallback for old data structure
             const t1 = classSchedule.tahap1 || { start: classSchedule.start || '00:00', end: classSchedule.end || '23:59', active: classSchedule.active || false };
             const t2 = classSchedule.tahap2 || { start: '00:00', end: '23:59', active: false };
             const t3 = classSchedule.tahap3 || { start: '00:00', end: '23:59', active: false };
-            
+
             let currentStageSchedule;
             if (page === 'tahap1') currentStageSchedule = t1;
             else if (page === 'tahap2') currentStageSchedule = t2;
@@ -663,7 +663,7 @@ function navigateTo(page) {
             if (currentStageSchedule && currentStageSchedule.active) {
                 const now = new Date();
                 const currentTime = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-                
+
                 if (currentTime < currentStageSchedule.start || currentTime > currentStageSchedule.end) {
                     const stageName = page === 'tahap1' ? 'Tahap 1' : page === 'tahap2' ? 'Tahap 2' : 'Tahap 3';
                     alert(`⚠️ Belum Waktunya!\n\nJadwal akses ${stageName} untuk Kelas ${myClass} adalah:\n🕒 ${currentStageSchedule.start} s/d ${currentStageSchedule.end}\n\nSilakan kembali pada jam tersebut.`);
@@ -734,6 +734,12 @@ function renderPage(page) {
             renderTahap2(main);
             break;
         case 'tahap3':
+            const progressT3 = getProgress(currentUser.username);
+            if (progressT3.tahap2Complete && !progressT3.isReady) {
+                alert('⚠️ Akses Tahap 3 Terkunci! Hasil refleksi esai kamu dinilai AI belum siap. Silakan lihat ulasan analisismu di Tahap 2.');
+                navigateTo('tahap2');
+                return;
+            }
             renderTahap3(main);
             break;
         case 'tahap4':
