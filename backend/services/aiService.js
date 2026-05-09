@@ -419,14 +419,17 @@ async function analyzeUnderstanding(username, originalExplanation, studentAnswer
 }
 
 async function generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar = 'AI', jumlahTujuan = 3, jumlahHalaman = 3, judul = '') {
-    const prompt = `Kamu adalah AI Pakar Pedagogi dan Guru Kreatif yang ahli dalam merancang materi pembelajaran berkualitas tinggi, interaktif, dan premium.
-Tugasmu adalah menyusun materi pembelajaran lengkap, mendalam, dan menarik yang cocok untuk siswa tingkat/kelas: "${kelas}".
+    const minWords = (parseInt(jumlahHalaman) || 1) * 600;
+    const sectionCount = (parseInt(jumlahHalaman) || 1) * 2 + 1;
+    const prompt = `Kamu adalah AI Pakar Pedagogi dan Guru Kreatif Kurikulum Merdeka yang ahli dalam merancang materi pembelajaran berkualitas tinggi, interaktif, dan premium.
+Tugasmu adalah menyusun materi pembelajaran lengkap, sangat mendalam, komprehensif, dan menarik yang cocok untuk siswa tingkat/kelas: "${kelas}".
 
 Materi harus disusun berdasarkan indikator:
 - Judul Materi Pembelajaran: "${judul}" (Wajib gunakan judul ini sebagai tajuk utama/heading 1 materi Anda)
 - Tujuan Pembelajaran Utama: "${tujuanPembelajaran}"
 - Jumlah Rincian Tujuan Pembelajaran: ${jumlahTujuan} (Harap pecah dan rumuskan tepat ${jumlahTujuan} tujuan pembelajaran khusus yang terperinci di dalam materi)
-- Target Panjang Materi: Setara dengan ${jumlahHalaman} Halaman cetak A4 (buat materi sangat mendalam, berbobot, dan kaya informasi yang sesuai dengan panjang ${jumlahHalaman} halaman, jangan buat materi pendek)
+- Target Panjang Materi: Setara dengan tepat ${jumlahHalaman} Halaman cetak A4.
+- ATURAN KETAT PANJANG KONTEN: Karena target panjang materi adalah ${jumlahHalaman} halaman cetak A4, maka materi tersebut wajib memiliki minimal ${sectionCount} sub-bab/sub-heading pembahasan materi yang diuraikan secara sangat lengkap, detail, dan mendalam. Jumlah kata keseluruhan materi HARUS mencapai MINIMAL ${minWords} kata! Jangan membuat materi yang pendek, singkat, ringkas, atau dirangkum. Tulis paragraf yang panjang, teoretis, kaya informasi, serta dilengkapi contoh studi kasus konkret untuk setiap sub-heading.
 - Sumber Gambar: "${sumberGambar}"
 
 PENTING - Gaya Penulisan Konten:
@@ -472,13 +475,14 @@ Penyisipan Video Pendukung (YouTube Embedded):
 
 Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan menyertakan tanda kutip markdown \`\`\`html di awal dan di akhir, cukup teks HTML murni.`;
 
+    const safeMaxTokens = Math.min(3000 + (parseInt(jumlahHalaman) || 1) * 1200, 8000);
     const payload = {
         messages: [
-            { role: "system", content: "Kamu adalah AI asisten pembuat materi pembelajaran HTML interaktif dan estetik." },
+            { role: "system", content: "Kamu adalah AI asisten pembuat materi pembelajaran HTML interaktif dan estetik yang selalu menulis materi sangat panjang, detail, mendalam, dan lengkap sesuai dengan jumlah halaman yang ditargetkan." },
             { role: "user", content: prompt }
         ],
         temperature: 0.7,
-        max_tokens: 3500
+        max_tokens: safeMaxTokens
     };
 
     const response = await requestWithFallback(payload);
