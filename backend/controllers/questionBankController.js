@@ -684,7 +684,39 @@ exports.generateImage = async (req, res) => {
                 console.warn("AI keyword extraction failed, using fallback:", e.message);
                 keyword = "education";
             }
-            imageUrl = `https://loremflickr.com/800/500/${encodeURIComponent(keyword)}`;
+
+            // Fetch high-quality Pinterest image from DuckDuckGo search
+            const axios = require('axios');
+            try {
+                const ddgUrl = `https://html.duckduckgo.com/html/?q=site:pinterest.com+${encodeURIComponent(keyword)}`;
+                const ddgRes = await axios.get(ddgUrl, {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    },
+                    timeout: 4000
+                });
+                const html = ddgRes.data;
+                const pinMatch = html.match(/pinterest\.com\/pin\/(\d+)/);
+                if (pinMatch && pinMatch[1]) {
+                    const pinId = pinMatch[1];
+                    const pinRes = await axios.get(`https://www.pinterest.com/pin/${pinId}/`, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                        },
+                        timeout: 3000
+                    });
+                    const ogMatch = pinRes.data.match(/<meta property="og:image" content="([^"]+)"/);
+                    if (ogMatch && ogMatch[1]) {
+                        imageUrl = ogMatch[1];
+                    }
+                }
+            } catch (err) {
+                console.warn("Pinterest scraping failed, using fallback:", err.message);
+            }
+
+            if (!imageUrl) {
+                imageUrl = `https://loremflickr.com/800/500/pinterest,${encodeURIComponent(keyword)}`;
+            }
         }
 
         question.image = imageUrl;
