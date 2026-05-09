@@ -2198,6 +2198,327 @@ async function bulkDeleteBankSoal() {
     }
 }
 
+let currentTeacherAccountPage = 1;
+const teachersPerPage = 20;
+
+function changeTeacherPage(direction) {
+    currentTeacherAccountPage += direction;
+    renderTeacherAccounts(document.getElementById('main-content'));
+}
+
+// ---- TEACHER ACCOUNT MANAGEMENT ----
+async function renderTeacherAccounts(main) {
+    if (currentUser.role !== 'admin') {
+        main.innerHTML = '<div class="alert alert-danger">Akses ditolak. Menu ini hanya untuk Administrator.</div>';
+        return;
+    }
+
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat data akun guru...</p></div>';
+    
+    try {
+        await syncUsers();
+    } catch (e) { console.error(e); }
+
+    const users = getUsers();
+    const teachers = users.filter(u => u.role === 'guru');
+
+    const now = Date.now();
+    const onlineThreshold = 2 * 60 * 1000; // 2 Menit
+
+    // Process status
+    const processedTeachers = teachers.map(t => {
+        const lastSeenTime = t.lastSeen ? new Date(t.lastSeen).getTime() : 0;
+        const isOnline = (now - lastSeenTime) <= onlineThreshold;
+        let timeStr = 'Belum pernah aktif';
+        if (lastSeenTime > 0) {
+            const diffMin = Math.floor((now - lastSeenTime) / 60000);
+            if (diffMin < 1) timeStr = 'Aktif sekarang';
+            else if (diffMin < 60) timeStr = `${diffMin} menit lalu`;
+            else {
+                const diffHour = Math.floor(diffMin / 60);
+                if (diffHour < 24) timeStr = `${diffHour} jam lalu`;
+                else timeStr = new Date(t.lastSeen).toLocaleDateString('id-ID');
+            }
+        }
+        return { ...t, isOnline, timeStr };
+    });
+
+    const totalPages = Math.ceil(processedTeachers.length / teachersPerPage) || 1;
+    if (currentTeacherAccountPage > totalPages) currentTeacherAccountPage = totalPages;
+    if (currentTeacherAccountPage < 1) currentTeacherAccountPage = 1;
+
+    const startIndex = (currentTeacherAccountPage - 1) * teachersPerPage;
+    const paginatedTeachers = processedTeachers.slice(startIndex, startIndex + teachersPerPage);
+
+    main.innerHTML = `
+    <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap; gap:0.5rem">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <i class="fas fa-user-tie" style="font-size:1.5rem; color:var(--primary)"></i>
+            <h3 style="margin-bottom:0;">Akun Guru (${processedTeachers.length})</h3>
+        </div>
+        <div class="flex gap-1" style="align-items:center;">
+            <input type="text" id="search-teacher-accounts" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Guru..." onkeyup="filterTable('search-teacher-accounts', 'table-teacher-accounts')">
+            <button class="btn btn-danger btn-sm" onclick="bulkDeleteTeachers()" id="btn-bulk-delete-teachers" style="display:none;"><i class="fas fa-trash"></i> Hapus (<span id="count-selected-teachers">0</span>)</button>
+            <button class="btn btn-primary btn-sm" onclick="showAddTeacherModal()"><i class="fas fa-plus"></i> Tambah Guru</button>
+            <button class="btn btn-success btn-sm" onclick="downloadTeacherExcelTemplate()"><i class="fas fa-download"></i> Template</button>
+            <button class="btn btn-warning btn-sm" onclick="document.getElementById('excel-upload-teacher').click()"><i class="fas fa-upload"></i> Upload Excel</button>
+            <input type="file" id="excel-upload-teacher" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleTeacherExcelUpload(event)">
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="table-container">
+            <table id="table-teacher-accounts">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="check-all-teachers" onchange="toggleAllTeachers(this)"></th>
+                        <th>Status Akun</th>
+                        <th>Username</th>
+                        <th>Nama Lengkap</th>
+                        <th>Mengajar / Akses Kelas</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${paginatedTeachers.map(t => `
+                    <tr>
+                        <td><input type="checkbox" class="check-teacher" value="${t.username}" onchange="updateTeacherBulkDeleteBtn()"></td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:0.5rem;">
+                                <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${t.isOnline ? 'var(--success)' : 'var(--text-muted)'}"></span>
+                                <span style="font-size:0.85rem; color:${t.isOnline ? 'var(--success)' : 'var(--text-muted)'}; font-weight:${t.isOnline ? 'bold' : 'normal'}">${t.isOnline ? 'Online' : t.timeStr}</span>
+                            </div>
+                        </td>
+                        <td><strong>${t.username}</strong></td>
+                        <td>${t.name}</td>
+                        <td><span class="badge badge-info">${t.kelas || 'Semua Kelas'}</span></td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button class="btn btn-sm btn-warning" onclick="resetTeacherPassword('${t.username}')" title="Reset Password"><i class="fas fa-key"></i></button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteTeacherAccount('${t.username}')" title="Hapus"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>`).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada data guru</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        ${totalPages > 1 ? `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding: 0.5rem;">
+            <div class="text-muted" style="font-size: 0.9rem;">
+                Menampilkan ${startIndex + 1} - ${Math.min(startIndex + teachersPerPage, processedTeachers.length)} dari ${processedTeachers.length} Akun
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button class="btn btn-outline btn-sm" onclick="changeTeacherPage(-1)" ${currentTeacherAccountPage === 1 ? 'disabled' : ''}>
+                    <i class="fas fa-chevron-left"></i> Sebelumnya
+                </button>
+                <div style="background:var(--bg-color); padding:0.25rem 0.75rem; border-radius:0.5rem; border:1px solid var(--border-color); font-weight:bold;">
+                    Halaman ${currentTeacherAccountPage} / ${totalPages}
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="changeTeacherPage(1)" ${currentTeacherAccountPage === totalPages ? 'disabled' : ''}>
+                    Selanjutnya <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        ` : ''}
+    </div>
+    <div id="modal-container"></div>`;
+}
+
+function showAddTeacherModal() {
+    const modalCont = document.getElementById('modal-container');
+    if(!modalCont) return;
+    modalCont.innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal">
+        <div class="modal-header"><h2><i class="fas fa-user-plus"></i> Tambah Akun Guru</h2><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="form-group"><label>Username</label><input type="text" id="new-teacher-username" placeholder="contoh: gurunama"></div>
+        <div class="form-group"><label>Nama Lengkap</label><input type="text" id="new-teacher-name" placeholder="Nama lengkap beserta gelar"></div>
+        <div class="form-group"><label>Akses Kelas</label>
+            <select id="new-teacher-kelas">
+                <option value="Semua Kelas">Semua Kelas</option>
+                <option value="7.6">7.6</option>
+                <option value="7.7">7.7</option>
+                <option value="7.8">7.8</option>
+                <option value="7.9">7.9</option>
+                <option value="7.10">7.10</option>
+                <option value="7.11">7.11</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Password Awal</label><input type="text" id="new-teacher-password" value="guru123" placeholder="Password default"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+            <button class="btn btn-primary" onclick="addTeacherAccount()">Simpan Akun</button>
+        </div>
+    </div>
+    </div>`;
+}
+
+async function addTeacherAccount() {
+    const username = document.getElementById('new-teacher-username').value.trim();
+    const name = document.getElementById('new-teacher-name').value.trim();
+    const kelas = document.getElementById('new-teacher-kelas').value;
+    const password = document.getElementById('new-teacher-password').value;
+
+    if (!username || !name) { alert('Username dan nama lengkap wajib diisi!'); return; }
+
+    try {
+        const payload = { 
+            username, 
+            password: password || 'guru123', 
+            name, 
+            role: 'guru', 
+            kelas, 
+            mustChangePassword: true 
+        };
+        const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            alert('Gagal menambah akun guru. Username mungkin sudah terpakai.');
+            return;
+        }
+
+        await syncUsers();
+        document.querySelector('.modal-overlay').remove();
+        renderTeacherAccounts(document.getElementById('main-content'));
+        alert('✅ Akun Guru berhasil ditambahkan!');
+    } catch (err) {
+        alert('Terjadi kesalahan pada koneksi server.');
+    }
+}
+
+function downloadTeacherExcelTemplate() {
+    const csv = 'username,nama,kelas,password\nguruinformatika,Budi Santoso S.Kom,Semua Kelas,guru123\ngurubahasindo,Dewi Safitri M.Pd,7.6,guru123';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'template_akun_guru.csv';
+    link.click();
+}
+
+async function handleTeacherExcelUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.match(/\.(xlsx|xls|csv)$/)) {
+        alert('File yang diizinkan hanya berformat .xlsx, .xls, atau .csv!');
+        event.target.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const main = document.getElementById('main-content');
+    const originalContent = main.innerHTML;
+    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Mengunggah dan memproses Excel Guru...</p></div>';
+
+    try {
+        const res = await fetch('/api/users/upload?role=guru', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            await syncUsers();
+            alert(data.message || '✅ Akun guru berhasil diimpor!');
+        } else {
+            alert(data.error || 'Gagal mengimpor file Excel guru.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Kesalahan server internal saat proses unggah.');
+    } finally {
+        renderTeacherAccounts(document.getElementById('main-content'));
+        event.target.value = '';
+    }
+}
+
+function toggleAllTeachers(source) {
+    const checkboxes = document.querySelectorAll('.check-teacher');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+    updateTeacherBulkDeleteBtn();
+}
+
+function updateTeacherBulkDeleteBtn() {
+    const checkboxes = document.querySelectorAll('.check-teacher:checked');
+    const btn = document.getElementById('btn-bulk-delete-teachers');
+    const countSpan = document.getElementById('count-selected-teachers');
+    if (btn && countSpan) {
+        if (checkboxes.length > 0) {
+            btn.style.display = 'inline-block';
+            countSpan.textContent = checkboxes.length;
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+}
+
+async function bulkDeleteTeachers() {
+    const checkboxes = document.querySelectorAll('.check-teacher:checked');
+    const usernames = Array.from(checkboxes).map(cb => cb.value);
+
+    if (usernames.length === 0) return;
+    if (!confirm(`PERINGATAN: Anda akan menghapus ${usernames.length} akun GURU terpilih secara permanen. Lanjutkan?`)) return;
+
+    try {
+        const res = await fetch('/api/users/bulk-delete?role=guru', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Gagal memproses request delete.');
+
+        await syncUsers();
+        alert(data.message || 'Akun guru berhasil dihapus.');
+        renderTeacherAccounts(document.getElementById('main-content'));
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+async function deleteTeacherAccount(username) {
+    if (!confirm(`Yakin ingin menghapus akun guru: ${username}?`)) return;
+    try {
+        const res = await fetch(`/api/users/${username}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Server error');
+        await syncUsers();
+        renderTeacherAccounts(document.getElementById('main-content'));
+    } catch (e) { alert('Gagal menghapus akun.'); }
+}
+
+async function resetTeacherPassword(username) {
+    const newPassword = prompt(`Buat password baru untuk guru '${username}':`, "guru123");
+    if (!newPassword || newPassword.trim().length < 6) {
+        if(newPassword) alert("Gagal: Password minimal 6 karakter untuk keamanan.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, newPassword: newPassword.trim() })
+        });
+
+        if (res.ok) {
+            alert(`✅ Password guru '${username}' berhasil direset. Diwajibkan ganti saat masuk pertama.`);
+        } else {
+            const data = await res.json();
+            alert(`Error: ${data.error}`);
+        }
+    } catch (err) { alert('Server down/error.'); }
+}
+
 let currentStudentAccountPage = 1;
 const studentsPerPage = 20;
 
@@ -2607,8 +2928,10 @@ async function renderMonitoring(main) {
         console.error("Gagal sync user untuk monitoring", e);
     }
 
+    const targetRole = document.getElementById('monitor-role-selector') ? document.getElementById('monitor-role-selector').value : 'siswa';
     const users = getUsers();
-    const students = users.filter(u => u.role === 'siswa');
+    const selectedUsers = targetRole === 'all' ? users.filter(u => ['siswa', 'guru'].includes(u.role)) : users.filter(u => u.role === targetRole);
+    const roleLabel = targetRole === 'siswa' ? 'Siswa' : targetRole === 'guru' ? 'Guru' : 'Semua';
 
     const now = Date.now();
     let onlineCount = 0;
@@ -2616,12 +2939,12 @@ async function renderMonitoring(main) {
     // threshold: 2 minutes
     const onlineThreshold = 2 * 60 * 1000;
 
-    const studentStatus = students.map(s => {
+    const userStatus = selectedUsers.map(s => {
         const lastSeenTime = s.lastSeen ? new Date(s.lastSeen).getTime() : 0;
         const isOnline = (now - lastSeenTime) <= onlineThreshold;
         if (isOnline) onlineCount++;
 
-        let timeStr = 'Belum pernah login';
+        let timeStr = 'Belum login';
         if (lastSeenTime > 0) {
             const diffMin = Math.floor((now - lastSeenTime) / 60000);
             if (diffMin < 1) timeStr = 'Baru saja';
@@ -2629,7 +2952,7 @@ async function renderMonitoring(main) {
             else {
                 const diffHour = Math.floor(diffMin / 60);
                 if (diffHour < 24) timeStr = `${diffHour} jam yang lalu`;
-                else timeStr = new Date(s.lastSeen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                else timeStr = new Date(s.lastSeen).toLocaleDateString('id-ID');
             }
         }
 
@@ -2637,7 +2960,7 @@ async function renderMonitoring(main) {
     });
 
     // sort: online first, then by lastSeen desc
-    studentStatus.sort((a, b) => {
+    userStatus.sort((a, b) => {
         if (a.isOnline === b.isOnline) {
             return b.lastSeenTime - a.lastSeenTime;
         }
@@ -2645,13 +2968,21 @@ async function renderMonitoring(main) {
     });
 
     main.innerHTML = `
-    <div class="flex justify-between items-center mb-2">
-        <h3>Monitoring Status Siswa</h3>
+    <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap; gap:0.5rem">
+        <h3><i class="fas fa-desktop"></i> Monitoring Status Aktif</h3>
+        <div class="flex gap-1">
+            <label class="text-muted" style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0;">Role:</label>
+            <select id="monitor-role-selector" class="form-control" style="width:auto; margin-bottom:0;" onchange="renderMonitoring(document.getElementById('main-content'))">
+                <option value="siswa" ${targetRole === 'siswa' ? 'selected' : ''}>Hanya Siswa</option>
+                <option value="guru" ${targetRole === 'guru' ? 'selected' : ''}>Hanya Guru</option>
+                <option value="all" ${targetRole === 'all' ? 'selected' : ''}>Semua User</option>
+            </select>
+        </div>
     </div>
     
     <div class="tabs mb-2">
-        <button class="tab-button active" onclick="switchMonitoringTab('status', this)">Status Aktif</button>
-        <button class="tab-button" onclick="switchMonitoringTab('violations', this)">Laporan Kecurangan</button>
+        <button class="tab-button active" onclick="switchMonitoringTab('status', this)">Status Online</button>
+        <button class="tab-button" onclick="switchMonitoringTab('violations', this)">Pelanggaran Keamanan</button>
     </div>
 
     <div id="monitoring-status-tab" class="tab-content active">
@@ -2659,54 +2990,56 @@ async function renderMonitoring(main) {
         <div class="card stat-card" style="border-left: 4px solid var(--success)">
             <div class="stat-icon" style="background: rgba(76, 175, 80, 0.1); color: var(--success)"><i class="fas fa-user-check"></i></div>
             <div class="stat-info">
-                <h4>Online / Sedang Login</h4>
-                <div class="stat-value">${onlineCount} Siswa</div>
+                <h4>Online / Aktif</h4>
+                <div class="stat-value">${onlineCount}</div>
             </div>
         </div>
         <div class="card stat-card" style="border-left: 4px solid var(--text-muted)">
             <div class="stat-icon" style="background: rgba(158, 158, 158, 0.1); color: var(--text-muted)"><i class="fas fa-user-clock"></i></div>
             <div class="stat-info">
                 <h4>Offline</h4>
-                <div class="stat-value">${students.length - onlineCount} Siswa</div>
+                <div class="stat-value">${selectedUsers.length - onlineCount}</div>
             </div>
         </div>
         <div class="card stat-card" style="border-left: 4px solid var(--primary-light)">
             <div class="stat-icon" style="background: rgba(79, 195, 247, 0.1); color: var(--primary-light)"><i class="fas fa-users"></i></div>
             <div class="stat-info">
-                <h4>Total Siswa</h4>
-                <div class="stat-value">${students.length} Siswa</div>
+                <h4>Total Akun (${roleLabel})</h4>
+                <div class="stat-value">${selectedUsers.length}</div>
             </div>
         </div>
     </div>
 
     <div class="card">
-        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; border-bottom:none; padding-bottom:0;">
-            <h3 class="card-title" style="margin-bottom: 1rem;"><i class="fas fa-desktop"></i> Status Aktivitas Terakhir</h3>
-            <input type="text" id="search-monitoring" class="form-control" style="margin-bottom:1rem; width:250px; padding:0.4rem;" placeholder="Cari Siswa/Kelas..." onkeyup="filterTable('search-monitoring', 'table-monitoring')">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; border-bottom:none;">
+            <h3 class="card-title" style="margin-bottom:0;"><i class="fas fa-list"></i> Aktivitas Pengguna</h3>
+            <input type="text" id="search-monitoring" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari nama..." onkeyup="filterTable('search-monitoring', 'table-monitoring')">
         </div>
         <div class="table-container">
             <table id="table-monitoring">
                 <thead>
                     <tr>
                         <th>Status</th>
-                        <th>Nama Siswa</th>
-                        <th>Kelas</th>
-                        <th>Aktivitas Terakhir</th>
+                        <th>Nama User</th>
+                        <th>Role</th>
+                        <th>Kelas / Info</th>
+                        <th>Keterangan Waktu</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${studentStatus.length > 0 ? studentStatus.map(s => `
+                    ${userStatus.length > 0 ? userStatus.map(s => `
                         <tr>
                             <td>
                                 ${s.isOnline
-            ? '<span class="badge badge-success"><i class="fas fa-circle" style="font-size:0.6rem; vertical-align:middle; margin-right:4px;"></i> Online</span>'
-            : '<span class="badge" style="background:var(--bg-input);color:var(--text-muted)"><i class="far fa-circle" style="font-size:0.6rem; vertical-align:middle; margin-right:4px;"></i> Offline</span>'}
+            ? '<span class="badge badge-success">Online</span>'
+            : '<span class="badge badge-light" style="background:#eee; color:#666">Offline</span>'}
                             </td>
-                            <td><strong>${s.name}</strong><br><small class="text-muted">@${s.username}</small></td>
+                            <td><strong>${s.name}</strong><br><small class="text-muted">${s.username}</small></td>
+                            <td><span class="badge ${s.role === 'guru' ? 'badge-warning' : 'badge-info'}">${s.role.toUpperCase()}</span></td>
                             <td>${s.kelas || '-'}</td>
-                            <td>${s.isOnline ? '<span style="color:var(--success)">Aktif sekarang</span>' : s.timeStr}</td>
+                            <td>${s.isOnline ? '<span class="text-success font-weight-bold">Aktif sekarang</span>' : s.timeStr}</td>
                         </tr>
-                    `).join('') : '<tr><td colspan="4" class="text-center text-muted">Belum ada data siswa</td></tr>'}
+                    `).join('') : '<tr><td colspan="5" class="text-center text-muted">Tidak ada pengguna ditemukan</td></tr>'}
                 </tbody>
             </table>
         </div>

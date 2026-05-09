@@ -146,6 +146,8 @@ const uploadExcel = async (req, res) => {
             return res.status(400).json({ error: 'File Excel tidak ditemukan dalam request!' });
         }
 
+        const targetRole = req.query.role === 'guru' ? 'guru' : 'siswa';
+
         const xlsx = require('xlsx');
         const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
@@ -167,8 +169,9 @@ const uploadExcel = async (req, res) => {
 
             const username = findKey('username') || findKey('user');
             const name = findKey('nama') || findKey('name');
-            const kelas = findKey('kelas') || '7A';
-            const password = findKey('password') || 'siswa123';
+            const kelas = findKey('kelas') || (targetRole === 'siswa' ? '7A' : 'Semua Kelas');
+            const defaultPassword = targetRole === 'guru' ? 'guru123' : 'siswa123';
+            const password = findKey('password') || defaultPassword;
 
             if (username && name) {
                 const safeUsername = String(username).replace(/\s+/g, '').toLowerCase();
@@ -176,8 +179,8 @@ const uploadExcel = async (req, res) => {
                     username: safeUsername,
                     name: String(name).trim(),
                     kelas: String(kelas).trim(),
-                    role: 'siswa',
-                    password: String(password).trim() || 'siswa123',
+                    role: targetRole,
+                    password: String(password).trim() || defaultPassword,
                     mustChangePassword: true
                 });
             } else {
@@ -200,9 +203,10 @@ const uploadExcel = async (req, res) => {
             importCount = newUsers.length;
         }
 
+        const roleLabel = targetRole === 'guru' ? 'guru' : 'siswa';
         res.json({
             success: true,
-            message: `Berhasil mengimpor ${importCount} akun siswa.${errorCount > 0 ? ` (Ada ${errorCount} baris bermasalah diabaikan).` : ''}${existingUsernames.length > 0 ? ` (${existingUsernames.length} akun terlewat karena username sudah ada).` : ''}`
+            message: `Berhasil mengimpor ${importCount} akun ${roleLabel}.${errorCount > 0 ? ` (Ada ${errorCount} baris bermasalah diabaikan).` : ''}${existingUsernames.length > 0 ? ` (${existingUsernames.length} akun terlewat karena username sudah ada).` : ''}`
         });
 
     } catch (err) {
@@ -214,12 +218,14 @@ const uploadExcel = async (req, res) => {
 const bulkDeleteUsers = async (req, res) => {
     try {
         const { usernames } = req.body;
+        const role = req.query.role === 'guru' ? 'guru' : 'siswa';
+
         if (!Array.isArray(usernames) || usernames.length === 0) {
             return res.status(400).json({ error: 'Tidak ada user yang dipilih untuk dihapus' });
         }
 
-        const result = await User.deleteMany({ username: { $in: usernames }, role: 'siswa' });
-        res.json({ message: `Berhasil menghapus ${result.deletedCount} akun siswa` });
+        const result = await User.deleteMany({ username: { $in: usernames }, role: role });
+        res.json({ message: `Berhasil menghapus ${result.deletedCount} akun ${role}` });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });
     }

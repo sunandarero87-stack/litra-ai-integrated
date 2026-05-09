@@ -600,8 +600,23 @@ function updateSidebar() {
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-home"></i> Dashboard</button>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user"></i> Profil</button>`;
+    } else if (role === 'guru') {
+        // Guru restricted view according to requirements
+        items = `
+            <div class="nav-section">Menu Utama</div>
+            <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
+            <button class="nav-item" onclick="navigateTo('student-attendance')"><i class="fas fa-calendar-check"></i> Absen Siswa</button>
+            <button class="nav-item" onclick="navigateTo('teacher-journal')"><i class="fas fa-journal-whills"></i> Jurnal Harian</button>
+            
+            <div class="nav-section">Pembelajaran</div>
+            <button class="nav-item" onclick="navigateTo('materials')"><i class="fas fa-book"></i> Materi</button>
+            <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
+            <button class="nav-item" onclick="navigateTo('kisi-kisi')"><i class="fas fa-file-signature"></i> Kisi-kisi Soal</button>
+            
+            <div class="nav-section">Profil</div>
+            <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
     } else {
-        // Admin & Guru have the same management menus
+        // Admin View (Full Access + User Management)
         items = `
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
@@ -617,10 +632,12 @@ function updateSidebar() {
             <button class="nav-item" onclick="navigateTo('banksoal')"><i class="fas fa-database"></i> Bank Soal</button>
             <button class="nav-item" onclick="navigateTo('kisi-kisi')"><i class="fas fa-file-signature"></i> Kisi-kisi Soal</button>
             
+            <div class="nav-section">Akun User</div>
+            <button class="nav-item" onclick="navigateTo('teacher-accounts')"><i class="fas fa-user-tie"></i> Akun Guru</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
             
             <div class="nav-section">Monitoring</div>
-            <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Siswa</button>
+            <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Online</button>
             
             <div class="nav-section">Profil</div>
             <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user-cog"></i> Profil</button>`;
@@ -688,8 +705,9 @@ function navigateTo(page) {
         'schedule-mgmt': 'Penjadwalan Waktu Akses',
         'banksoal': 'Bank Soal (HOTS)',
         'student-accounts': 'Manajemen Akun Siswa',
+        'teacher-accounts': 'Manajemen Akun Guru',
         'chat-history': 'Riwayat Chat Siswa',
-        'monitoring': 'Status Siswa',
+        'monitoring': 'Monitoring Status Aktif',
         'teacher-journal': 'Jurnal Harian Guru',
 
         'kisi-kisi': 'Pembuatan Kisi-kisi Soal',
@@ -762,6 +780,9 @@ function renderPage(page) {
             break;
         case 'student-accounts':
             renderStudentAccounts(main);
+            break;
+        case 'teacher-accounts':
+            if (typeof renderTeacherAccounts === 'function') renderTeacherAccounts(main);
             break;
         case 'chat-history':
             renderChatHistory(main);
