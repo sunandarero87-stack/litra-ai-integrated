@@ -1648,13 +1648,18 @@ async function renderBankSoal(main) {
                                 <td><input type="checkbox" class="check-bank-soal" value="${q._id}" onchange="updateBankSoalDeleteBtn()"></td>
                                 <td>${index + 1}</td>
                                 <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type === 'literasi' ? 'Literasi' : 'Numerasi'}</span></td>
-                                <td>${q.question.substring(0, 150)}${q.question.length > 150 ? '...' : ''}</td>
+                                <td>
+                                    ${q.image ? `<img src="${q.image}" style="height:35px; max-width:60px; border-radius:4px; margin-right:5px; cursor:pointer; object-fit:cover;" onclick="viewFullImage('${q.image}')" title="Klik untuk perbesar">` : ''}
+                                    ${q.question.substring(0, 150)}${q.question.length > 150 ? '...' : ''}
+                                </td>
                                 <td><span class="badge badge-info">${q.kelas || 'Semua Kelas'}</span></td>
                                 <td><strong>${String.fromCharCode(65 + q.correct)}</strong></td>
                                 <td>
-                                    <div class="flex gap-1">
-                                        <button class="btn btn-sm btn-outline" onclick="editBankSoal('${q._id}')"><i class="fas fa-edit"></i></button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
+                                    <div class="flex gap-1" style="flex-wrap: wrap;">
+                                        <button class="btn btn-sm btn-outline" onclick="editBankSoal('${q._id}')" title="Edit Soal"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-info" onclick="generateSupportingImage('${q._id}', 'ai')" title="Generate Gambar AI"><i class="fas fa-robot"></i> AI</button>
+                                        <button class="btn btn-sm btn-success" onclick="generateSupportingImage('${q._id}', 'google')" title="Generate Gambar Google"><i class="fas fa-search"></i> Google</button>
+                                        <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')" title="Hapus Soal"><i class="fas fa-trash"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -3176,10 +3181,20 @@ window.addEventListener('click', function (e) {
 });
 
 function downloadBankSoal(format) {
-    if (!_bankSoalCache || _bankSoalCache.length === 0) {
-        alert('Tidak ada soal untuk diunduh.');
+    const filterEl = document.getElementById('bank-soal-class-filter');
+    const selectedClass = filterEl ? filterEl.value : 'all';
+
+    let questionsToDownload = _bankSoalCache || [];
+    if (selectedClass !== 'all') {
+        questionsToDownload = questionsToDownload.filter(q => q.kelas && q.kelas.toLowerCase() === selectedClass.toLowerCase());
+    }
+
+    if (questionsToDownload.length === 0) {
+        alert(`Tidak ada soal untuk kelas "${selectedClass}" untuk diunduh.`);
         return;
     }
+
+    const classNameDisplay = selectedClass === 'all' ? 'Semua Kelas' : selectedClass;
 
     if (format === 'excel') {
         let excelHtml = `
@@ -3198,7 +3213,7 @@ function downloadBankSoal(format) {
                 </tr>
             </thead>
             <tbody>
-                ${_bankSoalCache.map(q => `
+                ${questionsToDownload.map(q => `
                     <tr>
                         <td>${q.question}</td>
                         <td>${q.options[0]}</td>
@@ -3216,7 +3231,7 @@ function downloadBankSoal(format) {
         const blob = new Blob(['\ufeff' + excelHtml], { type: 'application/vnd.ms-excel;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `Bank_Soal_Export_${new Date().getTime()}.xls`;
+        link.download = `Bank_Soal_Kelas_${classNameDisplay.replace(/\s+/g, '_')}_Export_${new Date().getTime()}.xls`;
         link.click();
     } else if (format === 'pdf') {
         const element = document.createElement('div');
@@ -3226,7 +3241,7 @@ function downloadBankSoal(format) {
         element.style.color = '#000000';
 
         let questionsHtml = '';
-        _bankSoalCache.forEach((q, index) => {
+        questionsToDownload.forEach((q, index) => {
             questionsHtml += `
                 <div style="margin-bottom: 25px; page-break-inside: avoid;">
                     <p style="font-weight: 600; font-size: 1.05rem; margin-bottom: 8px;">${index + 1}. ${q.question}</p>
@@ -3262,7 +3277,7 @@ function downloadBankSoal(format) {
                 </div>
 
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0; color: #1e293b; text-transform: uppercase;">DAFTAR BANK SOAL ASESMEN</h2>
+                    <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0; color: #1e293b; text-transform: uppercase;">DAFTAR BANK SOAL ASESMEN (${classNameDisplay.toUpperCase()})</h2>
                     <div style="width: 80px; height: 4px; background: #1a73e8; margin: 8px auto 0 auto; border-radius: 2px;"></div>
                 </div>
 
@@ -3274,7 +3289,7 @@ function downloadBankSoal(format) {
 
         const opt = {
             margin: [15, 15, 15, 15],
-            filename: `Bank_Soal_Export_${new Date().getTime()}.pdf`,
+            filename: `Bank_Soal_Kelas_${classNameDisplay.replace(/\s+/g, '_')}_Export_${new Date().getTime()}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -3295,8 +3310,9 @@ function downloadBankSoal(format) {
         </head>
         <body>
             <h2 style="text-align: center;">DAFTAR BANK SOAL ASESMEN - SMP NEGERI 1 BALIKPAPAN</h2>
+            <h3 style="text-align: center;">KELAS: ${classNameDisplay.toUpperCase()}</h3>
             <hr/>
-            ${_bankSoalCache.map((q, index) => `
+            ${questionsToDownload.map((q, index) => `
                 <div class="question">
                     <p><strong>${index + 1}. ${q.question}</strong></p>
                     <div class="options">
@@ -3316,7 +3332,7 @@ function downloadBankSoal(format) {
         const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `Bank_Soal_Export_${new Date().getTime()}.doc`;
+        link.download = `Bank_Soal_Kelas_${classNameDisplay.replace(/\s+/g, '_')}_Export_${new Date().getTime()}.doc`;
         link.click();
     }
     const menu = document.getElementById('download-dropdown-menu');
@@ -3728,14 +3744,16 @@ async function filterBankSoalByKelas(kelas, btn) {
                             <td>${i + 1}</td>
                             <td><span class="badge ${q.type === 'literasi' ? 'badge-info' : 'badge-warning'}">${q.type}</span></td>
                             <td>
-                                ${q.image ? `<img src="${q.image}" style="height:30px; border-radius:4px; margin-right:5px; cursor:pointer;" onclick="viewFullImage('${q.image}')">` : ''}
-                                ${q.question.substring(0, 80)}...
+                                ${q.image ? `<img src="${q.image}" style="height:35px; max-width:60px; border-radius:4px; margin-right:5px; cursor:pointer; object-fit:cover;" onclick="viewFullImage('${q.image}')" title="Klik untuk perbesar">` : ''}
+                                ${q.question.substring(0, 150)}${q.question.length > 150 ? '...' : ''}
                             </td>
-                            <td>${String.fromCharCode(65 + q.correct)}</td>
+                            <td><strong>${String.fromCharCode(65 + q.correct)}</strong></td>
                             <td>
-                                <div class="flex gap-1">
-                                    <button class="btn btn-sm btn-outline" onclick="editBankSoal('${q._id}')"><i class="fas fa-edit"></i></button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')"><i class="fas fa-trash"></i></button>
+                                <div class="flex gap-1" style="flex-wrap: wrap;">
+                                    <button class="btn btn-sm btn-outline" onclick="editBankSoal('${q._id}')" title="Edit Soal"><i class="fas fa-edit"></i></button>
+                                    <button class="btn btn-sm btn-info" onclick="generateSupportingImage('${q._id}', 'ai')" title="Generate Gambar AI"><i class="fas fa-robot"></i> AI</button>
+                                    <button class="btn btn-sm btn-success" onclick="generateSupportingImage('${q._id}', 'google')" title="Generate Gambar Google"><i class="fas fa-search"></i> Google</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteBankSoal('${q._id}')" title="Hapus Soal"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>`).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada soal untuk kelas ini</td></tr>'}
@@ -3833,76 +3851,59 @@ function renderKisiKisiSoal(main) {
 async function generateKisiKisiView(kelas) {
     if (!kelas) return;
     const content = document.getElementById('kisi-kisi-content');
-    content.innerHTML = '<div class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Menganalisis Bank Soal...</div>';
+    content.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom:0.5rem; display:block;"></i> Nara-AI sedang menganalisis soal & membuat kisi-kisi otomatis (10-20 detik)...</div>';
 
     try {
-        const res = await fetch(`/api/question-bank?kelas=${encodeURIComponent(kelas)}`);
+        const res = await fetch('/api/question-bank/generate-kisi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ kelas })
+        });
         const data = await res.json();
-        const questions = data.questions || [];
 
-        if (questions.length === 0) {
+        if (!res.ok || !data.success) {
+            content.innerHTML = `<div class="error-msg">${data.error || 'Gagal menghasilkan kisi-kisi otomatis.'}</div>`;
+            return;
+        }
+
+        const kisiKisi = data.kisiKisi || [];
+        if (kisiKisi.length === 0) {
             content.innerHTML = '<div class="text-center py-3 text-muted">Tidak ada soal ditemukan untuk kelas ini di Bank Soal.</div>';
             return;
         }
 
-        // Aggregate by topic/type
-        const stats = { literasi: 0, numerasi: 0, total: questions.length, topics: {} };
-        questions.forEach(q => {
-            stats[q.type]++;
-            const topic = q.topic || 'Umum';
-            if (!stats.topics[topic]) stats.topics[topic] = { count: 0, types: { literasi: 0, numerasi: 0 } };
-            stats.topics[topic].count++;
-            stats.topics[topic].types[q.type]++;
-        });
-
         content.innerHTML = `
-        <div class="alert alert-info mt-2" style="background:rgba(26,115,232,0.1); border-left:4px solid var(--primary); padding:1rem; border-radius:8px;">
-            <h4 style="color:var(--primary); margin-bottom:0.5rem">Ringkasan Kisi-kisi: ${kelas}</h4>
-            <div class="grid-3">
-                <div class="stat-mini"><strong>Total Soal:</strong> ${stats.total}</div>
-                <div class="stat-mini"><strong>Literasi:</strong> ${stats.literasi}</div>
-                <div class="stat-mini"><strong>Numerasi:</strong> ${stats.numerasi}</div>
-            </div>
+        <div class="alert alert-info mt-2" style="background:rgba(26,115,232,0.05); border-left:4px solid var(--primary); padding:1rem; border-radius:8px; margin-bottom: 1.5rem;">
+            <h4 style="color:var(--primary); margin-bottom:0.25rem"><i class="fas fa-robot"></i> Kisi-kisi Hasil Analisis AI</h4>
+            <p class="text-muted" style="font-size:0.9rem; margin:0;">AI berhasil memetakan soal-soal di Bank Soal Kelas <strong>${kelas}</strong> ke dalam kompetensi inti di bawah ini.</p>
         </div>
         
         <div class="table-container mt-2">
             <table>
                 <thead>
                     <tr>
-                        <th>Materi/Topik</th>
-                        <th>Literasi</th>
-                        <th>Numerasi</th>
-                        <th>Total Soal</th>
-                        <th>Distribusi (%)</th>
+                        <th style="width: 60%">Deskripsi Point dari Materi</th>
+                        <th style="text-align: center; width: 20%">Jumlah Soal</th>
+                        <th style="text-align: center; width: 20%">Bentuk Soal</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${Object.keys(stats.topics).map(topic => {
-            const t = stats.topics[topic];
-            const pct = ((t.count / stats.total) * 100).toFixed(1);
-            return `
+                    ${kisiKisi.map(item => `
                         <tr>
-                            <td><strong>${topic}</strong></td>
-                            <td>${t.types.literasi}</td>
-                            <td>${t.types.numerasi}</td>
-                            <td>${t.count}</td>
-                            <td>
-                                <div class="progress-bar" style="height:6px; width:80px">
-                                    <div class="progress-fill" style="width:${pct}%"></div>
-                                </div>
-                                <small>${pct}%</small>
-                            </td>
-                        </tr>`;
-        }).join('')}
+                            <td style="font-weight: 500;">${item.pointDescription}</td>
+                            <td style="text-align: center; font-weight: bold; color: var(--primary);">${item.count} Soal</td>
+                            <td style="text-align: center;"><span class="badge badge-success" style="background:#e8f5e9; color:#2e7d32; border:1px solid #c8e6c9;">${item.format || 'Pilihan Ganda HOTS'}</span></td>
+                        </tr>
+                    `).join('')}
                 </tbody>
             </table>
         </div>
-        <div class="flex justify-between mt-2">
+        <div class="flex justify-between mt-3">
             <button class="btn btn-outline" onclick="exportKisiToExcel('${kelas}')"><i class="fas fa-file-excel"></i> Download Kisi-kisi (Excel)</button>
             <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Cetak Laporan</button>
         </div>`;
     } catch (err) {
-        content.innerHTML = '<div class="error-msg">Gagal memproses kisi-kisi.</div>';
+        content.innerHTML = '<div class="error-msg">Gagal memproses kisi-kisi otomatis dari AI: ' + err.message + '</div>';
     }
 }
 
@@ -4207,3 +4208,58 @@ async function loadViolationData(kelas) {
         container.innerHTML = '<div class="error-msg">Gagal memuat data pelanggaran.</div>';
     }
 }
+
+window.generateSupportingImage = async function(id, source) {
+    const confirmMsg = source === 'ai' 
+        ? 'Generate gambar pendukung menggunakan AI (Pollinations)?' 
+        : 'Generate gambar pendukung menggunakan pencarian gambar Google/LoremFlickr?';
+    if (!confirm(confirmMsg)) return;
+
+    // Show loading spinner
+    const loader = document.createElement('div');
+    loader.id = 'img-gen-loader';
+    loader.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:rgba(0,0,0,0.8); color:white; padding:1.5rem 2rem; border-radius:12px; z-index:99999; text-align:center; box-shadow:var(--shadow-lg); font-weight:700;';
+    loader.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x" style="margin-bottom:0.5rem; display:block;"></i> Sedang menghasilkan gambar...';
+    document.body.appendChild(loader);
+
+    try {
+        const res = await fetch('/api/question-bank/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, source })
+        });
+        const data = await res.json();
+        loader.remove();
+
+        if (res.ok && data.success) {
+            alert('✅ Gambar berhasil dipasang!');
+            // Refresh view
+            const activeTab = document.querySelector('.tabs .tab-button.active');
+            if (activeTab && activeTab.onclick && activeTab.onclick.toString().includes('filterBankSoalByKelas')) {
+                filterBankSoalByKelas(activeTab.innerText, activeTab);
+            } else {
+                renderBankSoal(document.getElementById('main-content'));
+            }
+        } else {
+            alert(data.error || 'Gagal menghasilkan gambar.');
+        }
+    } catch (err) {
+        loader.remove();
+        console.error(err);
+        alert('Server error.');
+    }
+};
+
+window.viewFullImage = function(url) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'full-image-modal';
+    modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:99999;';
+    modal.innerHTML = `
+        <div class="modal" style="max-width:800px; text-align:center; position:relative; background:transparent; box-shadow:none; border:none; padding:0;">
+            <button class="modal-close" style="position:absolute; top:-40px; right:0; color:white; font-size:2.5rem; background:none; border:none; cursor:pointer;" onclick="document.getElementById('full-image-modal').remove()">&times;</button>
+            <img src="${url}" style="max-width:95vw; max-height:85vh; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        </div>
+    `;
+    document.body.appendChild(modal);
+};

@@ -1420,7 +1420,19 @@ window.startRemedialMandiri = async function () {
         const genData = await genRes.json();
 
         const progress = getProgress(currentUser.username);
-        progress.generatedAssessment = genData.questions;
+        // Shuffle options and adjust correct index uniquely for each student
+        const shuffledQuestions = (genData.questions || []).map(q => {
+            const originalCorrectText = q.options[q.correct];
+            const shuffledOptions = [...q.options];
+            for (let i = shuffledOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+            }
+            q.options = shuffledOptions;
+            q.correct = shuffledOptions.indexOf(originalCorrectText);
+            return q;
+        });
+        progress.generatedAssessment = shuffledQuestions;
         progress.tahap3Complete = false;
         progress.remedialStatus = 'approved';
         updateProgress(currentUser.username, progress);
@@ -1459,7 +1471,19 @@ async function startAssessment() {
 
         if (data.success && data.questions && data.questions.length > 0) {
             const progress = getProgress(currentUser.username);
-            progress.generatedAssessment = data.questions;
+            // Shuffle options and adjust correct index uniquely for each student
+            const shuffledQuestions = (data.questions || []).map(q => {
+                const originalCorrectText = q.options[q.correct];
+                const shuffledOptions = [...q.options];
+                for (let i = shuffledOptions.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+                }
+                q.options = shuffledOptions;
+                q.correct = shuffledOptions.indexOf(originalCorrectText);
+                return q;
+            });
+            progress.generatedAssessment = shuffledQuestions;
             updateProgress(currentUser.username, progress);
         } else {
             alert(data.error || 'Gagal mengambil soal dari Bank Soal');

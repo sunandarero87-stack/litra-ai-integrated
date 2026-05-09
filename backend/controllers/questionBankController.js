@@ -633,3 +633,102 @@ exports.downloadWordTemplate = async (req, res) => {
         res.status(500).json({ error: 'Gagal membuat template Word: ' + err.message });
     }
 };
+
+exports.generateImage = async (req, res) => {
+    try {
+        const { id, source } = req.body;
+        if (!id || !source) {
+            return res.status(400).json({ error: 'ID dan Source wajib diisi.' });
+        }
+
+        const question = await QuestionBank.findById(id);
+        if (!question) {
+            return res.status(404).json({ error: 'Soal tidak ditemukan.' });
+        }
+
+        const aiService = require('../services/aiService');
+        let imageUrl = '';
+
+        if (source === 'ai') {
+            const payload = {
+                messages: [
+                    { role: "system", content: "You are an expert AI image prompt designer. Convert the following Indonesian educational question into a highly descriptive, beautiful, educational 3D vector illustration or realistic photography prompt in English. Respond ONLY with the prompt, no other text." },
+                    { role: "user", content: question.question }
+                ],
+                max_tokens: 100,
+                temperature: 0.6
+            };
+            let promptText = "educational illustration";
+            try {
+                const resAI = await aiService.requestWithFallback(payload);
+                promptText = resAI.data.choices[0].message.content.trim().replace(/^"|"$/g, '');
+            } catch (e) {
+                console.warn("AI prompt gen failed, using fallback:", e.message);
+                promptText = "educational illustration about " + question.question.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, "");
+            }
+            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=800&height=500&nologo=true`;
+        } else {
+            const payload = {
+                messages: [
+                    { role: "system", content: "Extract exactly one or two specific English nouns representing the main subject or topic of this Indonesian question. Respond ONLY with the english words, e.g., 'photosynthesis' or 'algebra'. No explanation, no punctuation." },
+                    { role: "user", content: question.question }
+                ],
+                max_tokens: 15,
+                temperature: 0.3
+            };
+            let keyword = "education";
+            try {
+                const resAI = await aiService.requestWithFallback(payload);
+                keyword = resAI.data.choices[0].message.content.trim().toLowerCase().replace(/[^a-z0-9_\-\s]/g, "").replace(/\s+/g, "_");
+            } catch (e) {
+                console.warn("AI keyword extraction failed, using fallback:", e.message);
+                keyword = "education";
+            }
+            imageUrl = `https://loremflickr.com/800/500/${encodeURIComponent(keyword)}`;
+        }
+
+        question.image = imageUrl;
+        await question.save();
+
+        res.json({ success: true, imageUrl });
+    } catch (err) {
+        console.error('generateImage error:', err);
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.generateKisiAI = async (req, res) => {
+    try {
+        const { kelas } = req.body;
+        let query = {};
+        if (kelas && kelas !== 'all' && kelas !== 'Semua Kelas') {
+            query.kelas = kelas;
+        }
+
+        const questions = await QuestionBank.find(query);
+        if (!questions || questions.length === 0) {
+            return res.status(404).json({ error: 'Belum ada soal untuk kelas ini di Bank Soal.' });
+        }
+
+        const aiService = require('../services/aiService');
+        const questionsSummary = questions.map((q, idx) => `Soal ${idx+1}: "${q.question}" (Tipe: ${q.type})`).join('\n\n');
+        
+        const payload = {
+            messages: [
+                { role: "system", content: "Kamu adalah AI Pakar Kurikulum dan Evaluasi Pembelajaran Indonesia. Tugasmu adalah menganalisis kumpulan soal ujian yang diberikan, mengelompokkannya ke dalam beberapa materi/topik utama, lalu merumuskan kisi-kisi instrumen asesmen yang rapi. OUTPUT WAJIB BERUPA PURE JSON ARRAY YANG VALID." },
+                { role: "user", content: `Berikut adalah daftar soal ujian untuk analisis:\n\n${questionsSummary}\n\nBuatlah analisis kisi-kisi soal otomatis dalam bentuk JSON array murni of objects dengan struktur berikut:\n[\n  {\n    "pointDescription": "Deskripsi rinci poin materi/kompetensi yang diuji (contoh: 'Peserta didik mampu menganalisis data tabel untuk menyimpulkan tren pertumbuhan populasi') berdasarkan soal yang ada.",\n    "count": 3,\n    "format": "Pilihan Ganda HOTS"\n  }\n]\n\nATURAN KETAT:\n1. Analisis harus mencakup semua soal yang diberikan.\n2. Deskripsi poin materi harus spesifik, mendalam, dan menggunakan Bahasa Indonesia baku kurikulum merdeka.\n3. Nilai \"count\" adalah jumlah soal yang termasuk dalam deskripsi materi tersebut.\n4. Nilai \"format\" harus \"Pilihan Ganda HOTS\".\n5. Jangan berikan kata pengantar atau markdown block. Berikan JSON murni mulai dari [\n` }
+            ],
+            max_tokens: 3000,
+            temperature: 0.5
+        };
+
+        const response = await aiService.requestWithFallback(payload);
+        const cleanText = aiService.cleanJson(response.data.choices[0].message.content);
+        const kisiKisi = JSON.parse(cleanText);
+
+        res.json({ success: true, kisiKisi });
+    } catch (err) {
+        console.error('generateKisiAI error:', err);
+        res.status(500).json({ error: 'Gagal membuat kisi-kisi otomatis dari AI: ' + err.message });
+    }
+};

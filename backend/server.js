@@ -85,6 +85,8 @@ app.post('/api/question-bank/upload', upload.single('file'), questionBankControl
 app.post('/api/question-bank/upload-word', upload.single('file'), questionBankController.uploadWord);
 app.post('/api/question-bank/generate-ai', questionBankController.generateFromAI);
 app.post('/api/question-bank/generate-from-material', questionBankController.generateFromMaterial);
+app.post('/api/question-bank/generate-image', questionBankController.generateImage);
+app.post('/api/question-bank/generate-kisi', questionBankController.generateKisiAI);
 // Route dengan :id harus di BAWAH route statis
 app.get('/api/question-bank/:id', questionBankController.getQuestionById);
 app.post('/api/question-bank', questionBankController.addQuestion);
