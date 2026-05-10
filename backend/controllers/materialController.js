@@ -182,7 +182,8 @@ exports.generateMaterialFromAI = async (req, res) => {
             size: Buffer.byteLength(htmlContent),
             contentDataUrl: contentDataUrl,
             content: plainTextContent, // store full text for chatbot/search context
-            kelas: kelas
+            kelas: kelas,
+            mapel: req.body.mapel || '' // Save provided mapel
         });
 
         await newMaterial.save();

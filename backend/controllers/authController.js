@@ -170,6 +170,7 @@ const uploadExcel = async (req, res) => {
             const username = findKey('username') || findKey('user');
             const name = findKey('nama') || findKey('name');
             const kelas = findKey('kelas') || (targetRole === 'siswa' ? '7A' : 'Semua Kelas');
+            const mapel = findKey('mapel') || findKey('mata pelajaran') || '';
             const defaultPassword = targetRole === 'guru' ? 'guru123' : 'siswa123';
             const password = findKey('password') || defaultPassword;
 
@@ -179,6 +180,7 @@ const uploadExcel = async (req, res) => {
                     username: safeUsername,
                     name: String(name).trim(),
                     kelas: String(kelas).trim(),
+                    mapel: String(mapel).trim(), // Assign subject if available
                     role: targetRole,
                     password: String(password).trim() || defaultPassword,
                     mustChangePassword: true

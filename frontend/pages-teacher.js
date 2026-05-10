@@ -557,7 +557,10 @@ function renderMaterials(main) {
     main.innerHTML = `
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-            <h3 class="card-title">📚 Materi Pembelajaran</h3>
+            <div style="display:flex; align-items:center; gap:1rem;">
+                <h3 class="card-title" style="margin-bottom:0;">📚 Materi Pembelajaran</h3>
+                ${isRestricted && currentUser.mapel ? `<span class="badge" style="background:var(--bg-input); color:var(--text-secondary);"><i class="fas fa-book"></i> ${currentUser.mapel}</span>` : ''}
+            </div>
             <select id="material-class-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="filterMaterialsByClass()" ${isRestricted ? 'disabled' : ''}>
                 ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
                 <option value="all">Semua Kelas</option>
@@ -652,12 +655,25 @@ function renderMaterials(main) {
         </div>
 
         <div class="material-list" id="material-list" style="padding:1rem">
-            ${materials.map((m) => `
-                <div class="material-item" data-kelas="${m.kelas || 'Semua Kelas'}">
+            ${materials
+                // Filter list up-front if role matches restricted Teacher
+                .filter(m => {
+                    if (currentUser.role !== 'guru') return true; // Admin sees everything
+                    
+                    // If restricted by class, must match class
+                    const classMatch = !isRestricted || (m.kelas === currentUser.kelas || m.kelas === 'Semua Kelas');
+                    // If specific mapel exists, filter for their mapel
+                    const mapelMatch = !currentUser.mapel || !m.mapel || m.mapel.toLowerCase().trim() === currentUser.mapel.toLowerCase().trim();
+                    
+                    return classMatch && mapelMatch;
+                })
+                .map((m) => `
+                <div class="material-item" data-kelas="${m.kelas || 'Semua Kelas'}" data-mapel="${m.mapel || ''}">
                     <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : m.type === 'html' || m.type === 'ai' ? 'fa-robot' : 'fa-file-word'}"></i>
                     <div style="flex:1">
                         <div style="font-weight:600">${m.name}</div>
                         <div style="font-size:0.75rem" class="text-muted">
+                            ${m.mapel ? `<span class="badge" style="background:var(--bg-input); color:var(--text-secondary); font-size:0.65rem"><i class="fas fa-book"></i> ${m.mapel}</span> • ` : ''}
                              Kelas: <span class="badge badge-info" style="font-size:0.65rem">${m.kelas || 'Semua Kelas'}</span> • 
                             ${new Date(m.date).toLocaleDateString('id-ID')}
                         </div>
@@ -737,6 +753,7 @@ window.generateMaterialWithAI = async function () {
                 judul: title,
                 tujuanPembelajaran: objective,
                 kelas: kelas,
+                mapel: currentUser.mapel || '', // Attach teacher subject
                 sumberGambar: imageSource,
                 jumlahTujuan: jumlahTujuan,
                 jumlahHalaman: jumlahHalaman
@@ -790,7 +807,8 @@ function handleMaterialUpload(event) {
                 date: new Date().toISOString(),
                 size: file.size,
                 contentDataUrl: e.target.result,
-                kelas: document.getElementById('material-target-kelas').value
+                kelas: document.getElementById('material-target-kelas').value,
+                mapel: currentUser.mapel || '' // Auto-assign teacher subject
             };
 
             const res = await fetch('/api/materials', {
@@ -2329,7 +2347,7 @@ async function renderTeacherAccounts(main) {
                         <th>Status Akun</th>
                         <th>Username</th>
                         <th>Nama Lengkap</th>
-                        <th>Mengajar / Akses Kelas</th>
+                        <th>Mata Pelajaran & Kelas</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -2345,7 +2363,10 @@ async function renderTeacherAccounts(main) {
                         </td>
                         <td><strong>${t.username}</strong></td>
                         <td>${t.name}</td>
-                        <td><span class="badge badge-info">${t.kelas || 'Semua Kelas'}</span></td>
+                        <td>
+                            <strong>${t.mapel || '<span class="text-muted"><em>Belum diatur</em></span>'}</strong><br>
+                            <span class="badge badge-info" style="margin-top:2px; font-size:0.7rem;"><i class="fas fa-school"></i> ${t.kelas || 'Semua Kelas'}</span>
+                        </td>
                         <td>
                             <div class="flex gap-1">
                                 <button class="btn btn-sm btn-warning" onclick="resetTeacherPassword('${t.username}')" title="Reset Password"><i class="fas fa-key"></i></button>
@@ -2389,16 +2410,28 @@ function showAddTeacherModal() {
         <div class="modal-header"><h2><i class="fas fa-user-plus"></i> Tambah Akun Guru</h2><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
         <div class="form-group"><label>Username</label><input type="text" id="new-teacher-username" placeholder="contoh: gurunama"></div>
         <div class="form-group"><label>Nama Lengkap</label><input type="text" id="new-teacher-name" placeholder="Nama lengkap beserta gelar"></div>
+        <div class="form-group"><label>Mata Pelajaran</label>
+            <input type="text" id="new-teacher-mapel" placeholder="Contoh: Informatika, Bahasa Indonesia" list="mapel-list">
+            <datalist id="mapel-list">
+                <option value="Informatika">
+                <option value="Bahasa Indonesia">
+                <option value="Matematika">
+                <option value="Ilmu Pengetahuan Alam">
+                <option value="Bahasa Inggris">
+            </datalist>
+        </div>
         <div class="form-group"><label>Akses Kelas</label>
-            <select id="new-teacher-kelas">
-                <option value="Semua Kelas">Semua Kelas</option>
-                <option value="7.6">7.6</option>
-                <option value="7.7">7.7</option>
-                <option value="7.8">7.8</option>
-                <option value="7.9">7.9</option>
-                <option value="7.10">7.10</option>
-                <option value="7.11">7.11</option>
-            </select>
+            <input type="text" id="new-teacher-kelas" placeholder="Pilih atau ketik kelas baru" list="kelas-list" style="width:100%">
+            <small class="text-muted">Ketik kelas baru di atas jika tidak ada di daftar.</small>
+            <datalist id="kelas-list">
+                <option value="Semua Kelas">
+                <option value="7.6">
+                <option value="7.7">
+                <option value="7.8">
+                <option value="7.9">
+                <option value="7.10">
+                <option value="7.11">
+            </datalist>
         </div>
         <div class="form-group"><label>Password Awal</label><input type="text" id="new-teacher-password" value="guru123" placeholder="Password default"></div>
         <div class="modal-actions">
@@ -2412,7 +2445,8 @@ function showAddTeacherModal() {
 async function addTeacherAccount() {
     const username = document.getElementById('new-teacher-username').value.trim();
     const name = document.getElementById('new-teacher-name').value.trim();
-    const kelas = document.getElementById('new-teacher-kelas').value;
+    const mapel = document.getElementById('new-teacher-mapel').value.trim();
+    const kelas = document.getElementById('new-teacher-kelas').value.trim() || 'Semua Kelas';
     const password = document.getElementById('new-teacher-password').value;
 
     if (!username || !name) { alert('Username dan nama lengkap wajib diisi!'); return; }
@@ -2424,6 +2458,7 @@ async function addTeacherAccount() {
             name, 
             role: 'guru', 
             kelas, 
+            mapel,
             mustChangePassword: true 
         };
         const res = await fetch('/api/users', {
@@ -2447,7 +2482,7 @@ async function addTeacherAccount() {
 }
 
 function downloadTeacherExcelTemplate() {
-    const csv = 'username,nama,kelas,password\nguruinformatika,Budi Santoso S.Kom,Semua Kelas,guru123\ngurubahasindo,Dewi Safitri M.Pd,7.6,guru123';
+    const csv = 'username,nama,kelas,mapel,password\\nguruinformatika,Budi Santoso S.Kom,Semua Kelas,Informatika,guru123\\ngurubahasindo,Dewi Safitri M.Pd,7.6,Bahasa Indonesia,guru123';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -3273,8 +3308,9 @@ function renderStudentAttendance(main) {
 
     main.innerHTML = `
     <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
             <h3 class="card-title">📅 Manajemen Absensi Siswa</h3>
+            ${isRestricted && currentUser.mapel ? `<span class="badge" style="background:var(--gradient-primary); color:white;"><i class="fas fa-book"></i> ${currentUser.mapel}</span>` : ''}
         </div>
         <div class="tabs">
             <button class="tab-button active" onclick="switchAttendanceTab('input', this)">Input Absensi</button>
