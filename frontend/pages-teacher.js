@@ -2,19 +2,30 @@
 // PAGES - Teacher/Admin Dashboard, Results, Management
 // ============================================
 
+// Helper functions to safely parse comma-separated assigned string from User record
+function getAssignedClasses() {
+    if (!currentUser || !currentUser.kelas) return [];
+    if (currentUser.kelas === 'Semua Kelas') return ['Semua Kelas'];
+    return currentUser.kelas.split(',').map(s => s.trim()).filter(Boolean);
+}
+function getAssignedMapels() {
+    if (!currentUser || !currentUser.mapel) return [];
+    return currentUser.mapel.split(',').map(s => s.trim()).filter(Boolean);
+}
+
 function renderTeacherDashboard(main) {
-    const isRestrictedGuru = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
+    const assignedClasses = getAssignedClasses();
+    const isRestrictedGuru = currentUser.role === 'guru' && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas');
     const users = getUsers();
     
-    // Filter raw list of students upfront if Guru is restricted to one class
     let students = users.filter(u => u.role === 'siswa');
     if (isRestrictedGuru) {
-        students = students.filter(s => s.kelas === currentUser.kelas);
+        // Filter students that belong to ANY of the teacher's assigned classes
+        students = students.filter(s => assignedClasses.includes(s.kelas));
     }
 
-    // If Guru, they see only the Attendance Statistics as requested
     if (currentUser.role === 'guru') {
-        renderGuruSpecificDashboard(main, students, isRestrictedGuru ? currentUser.kelas : 'Semua Kelas');
+        renderGuruSpecificDashboard(main, students, assignedClasses);
         return;
     }
 
@@ -115,17 +126,26 @@ function renderTeacherDashboard(main) {
     }, 100);
 }
 
-async function renderGuruSpecificDashboard(main, students, assignedClass) {
+async function renderGuruSpecificDashboard(main, students, assignedClasses) {
+    const displayClasses = assignedClasses.length > 0 ? assignedClasses.join(', ') : 'Semua Kelas';
+    const assignedMapels = getAssignedMapels();
+    const displayMapels = assignedMapels.length > 0 ? assignedMapels.join(', ') : 'Semua Mapel';
+
     main.innerHTML = `
     <div style="margin-bottom:1.5rem">
         <h2 style="font-size:1.3rem;font-weight:800">Dashboard Guru <i class="fas fa-chalkboard-teacher"></i></h2>
-        <p class="text-muted">Anda masuk sebagai Pengampu Kelas: <strong>${assignedClass}</strong></p>
+        <p class="text-muted">Anda Mengajar: <strong>${displayMapels}</strong> | Kelas: <strong>${displayClasses}</strong></p>
     </div>
 
     <div class="card">
-        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 class="card-title"><i class="fas fa-chart-pie"></i> Persentase Absensi Siswa Bulan Ini</h3>
-            <div style="display:flex; gap:0.5rem;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <h3 class="card-title"><i class="fas fa-chart-pie"></i> Pantauan Absensi</h3>
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <!-- Dropdown for multiple classes if restricted -->
+                <select id="dashboard-class-filter" class="form-control" style="width:auto; margin:0;" onchange="initDashboardCharts()">
+                    ${assignedClasses.includes('Semua Kelas') || assignedClasses.length > 1 ? '<option value="all">Gabungan Semua Kelas</option>' : ''}
+                    ${assignedClasses.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
                 <select id="dashboard-period-filter" class="form-control" style="width:auto; margin:0;" onchange="initDashboardCharts()">
                     <option value="monthly">Bulan Ini</option>
                     <option value="weekly">Minggu Ini</option>
@@ -552,17 +572,24 @@ function downloadExcelFile(tableHTML, filePrefix) {
 // ---- MATERIALS MANAGEMENT ----
 function renderMaterials(main) {
     const materials = getMaterials();
-    const isRestricted = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
+    const assignedClasses = getAssignedClasses();
+    const assignedMapels = getAssignedMapels();
+    const isRestricted = currentUser.role === 'guru' && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas');
     
     main.innerHTML = `
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <div style="display:flex; align-items:center; gap:1rem;">
                 <h3 class="card-title" style="margin-bottom:0;">📚 Materi Pembelajaran</h3>
-                ${isRestricted && currentUser.mapel ? `<span class="badge" style="background:var(--bg-input); color:var(--text-secondary);"><i class="fas fa-book"></i> ${currentUser.mapel}</span>` : ''}
+                <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                    ${assignedMapels.map(m => `<span class="badge" style="background:var(--bg-input); color:var(--text-secondary); font-size:0.65rem"><i class="fas fa-book"></i> ${m}</span>`).join('')}
+                </div>
             </div>
-            <select id="material-class-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="filterMaterialsByClass()" ${isRestricted ? 'disabled' : ''}>
-                ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
+            <select id="material-class-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="filterMaterialsByClass()" ${(isRestricted && assignedClasses.length <= 1) ? 'disabled' : ''}>
+                ${isRestricted ? `
+                    ${assignedClasses.length > 1 ? '<option value="all">Semua Kelas Anda</option>' : ''}
+                    ${assignedClasses.map(c => `<option value="${c}">${c}</option>`).join('')}
+                ` : `
                 <option value="all">Semua Kelas</option>
                 ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
                 `}
@@ -575,16 +602,25 @@ function renderMaterials(main) {
                 <button class="tab-btn" id="btn-tab-ai" onclick="switchMaterialTab('ai')" style="background:none; border:none; padding:0.75rem 1.5rem; color:var(--text-secondary); border-bottom:3px solid transparent; font-weight:600; cursor:pointer;"><i class="fas fa-robot"></i> Buat dengan AI</button>
             </div>
 
-            <!-- Upload Tab Content -->
             <div id="tab-content-upload">
-                <div class="form-group mb-2">
-                    <label>Target Kelas</label>
-                    <select id="material-target-kelas" class="form-control" ${isRestricted ? 'disabled' : ''}>
-                        ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
-                        <option value="Semua Kelas">Semua Kelas</option>
-                        ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
-                        `}
-                    </select>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div class="form-group">
+                        <label>Mata Pelajaran Materi</label>
+                        <select id="material-upload-mapel" class="form-control">
+                            ${assignedMapels.map(m => `<option value="${m}">${m}</option>`).join('') || '<option value="Umum">Umum</option>'}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Kelas</label>
+                        <select id="material-target-kelas" class="form-control" ${(isRestricted && assignedClasses.length <= 1) ? 'disabled' : ''}>
+                            ${isRestricted ? `
+                                ${assignedClasses.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            ` : `
+                            <option value="Semua Kelas">Semua Kelas</option>
+                            ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                            `}
+                        </select>
+                    </div>
                 </div>
                 <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
                     <i class="fas fa-cloud-upload-alt"></i>
@@ -600,11 +636,19 @@ function renderMaterials(main) {
                     <label>Judul Materi</label>
                     <input type="text" id="ai-material-title" class="form-control" placeholder="Contoh: Pengenalan Fotosintesis pada Tumbuhan" style="width:100%;">
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div class="form-group">
+                        <label>Mata Pelajaran</label>
+                        <select id="ai-material-mapel" class="form-control">
+                            ${assignedMapels.map(m => `<option value="${m}">${m}</option>`).join('') || '<option value="Umum">Umum</option>'}
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>Tujuan Kelas</label>
-                        <select id="ai-material-target-kelas" class="form-control" ${isRestricted ? 'disabled' : ''}>
-                            ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
+                        <select id="ai-material-target-kelas" class="form-control" ${(isRestricted && assignedClasses.length <= 1) ? 'disabled' : ''}>
+                            ${isRestricted ? `
+                                ${assignedClasses.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            ` : `
                             <option value="Semua Kelas">Semua Kelas</option>
                             ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
                             `}
@@ -613,9 +657,9 @@ function renderMaterials(main) {
                     <div class="form-group">
                         <label>Sumber Gambar</label>
                         <select id="ai-material-image-source" class="form-control">
-                            <option value="AI">Dihasilkan AI (Pollinations)</option>
-                            <option value="Internet">Diambil dari Internet (Unsplash)</option>
-                            <option value="Kedua-duanya">Kedua-duanya (AI & Internet)</option>
+                            <option value="AI">Dihasilkan AI</option>
+                            <option value="Internet">Unsplash (Foto)</option>
+                            <option value="Kedua-duanya">Keduanya</option>
                         </select>
                     </div>
                 </div>
@@ -660,10 +704,14 @@ function renderMaterials(main) {
                 .filter(m => {
                     if (currentUser.role !== 'guru') return true; // Admin sees everything
                     
-                    // If restricted by class, must match class
-                    const classMatch = !isRestricted || (m.kelas === currentUser.kelas || m.kelas === 'Semua Kelas');
-                    // If specific mapel exists, filter for their mapel
-                    const mapelMatch = !currentUser.mapel || !m.mapel || m.mapel.toLowerCase().trim() === currentUser.mapel.toLowerCase().trim();
+                    // If restricted by class, MUST belong to ANY assigned classes or be Global
+                    const classMatch = !isRestricted || assignedClasses.includes(m.kelas) || m.kelas === 'Semua Kelas';
+                    // Must be teaching the subject tagged on that material (if defined)
+                    // If a material has NO mapel defined, assume visible if class matches.
+                    const materialMapel = (m.mapel || '').toLowerCase().trim();
+                    const teacherMapels = getAssignedMapels().map(item => item.toLowerCase().trim());
+
+                    const mapelMatch = teacherMapels.length === 0 || !materialMapel || teacherMapels.includes(materialMapel);
                     
                     return classMatch && mapelMatch;
                 })
@@ -724,6 +772,7 @@ window.generateMaterialWithAI = async function () {
     const title = document.getElementById('ai-material-title').value.trim();
     const objective = document.getElementById('ai-material-objective').value.trim();
     const kelas = document.getElementById('ai-material-target-kelas').value;
+    const mapel = document.getElementById('ai-material-mapel') ? document.getElementById('ai-material-mapel').value : (currentUser.mapel || '');
     const imageSource = document.getElementById('ai-material-image-source').value;
     const jumlahTujuan = document.getElementById('ai-material-objectives-count').value;
     const jumlahHalaman = document.getElementById('ai-material-pages-count').value;
@@ -753,7 +802,7 @@ window.generateMaterialWithAI = async function () {
                 judul: title,
                 tujuanPembelajaran: objective,
                 kelas: kelas,
-                mapel: currentUser.mapel || '', // Attach teacher subject
+                mapel: mapel, // Pass explicitly picked subject
                 sumberGambar: imageSource,
                 jumlahTujuan: jumlahTujuan,
                 jumlahHalaman: jumlahHalaman
@@ -801,6 +850,7 @@ function handleMaterialUpload(event) {
     const reader = new FileReader();
     reader.onload = async function (e) {
         try {
+            const chosenMapel = document.getElementById('material-upload-mapel') ? document.getElementById('material-upload-mapel').value : (currentUser.mapel || '');
             const payload = {
                 name: file.name,
                 type: ext,
@@ -808,7 +858,7 @@ function handleMaterialUpload(event) {
                 size: file.size,
                 contentDataUrl: e.target.result,
                 kelas: document.getElementById('material-target-kelas').value,
-                mapel: currentUser.mapel || '' // Auto-assign teacher subject
+                mapel: chosenMapel // Use explicitly chosen subject from dropdown
             };
 
             const res = await fetch('/api/materials', {
@@ -2411,7 +2461,8 @@ function showAddTeacherModal() {
         <div class="form-group"><label>Username</label><input type="text" id="new-teacher-username" placeholder="contoh: gurunama"></div>
         <div class="form-group"><label>Nama Lengkap</label><input type="text" id="new-teacher-name" placeholder="Nama lengkap beserta gelar"></div>
         <div class="form-group"><label>Mata Pelajaran</label>
-            <input type="text" id="new-teacher-mapel" placeholder="Contoh: Informatika, Bahasa Indonesia" list="mapel-list">
+            <input type="text" id="new-teacher-mapel" placeholder="Pisahkan koma jika > 1 (Contoh: Matematika, IPA)" list="mapel-list">
+            <small class="text-muted">Gunakan tanda koma ( , ) untuk memasukkan lebih dari 1 pelajaran.</small>
             <datalist id="mapel-list">
                 <option value="Informatika">
                 <option value="Bahasa Indonesia">
@@ -2421,8 +2472,8 @@ function showAddTeacherModal() {
             </datalist>
         </div>
         <div class="form-group"><label>Akses Kelas</label>
-            <input type="text" id="new-teacher-kelas" placeholder="Pilih atau ketik kelas baru" list="kelas-list" style="width:100%">
-            <small class="text-muted">Ketik kelas baru di atas jika tidak ada di daftar.</small>
+            <input type="text" id="new-teacher-kelas" placeholder="Pilih atau pisahkan koma jika > 1 (Contoh: 7.6, 7.7)" list="kelas-list" style="width:100%">
+            <small class="text-muted">Ketik nama kelas atau pisahkan dengan koma jika mengajar banyak kelas.</small>
             <datalist id="kelas-list">
                 <option value="Semua Kelas">
                 <option value="7.6">
@@ -3296,11 +3347,12 @@ function toggleAllResults() {
 // ---- STUDENT ATTENDANCE ----
 function renderStudentAttendance(main) {
     const users = getUsers();
-    const isRestricted = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
+    const assignedClasses = getAssignedClasses();
+    const isRestricted = currentUser.role === 'guru' && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas');
     
     let students = users.filter(u => u.role === 'siswa');
     if (isRestricted) {
-        students = students.filter(s => s.kelas === currentUser.kelas);
+        students = students.filter(s => assignedClasses.includes(s.kelas));
     }
 
     const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
@@ -3310,7 +3362,9 @@ function renderStudentAttendance(main) {
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
             <h3 class="card-title">📅 Manajemen Absensi Siswa</h3>
-            ${isRestricted && currentUser.mapel ? `<span class="badge" style="background:var(--gradient-primary); color:white;"><i class="fas fa-book"></i> ${currentUser.mapel}</span>` : ''}
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                ${getAssignedMapels().map(m => `<span class="badge" style="background:var(--gradient-primary); color:white;"><i class="fas fa-book"></i> ${m}</span>`).join('')}
+            </div>
         </div>
         <div class="tabs">
             <button class="tab-button active" onclick="switchAttendanceTab('input', this)">Input Absensi</button>
@@ -3325,8 +3379,11 @@ function renderStudentAttendance(main) {
                     <input type="date" id="attendance-date-input" value="${today}" class="form-control" style="width:auto; display:inline-block; margin-top:0.5rem;" onchange="loadAttendanceForDate(this.value)">
                 </div>
                 <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <select id="attendance-class-filter-input" class="form-control" style="margin-bottom:0; width:auto;" onchange="filterAttendanceInput()" ${isRestricted ? 'disabled' : ''}>
-                        ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
+                    <select id="attendance-class-filter-input" class="form-control" style="margin-bottom:0; width:auto;" onchange="filterAttendanceInput()" ${(isRestricted && assignedClasses.length <= 1) ? 'disabled' : ''}>
+                        ${isRestricted ? `
+                            ${assignedClasses.length > 1 ? '<option value="all">Gabungan Kelas Anda</option>' : ''}
+                            ${assignedClasses.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        ` : `
                         <option value="all">Semua Kelas</option>
                         ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
                         `}
@@ -3987,7 +4044,14 @@ async function initDashboardCharts() {
     // GURU MODE: Attendance Pie Chart
     if (currentUser.role === 'guru') {
         const type = document.getElementById('dashboard-period-filter') ? document.getElementById('dashboard-period-filter').value : 'monthly';
-        const targetClass = currentUser.kelas !== 'Semua Kelas' ? currentUser.kelas : 'all';
+        const classSelector = document.getElementById('dashboard-class-filter');
+        let targetClass = classSelector ? classSelector.value : 'all';
+        
+        // If teacher explicitly chose "all" (Gabungan), we must strictly supply ONLY their allowed classes list, not literal "all" which means everything in DB
+        if (targetClass === 'all') {
+            targetClass = currentUser.kelas !== 'Semua Kelas' ? currentUser.kelas : 'all';
+        }
+
         const todayStr = new Date().toISOString().split('T')[0];
 
         try {

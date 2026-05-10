@@ -75,7 +75,13 @@ exports.getSummary = async (req, res) => {
 
         let query = { date: { $gte: startDate, $lte: endDate } };
         if (kelas && kelas !== 'all' && kelas !== 'Semua Kelas') {
-            query.kelas = kelas;
+            // Support comma-separated classes for teachers managing multiple groups
+            const classList = kelas.split(',').map(s => s.trim()).filter(Boolean);
+            if (classList.length > 1) {
+                query.kelas = { $in: classList };
+            } else if (classList.length === 1) {
+                query.kelas = classList[0];
+            }
         }
 
         const records = await Attendance.find(query);
