@@ -1,5 +1,58 @@
 const User = require('../models/User');
 
+// HELPER: Validation to prevent same subject in same class assigned to different teachers
+async function checkTeacherAssignmentConflicts(proposedTeachers, excludeUsername = null) {
+    try {
+        // 1. Fetch all current DB teachers to map existing ownerships
+        const query = { role: 'guru' };
+        if (excludeUsername) query.username = { $ne: excludeUsername };
+        const currentTeachers = await User.find(query);
+
+        const registry = new Map();
+        const getCombos = (t) => {
+            const classes = String(t.kelas || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+            const mapels = String(t.mapel || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
+            return { classes, mapels };
+        };
+
+        // Pre-fill registry with existing DB allocations
+        currentTeachers.forEach(t => {
+            const { classes, mapels } = getCombos(t);
+            classes.forEach(c => {
+                mapels.forEach(m => {
+                    registry.set(`${c}|${m}`, t.name || t.username);
+                });
+            });
+        });
+
+        // 2. Check proposed teachers matrix
+        for (const proposed of proposedTeachers) {
+            if (proposed.role !== 'guru') continue;
+            const { classes, mapels } = getCombos(proposed);
+            
+            for (const c of classes) {
+                for (const m of mapels) {
+                    const key = `${c}|${m}`;
+                    if (registry.has(key)) {
+                        const existingOwner = registry.get(key);
+                        if (existingOwner !== proposed.name && existingOwner !== proposed.username) {
+                            return {
+                                conflict: true,
+                                error: `🚨 GAGAL: Mata Pelajaran [${m.toUpperCase()}] untuk Kelas [${c.toUpperCase()}] sudah diampu oleh Guru "${existingOwner}". Silakan pilih kelas atau mapel berbeda.`
+                            };
+                        }
+                    }
+                    registry.set(key, proposed.name || proposed.username);
+                }
+            }
+        }
+        return { conflict: false };
+    } catch (err) {
+        console.error('[Validator Error]', err);
+        return { conflict: false }; 
+    }
+}
+
 const initDefaultUsers = async () => {
     try {
         const count = await User.countDocuments();
@@ -103,6 +156,16 @@ const updateUser = async (req, res) => {
         delete updates.password; 
         delete updates.role; // Typically role shouldn't toggle via basic modal for safety
         
+        // NEW: Enforce strict mapping validation to prevent subject clashes
+        if (updates.mapel || updates.kelas) {
+            // Fake teacher object context from current known update payload
+            const validatorPayload = [{ ...updates, role: 'guru', username }]; 
+            const validation = await checkTeacherAssignmentConflicts(validatorPayload, username);
+            if (validation.conflict) {
+                return res.status(400).json({ error: validation.error });
+            }
+        }
+        
         const user = await User.findOneAndUpdate({ username }, updates, { new: true });
         if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
         
@@ -154,6 +217,12 @@ const getUsers = async (req, res) => {
 const createUsers = async (req, res) => {
     try {
         const usersToCreate = Array.isArray(req.body) ? req.body : [req.body];
+
+        // NEW: Enforce strict mapping validation for new additions
+        const validation = await checkTeacherAssignmentConflicts(usersToCreate);
+        if (validation.conflict) {
+            return res.status(400).json({ error: validation.error });
+        }
 
         const existingUsers = await User.find({ username: { $in: usersToCreate.map(u => u.username) } });
         const existingUsernames = existingUsers.map(u => u.username);
@@ -231,6 +300,12 @@ const uploadExcel = async (req, res) => {
 
         if (usersToInsert.length === 0) {
             return res.status(400).json({ error: 'Tidak ada data valid yang bisa disimpan. Pastikan judul kolom ada "Username" dan "Nama".' });
+        }
+
+        // NEW: Enforce strict mapping validation BEFORE batch insert
+        const validation = await checkTeacherAssignmentConflicts(usersToInsert);
+        if (validation.conflict) {
+            return res.status(400).json({ error: validation.error });
         }
 
         // Filter duplicates against existing DB
