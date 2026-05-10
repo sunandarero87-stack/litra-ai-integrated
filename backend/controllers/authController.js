@@ -93,6 +93,45 @@ const updateProfile = async (req, res) => {
     }
 };
 
+// Admin: Update Single User
+const updateUser = async (req, res) => {
+    try {
+        const { username } = req.params;
+        const updates = req.body;
+        
+        // Prevent hacking crucial security fields through basic update if not careful
+        delete updates.password; 
+        delete updates.role; // Typically role shouldn't toggle via basic modal for safety
+        
+        const user = await User.findOneAndUpdate({ username }, updates, { new: true });
+        if (!user) return res.status(404).json({ error: 'User tidak ditemukan' });
+        
+        res.json({ success: true, message: 'User updated', user });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Admin: Bulk Edit Class
+const bulkUpdateClass = async (req, res) => {
+    try {
+        const { fromClass, toClass, role } = req.body; // 'siswa' or 'guru'
+        if (!fromClass || !toClass) return res.status(400).json({ error: 'Kelas asal dan tujuan wajib diisi' });
+        
+        const query = { kelas: fromClass };
+        if (role) query.role = role;
+
+        const result = await User.updateMany(query, { $set: { kelas: toClass } });
+        res.json({ 
+            success: true, 
+            message: `Berhasil memperbarui ${result.modifiedCount} akun.`, 
+            modifiedCount: result.modifiedCount 
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 const getUsers = async (req, res) => {
     try {
         const users = await User.find({}).select('-password -sessionId');
@@ -268,5 +307,7 @@ module.exports = {
     uploadExcel,
     bulkDeleteUsers,
     heartbeat,
-    resetUserPassword
+    resetUserPassword,
+    updateUser,
+    bulkUpdateClass
 };

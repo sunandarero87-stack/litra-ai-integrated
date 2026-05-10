@@ -2390,6 +2390,7 @@ async function renderTeacherAccounts(main) {
             <button class="btn btn-primary btn-sm" onclick="showAddTeacherModal()"><i class="fas fa-plus"></i> Tambah Guru</button>
             <button class="btn btn-success btn-sm" onclick="downloadTeacherExcelTemplate()"><i class="fas fa-download"></i> Template</button>
             <button class="btn btn-warning btn-sm" onclick="document.getElementById('excel-upload-teacher').click()"><i class="fas fa-upload"></i> Upload Excel</button>
+            <button class="btn btn-secondary btn-sm" onclick="showBulkEditClassModal('guru')"><i class="fas fa-layer-group"></i> Edit Masal Kelas</button>
             <input type="file" id="excel-upload-teacher" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleTeacherExcelUpload(event)">
         </div>
     </div>
@@ -2425,6 +2426,7 @@ async function renderTeacherAccounts(main) {
                         </td>
                         <td>
                             <div class="flex gap-1">
+                                <button class="btn btn-sm btn-info" onclick="showEditAccountModal('${t.username}', 'guru')" title="Edit Info"><i class="fas fa-pencil-alt"></i></button>
                                 <button class="btn btn-sm btn-warning" onclick="resetTeacherPassword('${t.username}')" title="Reset Password"><i class="fas fa-key"></i></button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteTeacherAccount('${t.username}')" title="Hapus"><i class="fas fa-trash"></i></button>
                             </div>
@@ -2694,6 +2696,7 @@ function renderStudentAccounts(main) {
             <button class="btn btn-primary btn-sm" onclick="showAddStudentModal()"><i class="fas fa-plus"></i> Tambah Siswa</button>
             <button class="btn btn-success btn-sm" onclick="downloadExcelTemplate()"><i class="fas fa-download"></i> Template Excel</button>
             <button class="btn btn-warning btn-sm" onclick="document.getElementById('excel-upload').click()"><i class="fas fa-upload"></i> Upload Excel</button>
+            ${currentUser.role === 'admin' ? `<button class="btn btn-secondary btn-sm" onclick="showBulkEditClassModal('siswa')"><i class="fas fa-layer-group"></i> Edit Masal Kelas</button>` : ''}
             <input type="file" id="excel-upload" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(event)">
         </div>
     </div>
@@ -2713,6 +2716,7 @@ function renderStudentAccounts(main) {
                         <td>${new Date(s.createdAt).toLocaleDateString('id-ID')}</td>
                         <td>
                             <div class="flex gap-1">
+                                <button class="btn btn-sm btn-info" onclick="showEditAccountModal('${s.username}', 'siswa')" title="Edit Data"><i class="fas fa-pencil-alt"></i></button>
                                 <button class="btn btn-sm btn-warning" onclick="resetStudentPassword('${s.username}')" title="Reset Password"><i class="fas fa-key"></i></button>
                                 ${currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${s.username}')"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
@@ -4846,4 +4850,203 @@ window.viewFullImage = function(url) {
         </div>
     `;
     document.body.appendChild(modal);
+};
+
+// ---- ADMIN: USER EDIT MODULES ----
+
+window.showEditAccountModal = function(username, role) {
+    const user = getUsers().find(u => u.username === username);
+    if (!user) return alert('Data user tidak ditemukan');
+
+    const modalCont = document.getElementById('modal-container') || document.body;
+    
+    const modalWrapper = document.createElement('div');
+    modalWrapper.className = 'modal-overlay';
+    modalWrapper.onclick = function(e) { if(e.target === this) this.remove(); };
+    
+    modalWrapper.innerHTML = `
+    <div class="modal" style="max-width:450px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-edit"></i> Edit Akun ${role === 'guru' ? 'Guru' : 'Siswa'}</h2>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div style="padding:1.5rem;">
+            <p class="text-muted mb-2" style="font-size:0.9rem;">Username: <strong>${user.username}</strong></p>
+            
+            <div class="form-group">
+                <label>Nama Lengkap</label>
+                <input type="text" id="edit-user-name" class="form-control" value="${user.name || ''}" placeholder="Masukkan nama lengkap">
+            </div>
+
+            ${role === 'guru' ? `
+            <div class="form-group">
+                <label>Mata Pelajaran</label>
+                <input type="text" id="edit-user-mapel" class="form-control" value="${user.mapel || ''}" placeholder="Pisahkan dengan koma" list="edit-mapel-list">
+                <small class="text-muted">Pisahkan koma jika lebih dari satu (Contoh: IPA, IPS)</small>
+                <datalist id="edit-mapel-list">
+                    <option value="Informatika"><option value="Bahasa Indonesia"><option value="Matematika"><option value="IPA"><option value="Bahasa Inggris">
+                </datalist>
+            </div>
+            ` : ''}
+
+            <div class="form-group">
+                <label>Akses Kelas / Kelas Aktif</label>
+                <input type="text" id="edit-user-kelas" class="form-control" value="${user.kelas || ''}" placeholder="Nama kelas atau Pisahkan Koma" list="edit-kelas-list">
+                <small class="text-muted">${role === 'guru' ? 'Pisahkan koma jika mengajar banyak kelas' : 'Isi dengan nama kelas aktif siswa'}</small>
+                <datalist id="edit-kelas-list">
+                    <option value="Semua Kelas"><option value="7.6"><option value="7.7"><option value="7.8"><option value="7.9"><option value="7.10">
+                </datalist>
+            </div>
+
+            <div class="modal-actions mt-2">
+                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+                <button class="btn btn-primary" id="btn-save-edit" onclick="saveEditedAccount('${username}', '${role}', this)">
+                    <i class="fas fa-save"></i> Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>`;
+    
+    document.body.appendChild(modalWrapper);
+};
+
+window.saveEditedAccount = async function(username, role, btn) {
+    const name = document.getElementById('edit-user-name').value.trim();
+    const kelas = document.getElementById('edit-user-kelas').value.trim();
+    
+    if (!name) return alert('Nama wajib diisi!');
+
+    const payload = { name, kelas };
+    
+    if (role === 'guru') {
+        payload.mapel = document.getElementById('edit-user-mapel').value.trim();
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+    try {
+        const res = await fetch(`/api/users/${username}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+            alert('✅ Data akun berhasil diperbarui!');
+            btn.closest('.modal-overlay').remove();
+            
+            // Full sync and redraw
+            await syncData();
+            
+            const main = document.getElementById('main-content');
+            if (role === 'guru') renderTeacherAccounts(main);
+            else renderStudentAccounts(main);
+        } else {
+            alert('Gagal: ' + (data.error || 'Server Error'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Terjadi kesalahan server saat mengupdate.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Simpan Perubahan';
+    }
+};
+
+window.showBulkEditClassModal = function(role) {
+    const users = getUsers().filter(u => u.role === role);
+    // Extract unique classes currently in DB for that role to aid dropdown selection
+    const classes = [...new Set(users.map(u => u.kelas).filter(Boolean))].sort();
+
+    const modalWrapper = document.createElement('div');
+    modalWrapper.className = 'modal-overlay';
+    modalWrapper.onclick = function(e) { if(e.target === this) this.remove(); };
+
+    modalWrapper.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-layer-group"></i> Edit Massal Kelas (${role === 'guru' ? 'Guru' : 'Siswa'})</h2>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div style="padding:1.5rem;">
+            <div class="alert info mb-2" style="background:#e3f2fd; color:#1565c0; padding:0.75rem; border-radius:8px; font-size:0.85rem;">
+                <i class="fas fa-info-circle"></i> Fitur ini akan memindahkan <strong>SELURUH</strong> ${role} dari Kelas A ke Kelas B dalam satu kali klik. Cocok untuk kenaikan kelas!
+            </div>
+            
+            <div class="form-group">
+                <label>Pilih Kelas Asal (Saat Ini)</label>
+                <select id="bulk-from-class" class="form-control">
+                    <option value="">-- Pilih Kelas Asal --</option>
+                    ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            </div>
+
+            <div style="text-align:center; margin: 0.5rem 0;">
+                <i class="fas fa-arrow-down" style="color:var(--primary); font-size:1.2rem;"></i>
+            </div>
+
+            <div class="form-group">
+                <label>Ubah Menjadi Kelas Baru</label>
+                <input type="text" id="bulk-to-class" class="form-control" placeholder="Contoh: 8.1" list="edit-kelas-list-bulk">
+                <datalist id="edit-kelas-list-bulk">
+                    <option value="Semua Kelas"><option value="7.6"><option value="8.1"><option value="9.1">
+                </datalist>
+            </div>
+
+            <div class="modal-actions mt-2">
+                <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+                <button class="btn btn-warning" id="btn-execute-bulk" onclick="executeBulkClassEdit('${role}', this)">
+                    <i class="fas fa-exchange-alt"></i> Eksekusi Edit Massal
+                </button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modalWrapper);
+};
+
+window.executeBulkClassEdit = async function(role, btn) {
+    const fromClass = document.getElementById('bulk-from-class').value;
+    const toClass = document.getElementById('bulk-to-class').value.trim();
+
+    if (!fromClass || !toClass) {
+        return alert('Silakan pilih kelas asal dan ketik nama kelas tujuan baru!');
+    }
+
+    if (!confirm(`PERINGATAN!\n\nAnda akan mengubah SELURUH ${role === 'guru' ? 'Guru' : 'Siswa'} dari Kelas "${fromClass}" menjadi Kelas "${toClass}".\n\nApakah Anda sangat yakin? Tindakan ini tidak dapat dibatalkan.`)) {
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
+    try {
+        const res = await fetch('/api/users/bulk-update-class', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fromClass, toClass, role })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            alert(`🎉 Sukses! ${data.message}`);
+            btn.closest('.modal-overlay').remove();
+            
+            await syncData();
+            
+            const main = document.getElementById('main-content');
+            if (role === 'guru') renderTeacherAccounts(main);
+            else renderStudentAccounts(main);
+        } else {
+            alert('Gagal: ' + data.error);
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Kesalahan jaringan atau server saat update massal.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Eksekusi Edit Massal';
+    }
 };

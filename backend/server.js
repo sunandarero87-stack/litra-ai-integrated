@@ -104,6 +104,8 @@ app.post('/api/users/upload', upload.single('file'), authController.uploadExcel)
 app.post('/api/users/bulk-delete', authController.bulkDeleteUsers);
 app.delete('/api/users/:username', authController.deleteUser);
 app.put('/api/users/profile', authController.updateProfile);
+app.put('/api/users/:username', authController.updateUser);
+app.post('/api/users/bulk-update-class', authController.bulkUpdateClass);
 
 // Progress, Results, and Settings
 app.get('/api/sync', progressController.syncAll);
