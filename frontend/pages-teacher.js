@@ -727,6 +727,7 @@ function renderMaterials(main) {
                             ${m.mapel ? `<span class="badge" style="background:var(--bg-input); color:var(--text-secondary); font-size:0.65rem"><i class="fas fa-book"></i> ${m.mapel}</span> • ` : ''}
                              Kelas: <span class="badge badge-info" style="font-size:0.65rem">${m.kelas || 'Semua Kelas'}</span> • 
                             ${new Date(m.date).toLocaleDateString('id-ID')}
+                            ${currentUser.role === 'admin' ? `<br><span style="color:var(--primary); font-size:0.7rem; font-weight:600;"><i class="fas fa-user-edit"></i> Oleh: ${m.createdBy || 'Sistem / Admin'}</span>` : ''}
                         </div>
                     </div>
                     <div style="display:flex; gap:0.5rem;">
@@ -3947,8 +3948,8 @@ function renderTeacherJournal(main) {
     let journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
 
     if (isRestricted) {
-        // Guru can only see their own journal subset (either by class or by name - filtering by class for this specific logic flow)
-        journals = journals.filter(j => j.class === currentUser.kelas);
+        // Guru can only see their own journal entries specifically authored by them
+        journals = journals.filter(j => j.teacher === currentUser.username);
     }
 
     main.innerHTML = `
@@ -3992,6 +3993,7 @@ function renderTeacherJournal(main) {
                         <tr>
                             <th>Tanggal</th>
                             <th>Kelas</th>
+                            ${currentUser.role === 'admin' ? '<th>Pencatat</th>' : ''}
                             <th>Materi</th>
                         </tr>
                     </thead>
@@ -4000,12 +4002,13 @@ function renderTeacherJournal(main) {
                             <tr>
                                 <td>${new Date(j.date).toLocaleDateString('id-ID')}</td>
                                 <td>${j.class}</td>
+                                ${currentUser.role === 'admin' ? `<td style="font-weight:600; color:var(--primary);"><i class="fas fa-user-tie"></i> ${j.teacher || 'Sistem'}</td>` : ''}
                                 <td>
                                     <strong>${j.subject}</strong><br>
                                     <small class="text-muted">${j.activity.substring(0, 50)}${j.activity.length > 50 ? '...' : ''}</small>
                                 </td>
                             </tr>
-                        `).join('') || '<tr><td colspan="3" class="text-center text-muted">Belum ada riwayat jurnal</td></tr>'}
+                        `).join('') || `<tr><td colspan="${currentUser.role === 'admin' ? 4 : 3}" class="text-center text-muted">Belum ada riwayat jurnal</td></tr>`}
                     </tbody>
                 </table>
             </div>
@@ -4232,9 +4235,14 @@ function updateAttendanceChart() {
 }
 
 function renderJournalSummary() {
-    const journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
+    let journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
     const container = document.getElementById('journal-summary-content');
     if (!container) return;
+
+    // Guru can only view their own entries, Admin sees all
+    if (currentUser.role === 'guru') {
+        journals = journals.filter(j => j.teacher === currentUser.username);
+    }
 
     if (journals.length === 0) {
         container.innerHTML = '<p class="text-muted text-center">Belum ada jurnal yang tercatat.</p>';
@@ -4253,7 +4261,8 @@ function renderJournalSummary() {
                         <small class="text-muted">${j.class}</small>
                     </div>
                     <strong style="display:block; margin-bottom:0.3rem">${j.subject}</strong>
-                    <p style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4">${j.activity.substring(0, 80)}${j.activity.length > 80 ? '...' : ''}</p>
+                    <p style="font-size:0.8rem; color:var(--text-secondary); line-height:1.4; margin-bottom:0.5rem">${j.activity.substring(0, 80)}${j.activity.length > 80 ? '...' : ''}</p>
+                    ${currentUser.role === 'admin' ? `<div style="text-align:right; font-size:0.7rem; font-weight:600; color:var(--primary);"><i class="fas fa-user-tie"></i> ${j.teacher || 'Sistem'}</div>` : ''}
                 </div>
             `).join('')}
         </div>
