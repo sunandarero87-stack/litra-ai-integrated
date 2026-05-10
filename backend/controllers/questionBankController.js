@@ -666,7 +666,7 @@ exports.generateImage = async (req, res) => {
                 console.warn("AI prompt gen failed, using fallback:", e.message);
                 promptText = "educational illustration about " + question.question.substring(0, 50).replace(/[^a-zA-Z0-9\s]/g, "");
             }
-            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=800&height=500&nologo=true`;
+            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?model=flux&enhance=true&width=800&height=500&nologo=true`;
         } else {
             const payload = {
                 messages: [
