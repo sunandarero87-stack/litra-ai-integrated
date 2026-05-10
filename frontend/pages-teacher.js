@@ -3,8 +3,22 @@
 // ============================================
 
 function renderTeacherDashboard(main) {
+    const isRestrictedGuru = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
     const users = getUsers();
-    const students = users.filter(u => u.role === 'siswa');
+    
+    // Filter raw list of students upfront if Guru is restricted to one class
+    let students = users.filter(u => u.role === 'siswa');
+    if (isRestrictedGuru) {
+        students = students.filter(s => s.kelas === currentUser.kelas);
+    }
+
+    // If Guru, they see only the Attendance Statistics as requested
+    if (currentUser.role === 'guru') {
+        renderGuruSpecificDashboard(main, students, isRestrictedGuru ? currentUser.kelas : 'Semua Kelas');
+        return;
+    }
+
+    // ADMIN View (Global Statistics and Attainment)
     const results = getAssessmentResults();
     let passed = 0, failed = 0, total = 0, readyForAssessment = 0;
 
@@ -19,8 +33,8 @@ function renderTeacherDashboard(main) {
 
     main.innerHTML = `
     <div style="margin-bottom:1.5rem">
-        <h2 style="font-size:1.3rem;font-weight:800">Dashboard Laporan ${currentUser.role === 'admin' ? 'Administrator' : 'Guru'} <i class="fas fa-chart-line"></i></h2>
-        <p class="text-muted">SMP Negeri 1 Balikpapan - Informatika</p>
+        <h2 style="font-size:1.3rem;font-weight:800">Dashboard Laporan Administrator <i class="fas fa-chart-line"></i></h2>
+        <p class="text-muted">SMP Negeri 1 Balikpapan - Informatika (Pengawasan Penuh)</p>
     </div>
     <div class="grid-4">
         <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-users"></i></div><div class="stat-info"><h3>${students.length}</h3><p>Total Siswa</p></div></div>
@@ -29,7 +43,6 @@ function renderTeacherDashboard(main) {
         <div class="stat-card"><div class="stat-icon red"><i class="fas fa-hourglass-half"></i></div><div class="stat-info"><h3>${students.length - total}</h3><p>Belum Asesmen</p></div></div>
     </div>
 
-    <!-- Chart Section -->
     <div class="mt-2">
         <div class="card">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -47,11 +60,11 @@ function renderTeacherDashboard(main) {
                     <h4 class="text-muted mb-1">Keterangan:</h4>
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
                         <div style="width:15px; height:15px; background:#4caf50; border-radius:3px;"></div>
-                        <span><strong>Lulus:</strong> Siswa yang telah mencapai skor target pada asesmen Literasi & Numerasi.</span>
+                        <span><strong>Lulus:</strong> Siswa yang telah mencapai skor target.</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:0.5rem;">
                         <div style="width:15px; height:15px; background:#f44336; border-radius:3px;"></div>
-                        <span><strong>Perlu Penguatan:</strong> Siswa yang belum mencapai skor target atau belum menyelesaikan asesmen.</span>
+                        <span><strong>Perlu Penguatan:</strong> Siswa belum mencapai target.</span>
                     </div>
                 </div>
             </div>
@@ -59,12 +72,8 @@ function renderTeacherDashboard(main) {
     </div>
 
     <div class="card mt-2">
-        <div class="card-header">
-            <h3 class="card-title"><i class="fas fa-journal-whills"></i> Ringkasan Jurnal Harian</h3>
-        </div>
-        <div id="journal-summary-content">
-            <!-- Populated by JS -->
-        </div>
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-journal-whills"></i> Ringkasan Jurnal Harian</h3></div>
+        <div id="journal-summary-content"></div>
     </div>
 
     <div class="card mt-2">
@@ -76,39 +85,73 @@ function renderTeacherDashboard(main) {
                     ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
                 </select>
             </div>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-                <button class="btn btn-outline btn-sm" onclick="exportProgressToExcel()"><i class="fas fa-download"></i> Download Laporan</button>
-                <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset Pembelajaran (<span id="count-reset-selected">0</span>)</button>
+            <div style="display:flex; gap:0.5rem;">
+                <button class="btn btn-outline btn-sm" onclick="exportProgressToExcel()"><i class="fas fa-download"></i> Laporan</button>
+                <button class="btn btn-warning btn-sm" onclick="resetSelectedProgress()" id="btn-reset-progress" style="display:none;"><i class="fas fa-undo"></i> Reset (<span id="count-reset-selected">0</span>)</button>
             </div>
         </div>
         <div class="table-container">
             <table>
-                <thead><tr>
-                    <th><input type="checkbox" id="check-all-progress" onchange="toggleAllProgress(this)"></th>
-                    <th>Nama</th><th>Kelas</th><th>Tahap</th><th>Rekomendasi AI</th><th>Status Hasil</th>
-                </tr></thead>
+                <thead><tr><th><input type="checkbox" id="check-all-progress" onchange="toggleAllProgress(this)"></th><th>Nama</th><th>Kelas</th><th>Tahap</th><th>Rekomendasi</th><th>Status</th></tr></thead>
                 <tbody>
                     ${students.map(s => {
-        const p = getProgress(s.username);
-        const r = results[s.username];
-        const stage = p.tahap4Complete ? 'Selesai' : p.tahap3Complete ? 'Tahap 4' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
-        const badge = r ? (r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>') : '<span class="badge badge-warning">Proses</span>';
-        const aiRec = p.tahap2Complete ? (p.isReady ? '<span class="text-success"><i class="fas fa-check-circle"></i> SIAP</span>' : '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> PERLU BIMBINGAN</span>') : '<span class="text-muted">-</span>';
-        return `<tr>
-                    <td><input type="checkbox" class="check-progress" value="${s.username}" onchange="updateResetBtn()"></td>
-                    <td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${aiRec}</td><td>${badge}</td>
-                </tr>`;
-    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada siswa terdaftar</td></tr>'}
+                        const p = getProgress(s.username);
+                        const r = results[s.username];
+                        const stage = p.tahap4Complete ? 'Selesai' : p.tahap3Complete ? 'Tahap 4' : p.tahap2Complete ? 'Tahap 3' : p.tahap1Complete ? 'Tahap 2' : 'Tahap 1';
+                        const badge = r ? (r.pass ? '<span class="badge badge-success">Lulus</span>' : '<span class="badge badge-danger">Tidak Lulus</span>') : '<span class="badge badge-warning">Proses</span>';
+                        return `<tr>
+                            <td><input type="checkbox" class="check-progress" value="${s.username}" onchange="updateResetBtn()"></td>
+                            <td>${s.name}</td><td>${s.kelas || '-'}</td><td>${stage}</td><td>${p.isReady ? 'SIAP':' -'}</td><td>${badge}</td>
+                        </tr>`;
+                    }).join('')}
                 </tbody>
             </table>
         </div>
     </div>`;
 
-    // Initialize Charts after rendering
     setTimeout(() => {
         initDashboardCharts();
         renderJournalSummary();
     }, 100);
+}
+
+async function renderGuruSpecificDashboard(main, students, assignedClass) {
+    main.innerHTML = `
+    <div style="margin-bottom:1.5rem">
+        <h2 style="font-size:1.3rem;font-weight:800">Dashboard Guru <i class="fas fa-chalkboard-teacher"></i></h2>
+        <p class="text-muted">Anda masuk sebagai Pengampu Kelas: <strong>${assignedClass}</strong></p>
+    </div>
+
+    <div class="card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 class="card-title"><i class="fas fa-chart-pie"></i> Persentase Absensi Siswa Bulan Ini</h3>
+            <div style="display:flex; gap:0.5rem;">
+                <select id="dashboard-period-filter" class="form-control" style="width:auto; margin:0;" onchange="initDashboardCharts()">
+                    <option value="monthly">Bulan Ini</option>
+                    <option value="weekly">Minggu Ini</option>
+                    <option value="daily">Hari Ini</option>
+                </select>
+            </div>
+        </div>
+        <div class="grid-2" style="align-items:center; min-height:400px;">
+            <div style="height: 350px; display: flex; justify-content: center; padding: 1rem; position:relative;" id="attendance-chart-container">
+                <canvas id="chart-attainment"></canvas> <!-- Reusing ID so library context works easily -->
+            </div>
+            <div style="padding: 2rem;" id="attendance-stats-legend">
+                <div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data statistik absensi...</div>
+            </div>
+        </div>
+    </div>
+    <div class="alert alert-info mt-2" style="display:flex; align-items:center; gap:1rem;">
+        <i class="fas fa-info-circle fa-lg"></i>
+        <div><strong>Info:</strong> Halaman dashboard Anda difokuskan pada pemantauan kehadiran kelas bimbingan Anda. Menu navigasi kiri tersedia untuk manajemen materi & jurnal harian.</div>
+    </div>
+    `;
+    
+    // Initialize charts after a tiny delay
+    setTimeout(() => {
+        initDashboardCharts();
+    }, 200);
 }
 
 function filterDashboardProgress() {
@@ -509,13 +552,17 @@ function downloadExcelFile(tableHTML, filePrefix) {
 // ---- MATERIALS MANAGEMENT ----
 function renderMaterials(main) {
     const materials = getMaterials();
+    const isRestricted = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
+    
     main.innerHTML = `
     <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <h3 class="card-title">📚 Materi Pembelajaran</h3>
-            <select id="material-class-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="filterMaterialsByClass()">
+            <select id="material-class-filter" class="form-control" style="width:auto; margin-bottom:0;" onchange="filterMaterialsByClass()" ${isRestricted ? 'disabled' : ''}>
+                ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
                 <option value="all">Semua Kelas</option>
                 ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                `}
             </select>
         </div>
         
@@ -529,9 +576,11 @@ function renderMaterials(main) {
             <div id="tab-content-upload">
                 <div class="form-group mb-2">
                     <label>Target Kelas</label>
-                    <select id="material-target-kelas" class="form-control">
+                    <select id="material-target-kelas" class="form-control" ${isRestricted ? 'disabled' : ''}>
+                        ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
                         <option value="Semua Kelas">Semua Kelas</option>
                         ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                        `}
                     </select>
                 </div>
                 <div class="upload-zone" onclick="document.getElementById('material-upload').click()">
@@ -551,9 +600,11 @@ function renderMaterials(main) {
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin-bottom:1rem;">
                     <div class="form-group">
                         <label>Tujuan Kelas</label>
-                        <select id="ai-material-target-kelas" class="form-control">
+                        <select id="ai-material-target-kelas" class="form-control" ${isRestricted ? 'disabled' : ''}>
+                            ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
                             <option value="Semua Kelas">Semua Kelas</option>
                             ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                            `}
                         </select>
                     </div>
                     <div class="form-group">
@@ -1582,6 +1633,7 @@ async function submitAssessmentReview(username) {
 let _bankSoalCache = [];
 
 async function renderBankSoal(main) {
+    const isRestricted = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
     main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat Bank Soal...</p></div>';
 
     let materials = [];
@@ -1604,9 +1656,11 @@ async function renderBankSoal(main) {
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <h3 class="card-title" style="margin-bottom:0;">📚 Bank Soal</h3>
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                <select id="bank-soal-class-filter" class="form-control" style="margin-bottom:0; width:auto; padding:0.4rem;" onchange="filterBankSoalTable()">
+                <select id="bank-soal-class-filter" class="form-control" style="margin-bottom:0; width:auto; padding:0.4rem;" onchange="filterBankSoalTable()" ${isRestricted ? 'disabled' : ''}>
+                    ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
                     <option value="all">Semua Kelas</option>
                     ${[...new Set(getUsers().filter(u => u.role === 'siswa').map(s => s.kelas || 'Tanpa Kelas'))].map(c => `<option value="${c}">${c}</option>`).join('')}
+                    `}
                 </select>
                 <input type="text" id="search-bank-soal" class="form-control" style="margin-bottom:0; width:250px; padding:0.4rem;" placeholder="Cari Pertanyaan/Tipe..." onkeyup="filterBankSoalTable()">
             </div>
@@ -3207,7 +3261,13 @@ function toggleAllResults() {
 // ---- STUDENT ATTENDANCE ----
 function renderStudentAttendance(main) {
     const users = getUsers();
-    const students = users.filter(u => u.role === 'siswa');
+    const isRestricted = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
+    
+    let students = users.filter(u => u.role === 'siswa');
+    if (isRestricted) {
+        students = students.filter(s => s.kelas === currentUser.kelas);
+    }
+
     const classes = [...new Set(students.map(s => s.kelas || 'Tanpa Kelas'))];
     const today = new Date().toISOString().split('T')[0];
 
@@ -3229,9 +3289,11 @@ function renderStudentAttendance(main) {
                     <input type="date" id="attendance-date-input" value="${today}" class="form-control" style="width:auto; display:inline-block; margin-top:0.5rem;" onchange="loadAttendanceForDate(this.value)">
                 </div>
                 <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <select id="attendance-class-filter-input" class="form-control" style="margin-bottom:0; width:auto;" onchange="filterAttendanceInput()">
+                    <select id="attendance-class-filter-input" class="form-control" style="margin-bottom:0; width:auto;" onchange="filterAttendanceInput()" ${isRestricted ? 'disabled' : ''}>
+                        ${isRestricted ? `<option value="${currentUser.kelas}">${currentUser.kelas}</option>` : `
                         <option value="all">Semua Kelas</option>
                         ${classes.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        `}
                     </select>
                     <input type="text" id="search-attendance" class="form-control" style="margin-bottom:0; width:180px; padding:0.4rem;" placeholder="Cari Nama..." onkeyup="filterAttendanceInput()">
                     <button class="btn btn-outline" onclick="downloadDailyAttendancePDF()" style="border-color: #ef4444; color: #ef4444;"><i class="fas fa-file-pdf"></i> Download PDF</button>
@@ -3783,7 +3845,13 @@ function downloadDailyAttendancePDF() {
 
 // ---- TEACHER JOURNAL ----
 function renderTeacherJournal(main) {
-    const journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
+    const isRestricted = currentUser.role === 'guru' && currentUser.kelas && currentUser.kelas !== 'Semua Kelas';
+    let journals = JSON.parse(localStorage.getItem('teacher_journals') || '[]');
+
+    if (isRestricted) {
+        // Guru can only see their own journal subset (either by class or by name - filtering by class for this specific logic flow)
+        journals = journals.filter(j => j.class === currentUser.kelas);
+    }
 
     main.innerHTML = `
     <div class="grid-2">
@@ -3802,7 +3870,7 @@ function renderTeacherJournal(main) {
                 </div>
                 <div class="form-group">
                     <label>Kelas</label>
-                    <input type="text" id="journal-class" placeholder="Contoh: VII-A" required>
+                    <input type="text" id="journal-class" value="${isRestricted ? currentUser.kelas : ''}" placeholder="Contoh: VII-A" required ${isRestricted ? 'readonly style="background:var(--bg-input)"' : ''}>
                 </div>
                 <div class="form-group">
                     <label>Materi / Kegiatan</label>
@@ -3873,7 +3941,80 @@ function handleJournalSubmit(e) {
     renderTeacherJournal(document.getElementById('main-content'));
 }
 
-function initDashboardCharts() {
+async function initDashboardCharts() {
+    const ctxCanvas = document.getElementById('chart-attainment');
+    if (!ctxCanvas) return; // Element disappeared from view
+
+    const ctx = ctxCanvas.getContext('2d');
+    if (window.attainmentChart) window.attainmentChart.destroy();
+
+    // GURU MODE: Attendance Pie Chart
+    if (currentUser.role === 'guru') {
+        const type = document.getElementById('dashboard-period-filter') ? document.getElementById('dashboard-period-filter').value : 'monthly';
+        const targetClass = currentUser.kelas !== 'Semua Kelas' ? currentUser.kelas : 'all';
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        try {
+            const res = await fetch(`/api/attendance/summary?type=${type}&date=${todayStr}&kelas=${targetClass}`);
+            const data = await res.json();
+
+            if (!data.success || data.summary.total === 0) {
+                document.getElementById('attendance-stats-legend').innerHTML = `<div class="alert alert-warning"><i class="fas fa-exclamation-circle"></i> Belum ada data absensi tersimpan untuk periode ini.</div>`;
+                
+                // Draw empty placeholder
+                window.attainmentChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: ['Tidak Ada Data'], datasets: [{ data: [1], backgroundColor: ['#e0e0e0'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+                return;
+            }
+
+            const s = data.summary;
+            
+            // Generate Dynamic Legend next to chart
+            document.getElementById('attendance-stats-legend').innerHTML = `
+                <h4 class="text-muted mb-1">Rincian Kehadiran:</h4>
+                <div class="mt-1">
+                    <div style="display:flex; justify-content:space-between; padding:0.5rem; border-bottom:1px solid #eee;"><span><i class="fas fa-circle" style="color:#4caf50"></i> Hadir</span> <strong>${s.hadir}</strong></div>
+                    <div style="display:flex; justify-content:space-between; padding:0.5rem; border-bottom:1px solid #eee;"><span><i class="fas fa-circle" style="color:#ff9800"></i> Sakit</span> <strong>${s.sakit}</strong></div>
+                    <div style="display:flex; justify-content:space-between; padding:0.5rem; border-bottom:1px solid #eee;"><span><i class="fas fa-circle" style="color:#2196f3"></i> Izin</span> <strong>${s.izin}</strong></div>
+                    <div style="display:flex; justify-content:space-between; padding:0.5rem;"><span><i class="fas fa-circle" style="color:#f44336"></i> Alpha</span> <strong>${s.alpha}</strong></div>
+                </div>
+                <div class="card mt-2" style="background:var(--bg-input); text-align:center;">
+                    <h3 style="margin-bottom:0;">${Math.round((s.hadir/s.total)*100)}%</h3>
+                    <span class="text-muted">Persentase Kehadiran</span>
+                </div>
+            `;
+
+            window.attainmentChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Hadir', 'Sakit', 'Izin', 'Alpha'],
+                    datasets: [{
+                        data: [s.hadir, s.sakit, s.izin, s.alpha],
+                        backgroundColor: ['#4caf50', '#ff9800', '#2196f3', '#f44336'],
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } },
+                        tooltip: { callbacks: { label: function(context) { return ' ' + context.label + ': ' + context.raw + ' data'; } } }
+                    }
+                }
+            });
+
+        } catch (e) {
+            console.error(e);
+            document.getElementById('attendance-stats-legend').innerHTML = 'Error memuat grafik.';
+        }
+        return;
+    }
+
+    // ADMIN MODE: Literacy & Numeracy Chart
     const classFilter = document.getElementById('chart-class-filter') ? document.getElementById('chart-class-filter').value : 'all';
     const users = getUsers();
     const students = users.filter(u => u.role === 'siswa');
@@ -3896,10 +4037,6 @@ function initDashboardCharts() {
     const currentTotal = lulus + perluPenguatan || 1;
     const lulusPct = Math.round((lulus / currentTotal) * 100);
     const penguatanPct = 100 - lulusPct;
-
-    const ctx = document.getElementById('chart-attainment').getContext('2d');
-
-    if (window.attainmentChart) window.attainmentChart.destroy();
 
     window.attainmentChart = new Chart(ctx, {
         type: 'pie',
