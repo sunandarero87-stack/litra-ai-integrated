@@ -183,7 +183,8 @@ exports.generateMaterialFromAI = async (req, res) => {
             contentDataUrl: contentDataUrl,
             content: plainTextContent, // store full text for chatbot/search context
             kelas: kelas,
-            mapel: req.body.mapel || '' // Save provided mapel
+            mapel: req.body.mapel || '', // Save provided mapel
+            createdBy: req.body.createdBy || '' // Identify owner
         });
 
         await newMaterial.save();

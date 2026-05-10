@@ -8,7 +8,8 @@ const materialSchema = new mongoose.Schema({
     contentDataUrl: { type: String, required: true },
     content: { type: String }, // Field to store extracted text
     kelas: { type: String, default: 'Semua Kelas' },
-    mapel: { type: String } // Tambahan Mata Pelajaran
+    mapel: { type: String }, // Tambahan Mata Pelajaran
+    createdBy: { type: String } // Identitas Guru yang membuat/mengupload
 });
 
 module.exports = mongoose.model('Material', materialSchema);

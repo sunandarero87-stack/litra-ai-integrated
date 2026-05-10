@@ -713,7 +713,10 @@ function renderMaterials(main) {
 
                     const mapelMatch = teacherMapels.length === 0 || !materialMapel || teacherMapels.includes(materialMapel);
                     
-                    return classMatch && mapelMatch;
+                    // NEW: Check absolute ownership if defined (Teacher only sees their own work)
+                    const creatorMatch = !m.createdBy || m.createdBy === currentUser.username;
+
+                    return classMatch && mapelMatch && creatorMatch;
                 })
                 .map((m) => `
                 <div class="material-item" data-kelas="${m.kelas || 'Semua Kelas'}" data-mapel="${m.mapel || ''}">
@@ -803,6 +806,7 @@ window.generateMaterialWithAI = async function () {
                 tujuanPembelajaran: objective,
                 kelas: kelas,
                 mapel: mapel, // Pass explicitly picked subject
+                createdBy: currentUser.username, // Identify creating user
                 sumberGambar: imageSource,
                 jumlahTujuan: jumlahTujuan,
                 jumlahHalaman: jumlahHalaman
@@ -858,7 +862,8 @@ function handleMaterialUpload(event) {
                 size: file.size,
                 contentDataUrl: e.target.result,
                 kelas: document.getElementById('material-target-kelas').value,
-                mapel: chosenMapel // Use explicitly chosen subject from dropdown
+                mapel: chosenMapel, // Use explicitly chosen subject from dropdown
+                createdBy: currentUser.username // Identify creating user
             };
 
             const res = await fetch('/api/materials', {
