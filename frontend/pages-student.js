@@ -410,6 +410,11 @@ async function viewMaterial(id, type) {
                 const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
                 appendFloatingMessage('bot', initialGreeting, teacherPhoto);
             });
+
+        // Pulihkan state evaluasi jika ada
+        const restoredState = getChatState();
+        waitingForUnderstandingAnswer = restoredState.waitingForUnderstandingAnswer;
+        lastAiExplanation = restoredState.lastAiExplanation;
     } else {
         // Even if same material, ensure chatbot is visible and context is set
         const chatbotContainer = document.getElementById('floating-chatbot-container');
@@ -673,6 +678,29 @@ function appendFloatingMessage(role, html, teacherPhoto) {
 }
 
 // ---- State untuk alur Cek Pemahaman ----
+function getChatState() {
+    try {
+        if (!currentUser || !currentUser.username) return { waitingForUnderstandingAnswer: false, lastAiExplanation: '' };
+        const saved = localStorage.getItem('nara_chat_state_' + currentUser.username);
+        if (saved) return JSON.parse(saved);
+    } catch (e) { }
+    return { waitingForUnderstandingAnswer: false, lastAiExplanation: '' };
+}
+
+function updateChatState(waiting, explanation = undefined) {
+    if (!currentUser || !currentUser.username) return;
+    const state = getChatState();
+    state.waitingForUnderstandingAnswer = waiting;
+    if (explanation !== undefined) {
+        state.lastAiExplanation = explanation;
+    }
+    localStorage.setItem('nara_chat_state_' + currentUser.username, JSON.stringify(state));
+    // Update global vars
+    waitingForUnderstandingAnswer = waiting;
+    if (explanation !== undefined) lastAiExplanation = explanation;
+}
+
+// Inisialisasi awal
 let lastAiExplanation = '';
 let waitingForUnderstandingAnswer = false; // True = siswa sedang menjawab soal, siap dinilai
 let waitingForTestQuestion = false;         // True = siswa konfirmasi siap, AI sedang mengirim soal
@@ -783,7 +811,8 @@ function onPaham() {
 /** Siswa klik "Siap Uji Ulang Pemahaman" setelah gagal */
 function onSiapUjiUlang() {
     hidePahamButtons();
-    waitingForUnderstandingAnswer = true;
+    updateChatState(true);
+    waitingForTestQuestion = true; // Kita asumsikan ini mengirim permintaan soal baru
     const materials = getMaterials();
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
@@ -796,7 +825,7 @@ function onSiapUjiUlang() {
  * dipanggil ketika waitingForUnderstandingAnswer = true dan siswa mengirim pesan
  */
 async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
-    waitingForUnderstandingAnswer = false;
+    updateChatState(false);
     hidePahamButtons();
 
     const chatBox = document.getElementById('floating-chat-messages');
@@ -1015,6 +1044,7 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     // STEP 1: Siswa konfirmasi siap diuji → kirim ke chat biasa agar AI membuat SOAL
     if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isAffirmativeResponse(msg)) {
         waitingForTestQuestion = true;
+        updateChatState(false); // Reset dulu
         // Ubah pesan jadi sinyal eksplisit ke AI untuk segera menampilkan pertanyaan
         msg = "Saya Sudah Siap diuji. Berikan saya SATU pertanyaan uji pemahaman sekarang.";
         // Lanjutkan ke alur chat biasa di bawah (tidak return di sini)
@@ -1084,9 +1114,8 @@ function sendFloatingChat(quickMsg, isSilent = false) {
                 // transisi ke mode menunggu jawaban siswa
                 if (waitingForTestQuestion) {
                     waitingForTestQuestion = false;
-                    waitingForUnderstandingAnswer = true;
-                    // Simpan pertanyaan AI sebagai konteks untuk evaluasi nanti
-                    lastAiExplanation = aiReply;
+                    updateChatState(true, aiReply);
+                    
                     // Beri petunjuk visual kepada siswa
                     const qr = document.getElementById('quick-replies');
                     if (qr) {
