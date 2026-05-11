@@ -255,7 +255,7 @@ function renderTahap1(main) {
                     <button style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;" onclick="toggleChatbot()"><i class="fas fa-times"></i></button>
                 </div>
             </div>
-            <div id="chat-material-selector-container" style="padding: 0.5rem 1rem; background: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 0.5rem;">
+            <div id="chat-material-selector-container" style="display: none; padding: 0.5rem 1rem; background: var(--bg-sidebar); border-bottom: 1px solid var(--border-color); align-items: center; gap: 0.5rem;">
                 <label style="font-size: 0.75rem; font-weight: 600; white-space: nowrap;"><i class="fas fa-book"></i> Bahas:</label>
                 <select id="chat-material-selector" class="form-input" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex: 1;" onchange="updateChatMaterial(this.value)">
                     <option value="">-- Pilih Materi --</option>
@@ -733,13 +733,13 @@ function showGagalButtons() {
     if (!qr) return;
     qr.style.display = 'flex';
     qr.innerHTML = `
-        <button id="btn-ulangi-penjelasan" class="btn btn-outline btn-sm" onclick="onBelumPaham()"
+        <button id="btn-kembali-materi" class="btn btn-outline btn-sm" onclick="toggleChatbot()"
             style="padding:0.4rem 0.9rem;font-size:0.85rem;border-color:var(--primary);color:var(--primary);">
-            <i class="fas fa-sync-alt"></i> Ulangi Penjelasan
+            <i class="fas fa-book"></i> Kembali ke materi
         </button>
-        <button id="btn-buat-pertanyaan" class="btn btn-primary btn-sm" onclick="onMintaPertanyaanBaru()"
+        <button id="btn-siap-uji-ulang" class="btn btn-primary btn-sm" onclick="onSiapUjiUlang()"
             style="padding:0.4rem 0.9rem;font-size:0.85rem;">
-            <i class="fas fa-question-circle"></i> Buat Pertanyaan baru
+            <i class="fas fa-check-circle"></i> Siap Uji ulang pemahaman
         </button>
     `;
 }
@@ -761,14 +761,15 @@ function onPaham() {
     sendFloatingChat(`Saya Sudah Siap diuji.`, true);
 }
 
-/** Siswa klik "Buat Pertanyaan baru" setelah gagal */
-function onMintaPertanyaanBaru() {
+/** Siswa klik "Siap Uji Ulang Pemahaman" setelah gagal */
+function onSiapUjiUlang() {
     hidePahamButtons();
     waitingForUnderstandingAnswer = true;
     const materials = getMaterials();
     const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
     const materialName = currMat ? currMat.name : currentMaterial;
-    sendFloatingChat(`Tolong berikan SATU pertanyaan baru yang berkaitan dengan materi **${materialName}** berdasarkan penjelasanmu tadi untuk menguji pemahamanku lagi.`);
+    // Kirim konfirmasi tertulis siswa ke chat
+    sendFloatingChat(`Saya Siap Uji Ulang Pemahaman terhadap materi **${materialName}**.`);
 }
 
 /**
