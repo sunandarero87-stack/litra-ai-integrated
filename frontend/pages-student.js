@@ -352,6 +352,76 @@ async function viewMaterial(id, type) {
 
     if (!material) return;
 
+    // =========================================================================
+    // CHATBOT & CONTEXT INITIALIZATION (Moved to top for reliable context tracking)
+    // =========================================================================
+    // Avoid duplicate initialization if switching material inside the viewer
+    if (currentMaterial !== id) {
+        currentMaterial = id;
+
+        // Auto-open chatbot panel
+        const chatPanel = document.getElementById('chatbot-panel');
+        if (chatPanel && chatPanel.style.display === 'none') {
+            toggleChatbot();
+        }
+
+        // Ensure chatbot container is visible in viewer
+        const chatbotContainer = document.getElementById('floating-chatbot-container');
+        if (chatbotContainer) chatbotContainer.style.display = 'flex';
+
+        // Update chatbot header subtitle and selector
+        const contextEl = document.getElementById('chat-material-context');
+        if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
+        const chatSelector = document.getElementById('chat-material-selector');
+        if (chatSelector) chatSelector.value = material._id;
+
+        const chatBox = document.getElementById('floating-chat-messages');
+        chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
+
+        const users = getUsers();
+        const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+        const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+
+        fetch(`/api/chat/${currentUser.username}`)
+            .then(res => res.json())
+            .then(data => {
+                chatBox.innerHTML = '';
+                let history = [];
+                if (data.success && data.history) {
+                    history = data.history;
+                }
+
+                if (history.length === 0) {
+                    const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
+                    appendFloatingMessage('bot', initialGreeting, teacherPhoto);
+                    history.push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
+                } else {
+                    history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
+                }
+
+                // Update local storage
+                const histories = getChatHistories();
+                histories[currentUser.username] = history;
+                saveChatHistories(histories);
+            })
+            .catch(err => {
+                console.error('Failed to fetch chat history:', err);
+                chatBox.innerHTML = '';
+                const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
+                appendFloatingMessage('bot', initialGreeting, teacherPhoto);
+            });
+    } else {
+        // Even if same material, ensure chatbot is visible and context is set
+        const chatbotContainer = document.getElementById('floating-chatbot-container');
+        if (chatbotContainer) chatbotContainer.style.display = 'flex';
+
+        const contextEl = document.getElementById('chat-material-context');
+        if (contextEl && material) contextEl.textContent = `Membahas: ${material.name}`;
+        const chatSelector = document.getElementById('chat-material-selector');
+        if (chatSelector && material) chatSelector.value = material._id;
+    }
+    // =========================================================================
+
     const wrapper = document.getElementById('viewer-content-wrapper');
 
     // Default: Show PDF in iframe if it's a PDF
@@ -447,73 +517,7 @@ async function viewMaterial(id, type) {
             </div>`;
     }
 
-    // Avoid duplicate initialization if switching material inside the viewer
-    if (currentMaterial !== id) {
-        currentMaterial = id;
 
-        // Auto-open chatbot panel
-        const chatPanel = document.getElementById('chatbot-panel');
-        if (chatPanel && chatPanel.style.display === 'none') {
-            toggleChatbot();
-        }
-
-        // Ensure chatbot container is visible in viewer
-        const chatbotContainer = document.getElementById('floating-chatbot-container');
-        if (chatbotContainer) chatbotContainer.style.display = 'flex';
-
-        // Update chatbot header subtitle and selector
-        const contextEl = document.getElementById('chat-material-context');
-        if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
-        const chatSelector = document.getElementById('chat-material-selector');
-        if (chatSelector) chatSelector.value = material._id;
-
-        const chatBox = document.getElementById('floating-chat-messages');
-        chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
-
-        const users = getUsers();
-        const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
-        const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
-
-        fetch(`/api/chat/${currentUser.username}`)
-            .then(res => res.json())
-            .then(data => {
-                chatBox.innerHTML = '';
-                let history = [];
-                if (data.success && data.history) {
-                    history = data.history;
-                }
-
-                if (history.length === 0) {
-                    const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
-                    appendFloatingMessage('bot', initialGreeting, teacherPhoto);
-                    history.push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
-                } else {
-                    history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
-                }
-
-                // Update local storage
-                const histories = getChatHistories();
-                histories[currentUser.username] = history;
-                saveChatHistories(histories);
-            })
-            .catch(err => {
-                console.error('Failed to fetch chat history:', err);
-                chatBox.innerHTML = '';
-                const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
-                appendFloatingMessage('bot', initialGreeting, teacherPhoto);
-            });
-    } else {
-        // Even if same material, ensure chatbot is visible and context is set
-        const chatbotContainer = document.getElementById('floating-chatbot-container');
-        if (chatbotContainer) chatbotContainer.style.display = 'flex';
-
-        const contextEl = document.getElementById('chat-material-context');
-        const materials = getMaterials();
-        const mat = materials.find(m => m._id === id || m.name === id);
-        if (contextEl && mat) contextEl.textContent = `Membahas: ${mat.name}`;
-        const chatSelector = document.getElementById('chat-material-selector');
-        if (chatSelector && mat) chatSelector.value = mat._id;
-    }
 }
 
 function updateChatMaterial(id) {
