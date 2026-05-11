@@ -1,6 +1,7 @@
 global.DOMMatrix = class {};
 global.DOMPoint = class {};
 global.DOMRect = class {};
+const axios = require('axios');
 const Material = require('../models/Material');
 const mammoth = require('mammoth');
 const aiService = require('../services/aiService');
@@ -22,6 +23,89 @@ async function parsePdfBuffer(buffer) {
     throw new Error('pdf-parse module format not recognized');
 }
 
+
+// Helper function to pre-download all dynamic external images and store them as Base64 inside HTML.
+// This ensures that finalized materials never render new/different images after creation.
+async function downloadAndInlineImages(html) {
+    if (!html) return html;
+    const imgSrcRegex = /<img[^>]+src\s*=\s*["']([^"']+)["']/gi;
+    let match;
+    let newHtml = html;
+    const uniqueUrls = new Set();
+
+    while ((match = imgSrcRegex.exec(html)) !== null) {
+        const url = match[1];
+        // We only need to fetch remote http/https images that aren't already embedded as Data URIs
+        if (url && url.startsWith('http') && !url.startsWith('data:')) {
+            uniqueUrls.add(url);
+        }
+    }
+
+    for (const url of uniqueUrls) {
+        try {
+            console.log(`[Image Lock] Attempting to download and inline external image: ${url}`);
+            const response = await axios.get(url, { 
+                responseType: 'arraybuffer',
+                timeout: 12000 // Give it enough time (12s) but prevent infinite hanging
+            });
+            const mimeType = response.headers['content-type'] || 'image/jpeg';
+            const b64 = Buffer.from(response.data, 'binary').toString('base64');
+            const dataUri = `data:${mimeType};base64,${b64}`;
+            
+            // Perform clean replacements across entire document
+            newHtml = newHtml.split(url).join(dataUri);
+            console.log(`[Image Lock] Successfully embedded image.`);
+        } catch (e) {
+            console.error(`[Image Lock] Warning: failed to pre-cache ${url} : ${e.message}`);
+        }
+    }
+    return newHtml;
+}
+
+// Helper used on access to ensure hotfix propagates permanently back to database
+async function ensurePersistentConsistency(material) {
+    if (material.type !== 'html' || !material.contentDataUrl || !material.contentDataUrl.startsWith('data:text/html;base64,')) {
+        return;
+    }
+    
+    const base64Data = material.contentDataUrl.split(',')[1];
+    let html = Buffer.from(base64Data, 'base64').toString('utf-8');
+    
+    // Check if contains dynamic sources that need embedding
+    const needsEmbed = /<img[^>]+src\s*=\s*["']http(s?):\/\//gi.test(html) || html.includes('source.unsplash.com');
+    
+    if (!needsEmbed) return;
+
+    console.log(`[Consistency Check] Material "${material.name}" has dynamic links. Migrating to persistent base64.`);
+    
+    // Apply fix for obsolete domain
+    if (html.includes('source.unsplash.com')) {
+        html = html.replace(/source\.unsplash\.com\/featured\/800x500\/\?([a-zA-Z0-9,_]+)/gi, 'loremflickr.com/800/500/$1');
+        html = html.replace(/source\.unsplash\.com/gi, 'loremflickr.com');
+    }
+
+    const originalHtml = html;
+    // Pull data down to embed locally
+    html = await downloadAndInlineImages(html);
+    
+    if (html !== originalHtml) {
+        const newBase64 = Buffer.from(html).toString('base64');
+        material.contentDataUrl = `data:text/html;base64,${newBase64}`;
+        material.size = Buffer.byteLength(html);
+        // Update plain text cache
+        material.content = html
+            .replace(/<style([\s\S]*?)<\/style>/gi, '')
+            .replace(/<script([\s\S]*?)<\/script>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+            
+        await material.save();
+        console.log(`[Consistency Check] Migration completed & saved permanently for "${material.name}".`);
+    }
+}
+
+
 exports.getMaterials = async (req, res) => {
     try {
         const materials = await Material.find({}, { contentDataUrl: 0 }).sort({ date: -1 });
@@ -36,19 +120,8 @@ exports.getMaterialById = async (req, res) => {
         const material = await Material.findById(req.params.id);
         if (!material) return res.status(404).json({ error: 'Material not found' });
         
-        // Hot-fix old deprecated source.unsplash.com links
-        if (material.type === 'html' && material.contentDataUrl && material.contentDataUrl.includes('source.unsplash.com')) {
-            const matches = material.contentDataUrl.match(/^data:(.+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
-                const contentType = matches[1];
-                const base64Data = matches[2];
-                let html = Buffer.from(base64Data, 'base64').toString('utf8');
-                html = html.replace(/source\.unsplash\.com\/featured\/800x500\/\?([a-zA-Z0-9,_]+)/gi, 'loremflickr.com/800/500/$1');
-                html = html.replace(/source\.unsplash\.com/gi, 'loremflickr.com');
-                const newBase64 = Buffer.from(html).toString('base64');
-                material.contentDataUrl = `data:${contentType};base64,${newBase64}`;
-            }
-        }
+        // Guarantee full image persistence. If external dynamic images exist, download and commit them back to DB permanently.
+        await ensurePersistentConsistency(material);
 
         res.json({ success: true, material });
     } catch (err) {
@@ -63,21 +136,9 @@ exports.getMaterialContent = async (req, res) => {
             return res.status(404).json({ error: 'Material not found' });
         }
         
+        // Apply consistency fix before serving
+        await ensurePersistentConsistency(material);
         let dataUrl = material.contentDataUrl;
-
-        // Hot-fix old deprecated source.unsplash.com links
-        if (material.type === 'html' && dataUrl.includes('source.unsplash.com')) {
-            const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
-                const contentType = matches[1];
-                const base64Data = matches[2];
-                let html = Buffer.from(base64Data, 'base64').toString('utf8');
-                html = html.replace(/source\.unsplash\.com\/featured\/800x500\/\?([a-zA-Z0-9,_]+)/gi, 'loremflickr.com/800/500/$1');
-                html = html.replace(/source\.unsplash\.com/gi, 'loremflickr.com');
-                const newBase64 = Buffer.from(html).toString('base64');
-                dataUrl = `data:${contentType};base64,${newBase64}`;
-            }
-        }
 
         const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
         if (matches && matches.length === 3) {
@@ -158,7 +219,11 @@ exports.generateMaterialFromAI = async (req, res) => {
         console.log(`[AI Material] Generating material: "${judul}" for Class: ${kelas}, Objective: ${tujuanPembelajaran}, Image Source: ${sumberGambar}, Objectives Count: ${jumlahTujuan}, Pages Count: ${jumlahHalaman}`);
         
         // Call AI Service to generate HTML content
-        const htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman, judul);
+        let htmlContent = await aiService.generateLearningMaterial(tujuanPembelajaran, kelas, sumberGambar, jumlahTujuan, jumlahHalaman, judul);
+        
+        // Lock down generated content by converting ANY dynamic image tags into embedded base64 permanently
+        console.log('[AI Material] Pre-loading generated dynamic images to ensure static consistency...');
+        htmlContent = await downloadAndInlineImages(htmlContent);
 
         // Strip HTML tags to get clean plain text content for search / chatbot context
         const plainTextContent = htmlContent
@@ -208,19 +273,22 @@ exports.updateMaterial = async (req, res) => {
         if (name) material.name = name;
 
         if (htmlContent) {
+            // Lock down and freeze images on edit to prevent dynamic changes
+            const frozenHtml = await downloadAndInlineImages(htmlContent);
+
             // Base64 encode htmlContent to satisfy contentDataUrl requirement
-            const base64Content = Buffer.from(htmlContent).toString('base64');
+            const base64Content = Buffer.from(frozenHtml).toString('base64');
             material.contentDataUrl = `data:text/html;base64,${base64Content}`;
 
             // Strip HTML tags to get clean plain text content for search / chatbot context
-            const plainTextContent = htmlContent
+            const plainTextContent = frozenHtml
                 .replace(/<style([\s\S]*?)<\/style>/gi, '')
                 .replace(/<script([\s\S]*?)<\/script>/gi, '')
                 .replace(/<[^>]+>/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
             material.content = plainTextContent;
-            material.size = Buffer.byteLength(htmlContent);
+            material.size = Buffer.byteLength(frozenHtml);
         }
 
         await material.save();
