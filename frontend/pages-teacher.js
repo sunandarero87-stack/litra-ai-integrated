@@ -574,6 +574,17 @@ function renderMaterials(main) {
     const materials = getMaterials();
     const assignedClasses = getAssignedClasses();
     const assignedMapels = getAssignedMapels();
+    
+    // Compute all system subjects from other teachers to present as global selection options
+    const otherSystemMapels = [...new Set(getUsers().filter(u => u.role === 'guru' && u.mapel).flatMap(u => u.mapel.split(',')).map(m => m.trim()).filter(Boolean))].sort();
+    
+    // Filter out the user's already assigned mapels from the comprehensive list to avoid duplicates
+    const filteredSystemMapels = otherSystemMapels.filter(m => !assignedMapels.includes(m));
+    
+    // Merge lists: always present logged-in user's subjects first, followed by rest of system subjects
+    let dropdownMapels = [...assignedMapels, ...filteredSystemMapels];
+    if (dropdownMapels.length === 0) dropdownMapels = ['Umum'];
+
     const isRestricted = currentUser.role === 'guru' && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas');
     
     main.innerHTML = `
@@ -607,7 +618,7 @@ function renderMaterials(main) {
                     <div class="form-group">
                         <label>Mata Pelajaran Materi</label>
                         <select id="material-upload-mapel" class="form-control">
-                            ${assignedMapels.map(m => `<option value="${m}">${m}</option>`).join('') || '<option value="Umum">Umum</option>'}
+                            ${dropdownMapels.map(m => `<option value="${m}">${m}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
@@ -640,7 +651,7 @@ function renderMaterials(main) {
                     <div class="form-group">
                         <label>Mata Pelajaran</label>
                         <select id="ai-material-mapel" class="form-control">
-                            ${assignedMapels.map(m => `<option value="${m}">${m}</option>`).join('') || '<option value="Umum">Umum</option>'}
+                            ${dropdownMapels.map(m => `<option value="${m}">${m}</option>`).join('')}
                         </select>
                     </div>
                     <div class="form-group">
