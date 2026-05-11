@@ -674,7 +674,8 @@ function appendFloatingMessage(role, html, teacherPhoto) {
 
 // ---- State untuk alur Cek Pemahaman ----
 let lastAiExplanation = '';
-let waitingForUnderstandingAnswer = false;
+let waitingForUnderstandingAnswer = false; // True = siswa sedang menjawab soal, siap dinilai
+let waitingForTestQuestion = false;         // True = siswa konfirmasi siap, AI sedang mengirim soal
 let lastUserMessage = ''; // Simpan pesan terakhir siswa untuk deteksi sapaan
 
 /**
@@ -1001,15 +1002,15 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     input.disabled = true;
     hidePahamButtons();
 
-    // Intercept logic: Jika user memberikan penegasan (Siap/Ya) sebelum ujian dimulai, langsung ubah state ke waiting
-    if (!waitingForUnderstandingAnswer && isAffirmativeResponse(msg)) {
-        waitingForUnderstandingAnswer = true;
-        // Tambahkan flag eksplisit internal agar backend pasti memberikan pertanyaan uji
-        msg = "Saya Sudah Siap diuji. " + msg;
+    // STEP 1: Siswa konfirmasi siap diuji → kirim ke chat biasa agar AI membuat SOAL
+    if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isAffirmativeResponse(msg)) {
+        waitingForTestQuestion = true;
+        // Ubah pesan jadi sinyal eksplisit ke AI untuk segera menampilkan pertanyaan
+        msg = "Saya Sudah Siap diuji. Berikan saya SATU pertanyaan uji pemahaman sekarang.";
+        // Lanjutkan ke alur chat biasa di bawah (tidak return di sini)
     }
-
-    // Jika sedang menunggu jawaban uji pemahaman, proses khusus
-    if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
+    // STEP 2: Siswa sudah menerima soal dan sekarang mengirim JAWABAN → kirim ke evaluasi
+    else if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
         input.disabled = false;
         input.focus();
         sendUnderstandingAnswer(msg, teacherPhoto);
@@ -1064,11 +1065,26 @@ function sendFloatingChat(quickMsg, isSilent = false) {
                 histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
                 saveChatHistories(histories);
 
+                // Jika AI baru saja mengirimkan soal ujian (setelah siswa konfirmasi siap),
+                // transisi ke mode menunggu jawaban siswa
+                if (waitingForTestQuestion) {
+                    waitingForTestQuestion = false;
+                    waitingForUnderstandingAnswer = true;
+                    // Simpan pertanyaan AI sebagai konteks untuk evaluasi nanti
+                    lastAiExplanation = aiReply;
+                    // Beri petunjuk visual kepada siswa
+                    const qr = document.getElementById('quick-replies');
+                    if (qr) {
+                        qr.style.display = 'flex';
+                        qr.innerHTML = `<span style="font-size:0.82rem;color:var(--text-muted);align-self:center;">✏️ Ketik jawabanmu di kolom chat di bawah...</span>`;
+                    }
+                    return; // Jangan tampilkan tombol Paham/Belum Paham
+                }
+
                 // Tampilkan tombol Paham/Belum Paham hanya jika:
                 // 1. Tidak sedang menunggu jawaban uji pemahaman
                 // 2. Pesan siswa bukan sapaan
                 // 3. SEDANG MEMBAHAS MATERI (currentMaterial tidak null)
-                // 4. Jawaban AI bukan pesan penolakan karena di luar konteks
                 if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage) && currentMaterial) {
                     showPahamButtons();
                 }
