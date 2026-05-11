@@ -51,13 +51,13 @@ async function requestWithFallback(payload, retryDelay = 2000) {
             const status = e.response?.status;
             const errorDetail = e.response?.data?.error?.message || e.response?.data?.error || e.message;
             console.warn(`[AI] Model "${model}" gagal (${status || 'Err'}): ${JSON.stringify(errorDetail)}`);
-            
+
             // Jika 400 (Bad Request), kemungkinan payload/prompt bermasalah, jangan lanjut fallback jika sama
             if (status === 400) {
                 lastError = new Error(`AI Bad Request (400): ${JSON.stringify(errorDetail)}`);
                 continue; // Coba model lain tetap, siapa tahu model lain lebih toleran
             }
-            
+
             lastError = e;
             if (status === 429) await new Promise(r => setTimeout(r, retryDelay));
         }
@@ -295,7 +295,7 @@ async function analyzeHabits(username, habitAnswers) {
 async function generateBankSoal(objectivesArray, amount = 10, indicatorType = '', indicatorValue = '', penalaranLogis = 3) {
     const indicatorContext = indicatorType && indicatorValue ? `\n- Fokus Tipe Soal adalah ${indicatorType.toUpperCase()}\n- WAJIB menerapkan Indikator Soal: ${indicatorValue}` : '';
     const penalaranContext = `\n- WAJIB memiliki Tingkat Penalaran Logis: Level ${penalaranLogis} dari 5 (Keterangan: Level 1 = Logika Sederhana/Fakta Eksplisit, Level 2 = Sebab-Akibat/Pemahaman, Level 3 = Analisis Pola/Struktur, Level 4 = Evaluasi Kritis/HOTS, Level 5 = Logika Kompleks/Sintesis Tinggi/Pemecahan Teka-Teki).`;
-    
+
     const payload = {
         messages: [
             { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berstandar HOTS (Higher Order Thinking Skills). Semua soal harus dirancang untuk menguji analisis, evaluasi, dan logika kritis (C4-C6), bukan ingatan hafalan belaka. OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD). HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
@@ -345,7 +345,7 @@ async function generateBankSoalFromMaterial(materialContent, amount = 10, indica
     const penalaranContext = `\n- WAJIB memiliki Tingkat Penalaran Logis: Level ${penalaranLogis} dari 5 (Keterangan: Level 1 = Logika Sederhana/Fakta Eksplisit, Level 2 = Sebab-Akibat/Pemahaman, Level 3 = Analisis Pola/Struktur, Level 4 = Evaluasi Kritis/HOTS, Level 5 = Logika Kompleks/Sintesis Tinggi/Pemecahan Teka-Teki).`;
     const safeContent = materialContent ? materialContent.substring(0, 30000) : "";
     const safeAmount = Math.min(parseInt(amount) || 10, 20); // Batasi maks 20 soal per AI call agar tidak 400/timeout
-    
+
     const payload = {
         messages: [
             { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berdasarkan materi pembelajaran berstandar HOTS (Higher Order Thinking Skills). Semua soal harus dirancang untuk menguji analisis, evaluasi, dan logika kritis (C4-C6), bukan ingatan hafalan belaka. OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD). HINDARI KATA-KATA SULIT/TERJEMAHAN KAKU." },
@@ -487,12 +487,12 @@ Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan me
 
     const response = await requestWithFallback(payload);
     let htmlContent = response.data.choices[0].message.content;
-    
+
     // Clean if AI wrapped it in markdown code block anyway
     if (htmlContent.startsWith("```")) {
         htmlContent = htmlContent.replace(/^```html\s*/i, "").replace(/```$/, "").trim();
     }
-    
+
     return htmlContent;
 }
 

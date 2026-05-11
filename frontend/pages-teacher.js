@@ -3694,6 +3694,25 @@ function downloadBankSoal(format) {
 
     const classNameDisplay = selectedClass === 'all' ? 'Semua Kelas' : selectedClass;
 
+    // Utility to ensure image URLs are absolute
+    const getAbsImg = (url) => {
+        if (!url) return "";
+        if (url.startsWith('http') || url.startsWith('data:')) return url;
+        return window.location.origin + (url.startsWith('/') ? '' : '/') + url;
+    };
+    
+    // Format content to properly render potential images 
+    const formatExpContent = (str) => {
+        if (!str) return "";
+        if (typeof str !== 'string') return str;
+        if (str.includes('<img')) return str; 
+        const t = str.trim();
+        if (t.match(/^https?:\/\/.*\.(png|jpe?g|gif|webp|bmp|svg)/i) || t.startsWith('data:image/')) {
+            return `<img src="${t}" style="max-height:100px; max-width:100%; object-fit:contain; display:block; margin-top:5px;">`;
+        }
+        return str;
+    };
+
     if (format === 'excel') {
         let excelHtml = `
         <table border="1">
@@ -3713,13 +3732,16 @@ function downloadBankSoal(format) {
             <tbody>
                 ${questionsToDownload.map(q => `
                     <tr>
-                        <td>${q.question}</td>
-                        <td>${q.options[0]}</td>
-                        <td>${q.options[1]}</td>
-                        <td>${q.options[2]}</td>
-                        <td>${q.options[3]}</td>
+                        <td>
+                            ${formatExpContent(q.question)}
+                            ${q.image ? `<br><img src="${getAbsImg(q.image)}" style="max-height:100px;">` : ''}
+                        </td>
+                        <td>${formatExpContent(q.options[0])}</td>
+                        <td>${formatExpContent(q.options[1])}</td>
+                        <td>${formatExpContent(q.options[2])}</td>
+                        <td>${formatExpContent(q.options[3])}</td>
                         <td>${['A', 'B', 'C', 'D'][q.correct]}</td>
-                        <td>${q.explanation}</td>
+                        <td>${formatExpContent(q.explanation)}</td>
                         <td>${q.type}</td>
                         <td>${q.kelas || 'Semua Kelas'}</td>
                     </tr>
@@ -3742,16 +3764,17 @@ function downloadBankSoal(format) {
         questionsToDownload.forEach((q, index) => {
             questionsHtml += `
                 <div style="margin-bottom: 25px; page-break-inside: avoid;">
-                    <p style="font-weight: 600; font-size: 1.05rem; margin-bottom: 8px;">${index + 1}. ${q.question}</p>
+                    <p style="font-weight: 600; font-size: 1.05rem; margin-bottom: 8px;">${index + 1}. ${formatExpContent(q.question)}</p>
+                    ${q.image ? `<div style="margin-left:20px; margin-bottom:10px;"><img src="${getAbsImg(q.image)}" style="max-height:180px; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,0.1);"></div>` : ''}
                     <div style="margin-left: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>A. ${q.options[0]}</div>
-                        <div>B. ${q.options[1]}</div>
-                        <div>C. ${q.options[2]}</div>
-                        <div>D. ${q.options[3]}</div>
+                        <div>A. ${formatExpContent(q.options[0])}</div>
+                        <div>B. ${formatExpContent(q.options[1])}</div>
+                        <div>C. ${formatExpContent(q.options[2])}</div>
+                        <div>D. ${formatExpContent(q.options[3])}</div>
                     </div>
                     <div style="margin-top: 8px; margin-left: 20px; font-size: 0.9rem; color: #475569; background: #f8fafc; padding: 8px 12px; border-left: 3px solid #1a73e8; border-radius: 4px;">
                         <strong>Kunci Jawaban:</strong> ${['A', 'B', 'C', 'D'][q.correct]} <br>
-                        <strong>Pembahasan:</strong> ${q.explanation}
+                        <strong>Pembahasan:</strong> ${formatExpContent(q.explanation)}
                     </div>
                 </div>
             `;
@@ -3812,15 +3835,16 @@ function downloadBankSoal(format) {
             <hr/>
             ${questionsToDownload.map((q, index) => `
                 <div class="question">
-                    <p><strong>${index + 1}. ${q.question}</strong></p>
+                    <p><strong>${index + 1}. ${formatExpContent(q.question)}</strong></p>
+                    ${q.image ? `<div style="margin-bottom:10px;"><img src="${getAbsImg(q.image)}" style="max-height:200px; max-width:100%;"></div>` : ''}
                     <div class="options">
-                        A. ${q.options[0]} <br/>
-                        B. ${q.options[1]} <br/>
-                        C. ${q.options[2]} <br/>
-                        D. ${q.options[3]}
+                        A. ${formatExpContent(q.options[0])} <br/>
+                        B. ${formatExpContent(q.options[1])} <br/>
+                        C. ${formatExpContent(q.options[2])} <br/>
+                        D. ${formatExpContent(q.options[3])}
                     </div>
                     <p class="answer">Kunci Jawaban: ${['A', 'B', 'C', 'D'][q.correct]}</p>
-                    <p class="explanation">Pembahasan: ${q.explanation}</p>
+                    <p class="explanation">Pembahasan: ${formatExpContent(q.explanation)}</p>
                 </div>
                 <br/>
             `).join('')}
