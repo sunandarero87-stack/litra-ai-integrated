@@ -775,11 +775,12 @@ function hidePahamButtons() {
 /**
  * Tampilkan tombol Ulangi Penjelasan / Buat Pertanyaan Baru saat skor < 75
  */
-function showGagalButtons() {
+function showGagalButtons(score = 0) {
     const qr = document.getElementById('quick-replies');
     if (!qr) return;
     qr.style.display = 'flex';
-    qr.innerHTML = `
+    
+    let html = `
         <button id="btn-kembali-materi" class="btn btn-outline btn-sm" onclick="toggleChatbot()"
             style="padding:0.4rem 0.9rem;font-size:0.85rem;border-color:var(--primary);color:var(--primary);">
             <i class="fas fa-book"></i> Kembali ke materi
@@ -789,6 +790,18 @@ function showGagalButtons() {
             <i class="fas fa-check-circle"></i> Siap Uji ulang pemahaman
         </button>
     `;
+
+    // Jika skor >= 50, tambahkan opsi tombol Lanjut ke Tahap 2
+    if (score >= 50) {
+        html += `
+        <button id="btn-inline-lanjut" class="btn btn-success btn-sm" onclick="window.location.href='index.html?stage=2'"
+            style="padding:0.4rem 0.9rem;font-size:0.85rem;background:var(--success);">
+            <i class="fas fa-arrow-right"></i> Lanjut Tahap 2
+        </button>
+        `;
+    }
+
+    qr.innerHTML = html;
 }
 
 /** Siswa klik "Belum Paham" */
@@ -883,8 +896,25 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                     startChatbotCountdown(score);
                 }, 1500);
 
+            } else if (score >= 50) {
+                // ⚠️ MENENGAH (50-74): UI Kuning, bisa lanjut tapi harus manual klik (tidak ada countdown)
+                const btnLanjut = document.getElementById('btn-lanjut-tahap2');
+                if (btnLanjut) btnLanjut.style.display = 'inline-block';
+                localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
+
+                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#ca8a04,#eab308);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
+                    <i class="fas fa-exclamation-circle" style="font-size:1.4rem;"></i>
+                    <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Pemahamanmu cukup baik! Kamu bisa lanjut ke Tahap 2, atau menguji ulang pemahamanmu.</div>
+                </div>`;
+
+                // Tampilkan pilihan: Kembali, Uji Ulang, atau Lanjut
+                setTimeout(() => {
+                    showGagalButtons(score);
+                }, 600);
+
             } else {
-                // ❌ BELUM LULUS: sembunyikan tombol lanjut, tampilkan opsi ulangi
+                // ❌ BELUM LULUS (<50): UI Merah, sembunyikan tombol lanjut, tampilkan opsi ulangi
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'none';
                 localStorage.removeItem('tahap1_ready_' + currentUser.username);
@@ -892,12 +922,12 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
                     <i class="fas fa-times-circle" style="font-size:1.4rem;"></i>
                     <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Belum mencapai nilai minimum 75%. Pelajari kembali materinya dan coba uji lagi ya! 💪</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Belum mencapai nilai minimum. Pelajari kembali materinya dan coba uji lagi ya! 💪</div>
                 </div>`;
 
                 // Tampilkan pilihan: Kembali ke Materi atau Siap Uji Ulang
                 setTimeout(() => {
-                    showGagalButtons();
+                    showGagalButtons(score);
                 }, 600);
             }
 
