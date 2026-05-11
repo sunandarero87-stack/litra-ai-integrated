@@ -718,6 +718,20 @@ function isAffirmativeResponse(msg) {
 }
 
 /**
+ * Deteksi apakah pesan siswa merupakan indikasi ketidaksiapan (belum siap)
+ */
+function isNegativeResponse(msg) {
+    if (!msg) return false;
+    const cleaned = msg.trim().toLowerCase();
+    const negativePatterns = [
+        /^(belum|tidak|nggak|engga|ndak)(\s|!|$)/i,
+        /^(belum siap|tidak siap|kurang paham|belum paham|gak siap)(\s|!|$)/i,
+        /^saya\s+(belum|tidak|nggak)\s+(siap|paham|mengerti)/i
+    ];
+    return negativePatterns.some(pattern => pattern.test(cleaned));
+}
+
+/**
  * Tampilkan atau sembunyikan tombol Paham/Belum Paham
  */
 function showPahamButtons() {
@@ -1004,6 +1018,11 @@ function sendFloatingChat(quickMsg, isSilent = false) {
         // Ubah pesan jadi sinyal eksplisit ke AI untuk segera menampilkan pertanyaan
         msg = "Saya Sudah Siap diuji. Berikan saya SATU pertanyaan uji pemahaman sekarang.";
         // Lanjutkan ke alur chat biasa di bawah (tidak return di sini)
+    }
+    // STEP 1.5: Siswa menyatakan belum siap → minta AI jelaskan dengan analogi
+    else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isNegativeResponse(msg)) {
+        // Ubah pesan jadi sinyal eksplisit ke AI untuk menjelaskan dengan analogi
+        msg = "Saya belum siap diuji. Tolong jelaskan materi ini dengan analogi yang sederhana dan mudah dipahami anak SMP.";
     }
     // STEP 2: Siswa sudah menerima soal dan sekarang mengirim JAWABAN → kirim ke evaluasi
     else if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
