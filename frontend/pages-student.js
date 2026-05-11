@@ -207,7 +207,6 @@ function renderTahap1(main) {
                     </div>
                     <div style="display: flex; gap: 0.5rem;" onclick="event.stopPropagation()">
                         <button class="btn btn-outline btn-sm" onclick="downloadMaterial('${m._id}', '${m.name}', '${m.type}', event)" title="Download Materi"><i class="fas fa-download"></i></button>
-                        <a href="index.html?viewMaterial=${m._id}" target="_blank" class="btn btn-outline btn-sm" title="Buka di Tab Baru"><i class="fas fa-external-link-alt"></i></a>
                         <button class="btn btn-primary btn-sm" onclick="viewMaterial('${m._id}', '${m.type}')">Buka</button>
                     </div>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi untuk dipelajari.</p>'}
@@ -217,7 +216,6 @@ function renderTahap1(main) {
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 1rem;">
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn btn-outline" onclick="closeMaterialViewer()"><i class="fas fa-arrow-left"></i> Kembali</button>
-                    <button id="btn-view-new-tab" class="btn btn-outline" title="Buka di Tab Baru"><i class="fas fa-external-link-alt"></i></button>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <label style="font-weight: 500;">Materi:</label>
@@ -349,12 +347,6 @@ async function viewMaterial(id, type) {
         sel.value = id;
     }
 
-    // Update "Buka di Tab Baru" button link
-    const newTabBtn = document.getElementById('btn-view-new-tab');
-    if (newTabBtn) {
-        newTabBtn.onclick = () => window.open(`index.html?viewMaterial=${id}`, '_blank');
-    }
-
     // Find material in database to check if we have the content
     const material = materials.find(m => m._id === id || m.name === id); // fallback just in case
 
@@ -459,10 +451,13 @@ async function viewMaterial(id, type) {
     if (currentMaterial !== id) {
         currentMaterial = id;
 
-        // Tampilkan popup pengingat uji pemahaman
-        showMaterialPopup();
+        // Auto-open chatbot panel
+        const chatPanel = document.getElementById('chatbot-panel');
+        if (chatPanel && chatPanel.style.display === 'none') {
+            toggleChatbot();
+        }
 
-        // Ensure chatbot is visible in viewer
+        // Ensure chatbot container is visible in viewer
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
 
@@ -489,7 +484,7 @@ async function viewMaterial(id, type) {
                 }
 
                 if (history.length === 0) {
-                    const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+                    const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
                     appendFloatingMessage('bot', initialGreeting, teacherPhoto);
                     history.push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
                 } else {
@@ -504,7 +499,7 @@ async function viewMaterial(id, type) {
             .catch(err => {
                 console.error('Failed to fetch chat history:', err);
                 chatBox.innerHTML = '';
-                const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+                const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
                 appendFloatingMessage('bot', initialGreeting, teacherPhoto);
             });
     } else {
@@ -556,7 +551,7 @@ function updateChatMaterial(id) {
                 }
 
                 if (history.length === 0) {
-                    const initialGreeting = "Halo " + currentUser.name + " Saya NARA-AI Asistennya " + teacher.name + " untuk menemani kamu belajar Materi " + material.name + ", Tanyakan bagian mana yang tidak kamu pahami dari " + material.name;
+                    const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
                     appendFloatingMessage('bot', initialGreeting, teacherPhoto);
                 } else {
                     history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
@@ -595,7 +590,7 @@ function downloadMaterial(id, name, type, event) {
     document.body.removeChild(a);
 
     // Tampilkan popup pengingat chatbot setelah download
-    showMaterialPopup();
+    // showMaterialPopup(); (Dinonaktifkan, otomatis terbuka saat klik Buka)
 }
 
 function closeMaterialViewer() {
@@ -702,19 +697,27 @@ function isGreetingMessage(msg) {
 }
 
 /**
+ * Deteksi apakah pesan siswa merupakan konfirmasi kesiapan untuk diuji
+ */
+function isAffirmativeResponse(msg) {
+    if (!msg) return false;
+    const cleaned = msg.trim().toLowerCase();
+    const affirmativePatterns = [
+        /^(ya|siap|ok|oke|baik|boleh|tentu|mau|tancap|lanjut|gaskeun|sangat siap|siap diuji|gas|yoi)(\s|!|$)/i,
+        /^saya\s+(siap|mau)/i,
+        /^iya/i,
+        /^boleh/i,
+        /^ok/i
+    ];
+    return affirmativePatterns.some(pattern => pattern.test(cleaned));
+}
+
+/**
  * Tampilkan atau sembunyikan tombol Paham/Belum Paham
  */
 function showPahamButtons() {
-    const qr = document.getElementById('quick-replies');
-    if (!qr) return;
-    qr.style.display = 'flex';
-    qr.innerHTML = `
-        <span style="font-size:0.82rem;color:var(--text-muted);align-self:center;margin-right:0.25rem;">Apakah kamu sudah paham?</span>
-        <button id="btn-belum-paham" class="btn btn-outline btn-sm" onclick="onBelumPaham()"
-            style="padding:0.4rem 0.9rem;font-size:0.85rem;border-color:var(--danger);color:var(--danger);">🤔 Belum Paham</button>
-        <button id="btn-paham" class="btn btn-success btn-sm" onclick="onPaham()"
-            style="padding:0.4rem 0.9rem;font-size:0.85rem;">💡 Sudah Paham</button>
-    `;
+    // Dinonaktifkan sesuai instruksi: diganti dengan interaksi teks langsung
+    return;
 }
 
 function hidePahamButtons() {
@@ -864,10 +867,10 @@ function startChatbotCountdown(score) {
 
     const overlay = document.createElement('div');
     overlay.id = 'chatbot-countdown-overlay';
-    // Mengubah overlay menjadi kartu melayang kecil agar tidak menutupi seluruh chat/nilai
-    overlay.style.cssText = 'position:absolute; top:35%; left:50%; transform:translate(-50%, -50%); width:80%; max-width:280px; background:rgba(0,0,0,0.7); backdrop-filter:blur(10px); color:white; z-index:100; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:1.5rem; text-align:center; transition:all 0.3s; border:1px solid rgba(255,255,255,0.1);';
+    // Meletakkan overlay di atas agar nilai jawaban yang muncul di akhir feed chat tetap dapat dibaca di bawahnya
+    overlay.style.cssText = 'position:absolute; top:15px; left:50%; transform:translateX(-50%); width:80%; max-width:280px; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); color:white; z-index:100; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:1rem; text-align:center; transition:all 0.3s; border:1px solid rgba(255,255,255,0.1);';
 
-    let seconds = 10;
+    let seconds = 20;
 
     // Tombol batal jika skor < 75
     let cancelBtnHTML = '';
@@ -992,6 +995,13 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     if (typeof quickMsg !== 'string') input.value = '';
     input.disabled = true;
     hidePahamButtons();
+
+    // Intercept logic: Jika user memberikan penegasan (Siap/Ya) sebelum ujian dimulai, langsung ubah state ke waiting
+    if (!waitingForUnderstandingAnswer && isAffirmativeResponse(msg)) {
+        waitingForUnderstandingAnswer = true;
+        // Tambahkan flag eksplisit internal agar backend pasti memberikan pertanyaan uji
+        msg = "Saya Sudah Siap diuji. " + msg;
+    }
 
     // Jika sedang menunggu jawaban uji pemahaman, proses khusus
     if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
