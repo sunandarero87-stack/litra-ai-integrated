@@ -357,73 +357,36 @@ async function viewMaterial(id, type) {
     if (!material) return;
 
     // =========================================================================
-    // CHATBOT & CONTEXT INITIALIZATION (Moved to top for reliable context tracking)
+    // CHATBOT CONTEXT INITIALIZATION (tanpa auto-open)
     // =========================================================================
-    // Avoid duplicate initialization if switching material inside the viewer
     if (currentMaterial !== id) {
         currentMaterial = id;
 
-        // Auto-open chatbot panel
+        // Pastikan chatbot TIDAK auto-terbuka — siswa harus scroll dulu
         const chatPanel = document.getElementById('chatbot-panel');
-        if (chatPanel && chatPanel.style.display === 'none') {
-            toggleChatbot();
-        }
+        if (chatPanel) chatPanel.style.display = 'none';
 
-        // Ensure chatbot container is visible in viewer
+        // Pastikan tombol chatbot terlihat
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
 
-        // Update chatbot header subtitle and selector
+        // Update konteks header chatbot
         const contextEl = document.getElementById('chat-material-context');
         if (contextEl) contextEl.textContent = `Membahas: ${material.name}`;
         const chatSelector = document.getElementById('chat-material-selector');
         if (chatSelector) chatSelector.value = material._id;
 
+        // Kosongkan chat messages (siap untuk sesi baru)
         const chatBox = document.getElementById('floating-chat-messages');
-        chatBox.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat chat...</div>';
-
-        const users = getUsers();
-        const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
-        const teacherPhoto = teacher.photo ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
-
-        fetch(`/api/chat/${currentUser.username}`)
-            .then(res => res.json())
-            .then(data => {
-                chatBox.innerHTML = '';
-                let history = [];
-                if (data.success && data.history) {
-                    history = data.history;
-                }
-
-                if (history.length === 0) {
-                    const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
-                    appendFloatingMessage('bot', initialGreeting, teacherPhoto);
-                    history.push({ role: 'bot', text: initialGreeting, time: new Date().toISOString() });
-                } else {
-                    history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
-                }
-
-                // Update local storage
-                const histories = getChatHistories();
-                histories[currentUser.username] = history;
-                saveChatHistories(histories);
-            })
-            .catch(err => {
-                console.error('Failed to fetch chat history:', err);
-                chatBox.innerHTML = '';
-                const initialGreeting = "Halo " + currentUser.name + ", Saya adalah Asisten pak nandar yang akan menguji pemahamanmu tentang materi **" + material.name + "**. Apakah kamu siap diuji?";
-                appendFloatingMessage('bot', initialGreeting, teacherPhoto);
-            });
+        if (chatBox) chatBox.innerHTML = '';
 
         // Pulihkan state evaluasi jika ada
         const restoredState = getChatState();
         waitingForUnderstandingAnswer = restoredState.waitingForUnderstandingAnswer;
         lastAiExplanation = restoredState.lastAiExplanation;
     } else {
-        // Even if same material, ensure chatbot is visible and context is set
         const chatbotContainer = document.getElementById('floating-chatbot-container');
         if (chatbotContainer) chatbotContainer.style.display = 'flex';
-
         const contextEl = document.getElementById('chat-material-context');
         if (contextEl && material) contextEl.textContent = `Membahas: ${material.name}`;
         const chatSelector = document.getElementById('chat-material-selector');
@@ -436,7 +399,15 @@ async function viewMaterial(id, type) {
     // Default: Show PDF in iframe if it's a PDF
     if (type === 'pdf') {
         const urlObj = material._id ? `/api/materials/content/${material._id}` : material.contentDataUrl;
-        wrapper.innerHTML = `<iframe src="${urlObj}" style="width:100%; height:100%; border:none; background: white;"></iframe>`;
+        wrapper.style.flexDirection = 'column';
+        wrapper.innerHTML = `
+            <iframe src="${urlObj}" style="width:100%; flex:1; border:none; background: white;"></iframe>
+            <div id="scroll-chatbot-hint" style="display:none; padding:1rem 1.5rem; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-top:2px solid var(--primary-light); text-align:center; animation: slideUp 0.4s ease;">
+                <p style="color:white;font-size:0.88rem;font-weight:600;margin:0 0 0.5rem;">✅ Selesai membaca? Lanjut ke tahap berikutnya!</p>
+                <p style="color:rgba(255,255,255,0.85);font-size:0.82rem;margin:0;">👇 Klik tombol <strong>NARA-AI</strong> di kanan bawah untuk masuk ke Mode Penguatan Literasi & Numerasi Tahap 1</p>
+            </div>`;
+        // Untuk PDF, tampilkan hint setelah 10 detik (karena tidak bisa detect scroll iframe)
+        setTimeout(() => showScrollChatbotHint(), 10000);
         return;
     } else if (type === 'html' || type === 'ai') {
         let currentMatData = material;
@@ -475,11 +446,22 @@ async function viewMaterial(id, type) {
         }
 
         wrapper.innerHTML = `
-            <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
+            <div id="material-scroll-area" style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
                 <div style="max-width:800px; margin:0 auto;">
                     <div class="material-text-content">${htmlContent}</div>
+                    <div id="scroll-chatbot-hint" style="display:none; margin-top:2rem; padding:1.25rem 1.5rem; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; text-align:center; animation: slideUp 0.4s ease;">
+                        <div style="font-size:1.8rem;margin-bottom:0.5rem;">🎯</div>
+                        <p style="color:white;font-size:0.95rem;font-weight:700;margin:0 0 0.4rem;">Masuk ke Mode Penguatan Literasi & Numerasi Tahap 1</p>
+                        <p style="color:rgba(255,255,255,0.88);font-size:0.83rem;margin:0;">Diskusi dengan NARA-AI untuk menguji pemahamanmu tentang materi ini 💬</p>
+                        <div style="margin-top:1rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; color:rgba(255,255,255,0.9); font-size:0.82rem;">
+                            <i class="fas fa-arrow-down" style="animation:bounce-arrow 1s infinite;"></i>
+                            <span>Klik tombol <strong>NARA-AI</strong> di kanan bawah</span>
+                            <i class="fas fa-arrow-down" style="animation:bounce-arrow 1s infinite;"></i>
+                        </div>
+                    </div>
                 </div>
             </div>`;
+        setupScrollChatbotHint();
         return;
     }
 
@@ -505,14 +487,25 @@ async function viewMaterial(id, type) {
     if (textContent && textContent.trim()) {
         const formattedHTML = formatMaterialContent(textContent, material.name);
         wrapper.innerHTML = `
-            <div style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
+            <div id="material-scroll-area" style="width:100%; height:100%; overflow-y:auto; padding:2rem 2.5rem; text-align:left; line-height:1.8; font-size:1rem; color:var(--text-primary); background: var(--bg-card);">
                 <div style="max-width:800px; margin:0 auto;">
                     <h2 style="color:var(--primary); margin-bottom:1.5rem; padding-bottom:0.75rem; border-bottom:2px solid var(--primary-light);">
                         <i class="fas fa-book-open" style="margin-right:0.5rem;"></i>${material.name}
                     </h2>
                     <div class="material-text-content">${formattedHTML}</div>
+                    <div id="scroll-chatbot-hint" style="display:none; margin-top:2rem; padding:1.25rem 1.5rem; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; text-align:center; animation: slideUp 0.4s ease;">
+                        <div style="font-size:1.8rem;margin-bottom:0.5rem;">🎯</div>
+                        <p style="color:white;font-size:0.95rem;font-weight:700;margin:0 0 0.4rem;">Masuk ke Mode Penguatan Literasi &amp; Numerasi Tahap 1</p>
+                        <p style="color:rgba(255,255,255,0.88);font-size:0.83rem;margin:0;">Diskusi dengan NARA-AI untuk menguji pemahamanmu tentang materi ini 💬</p>
+                        <div style="margin-top:1rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; color:rgba(255,255,255,0.9); font-size:0.82rem;">
+                            <i class="fas fa-arrow-down" style="animation:bounce-arrow 1s infinite;"></i>
+                            <span>Klik tombol <strong>NARA-AI</strong> di kanan bawah</span>
+                            <i class="fas fa-arrow-down" style="animation:bounce-arrow 1s infinite;"></i>
+                        </div>
+                    </div>
                 </div>
             </div>`;
+        setupScrollChatbotHint();
     } else {
         wrapper.innerHTML = `
             <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:2rem; text-align:center; background: var(--bg-input);">
@@ -612,7 +605,64 @@ function closeMaterialViewer() {
     document.getElementById('floating-chatbot-container').style.display = 'none';
     document.getElementById('chatbot-panel').style.display = 'none';
     currentMaterial = null;
+    const arrow = document.getElementById('chatbot-arrow-pointer');
+    if (arrow) arrow.remove();
 }
+
+/**
+ * Setup scroll listener pada area konten materi.
+ * Saat siswa scroll >= 75%, tampilkan hint chatbot.
+ */
+function setupScrollChatbotHint() {
+    setTimeout(() => {
+        const scrollArea = document.getElementById('material-scroll-area');
+        if (!scrollArea) return;
+        scrollArea.onscroll = null;
+        scrollArea.addEventListener('scroll', function onMaterialScroll() {
+            const scrolled = scrollArea.scrollTop + scrollArea.clientHeight;
+            const total = scrollArea.scrollHeight;
+            if (scrolled >= total * 0.75) {
+                showScrollChatbotHint();
+                scrollArea.removeEventListener('scroll', onMaterialScroll);
+            }
+        });
+        // Jika konten pendek (tidak perlu scroll), langsung tampilkan
+        if (scrollArea.scrollHeight <= scrollArea.clientHeight + 20) {
+            setTimeout(() => showScrollChatbotHint(), 2000);
+        }
+    }, 300);
+}
+
+/**
+ * Tampilkan card hint di bawah materi + tanda panah ke tombol chatbot.
+ */
+function showScrollChatbotHint() {
+    const hint = document.getElementById('scroll-chatbot-hint');
+    if (hint && hint.style.display === 'none') {
+        hint.style.display = 'block';
+        hint.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+    const btn = document.getElementById('chatbot-toggle-btn');
+    if (!btn) return;
+    const existing = document.getElementById('chatbot-arrow-pointer');
+    if (existing) return;
+    const arrow = document.createElement('div');
+    arrow.id = 'chatbot-arrow-pointer';
+    arrow.style.cssText = 'position:fixed; bottom:90px; right:16px; width:165px; pointer-events:none; z-index:100001; text-align:center;';
+    arrow.innerHTML = `
+        <div style="background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; border-radius:12px; padding:8px 12px; font-size:0.78rem; font-weight:700; line-height:1.5; box-shadow:0 4px 20px rgba(99,102,241,0.5); margin-bottom:8px;">
+            🎯 Masuk ke Mode<br>Penguatan Literasi &amp;<br>Numerasi Tahap 1<br><span style="font-size:0.7rem;opacity:0.9;font-weight:400;">Diskusi dengan NARA-AI</span>
+        </div>
+        <div style="color:var(--primary-light); animation:bounce-arrow 1s infinite; font-size:2rem;"><i class="fas fa-arrow-down"></i></div>
+    `;
+    document.body.appendChild(arrow);
+    btn.classList.add('pulse');
+    btn.addEventListener('click', () => {
+        if (arrow.parentElement) arrow.remove();
+        btn.classList.remove('pulse');
+    }, { once: true });
+}
+
 
 async function toggleChatbot() {
     const panel = document.getElementById('chatbot-panel');
@@ -669,15 +719,55 @@ async function toggleChatbot() {
             const data = await res.json();
 
             if (!data.allowed) {
-                alert(data.message || "Maaf, antrian penuh (Maksimal 50 siswa). Silakan menunggu sambil mempelajari materi.");
+                alert(data.message || "Maaf, antrian penuh. Silakan menunggu sambil mempelajari materi.");
                 return;
             }
 
             panel.style.display = 'flex';
-            document.getElementById('floating-chat-input').focus();
+
+            // === INISIALISASI CHAT: Load riwayat atau tampilkan salam awal ===
+            const chatBox = document.getElementById('floating-chat-messages');
+            if (chatBox && chatBox.children.length === 0) {
+                const users = getUsers();
+                const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+                const teacherPhoto = teacher.photo
+                    ? `<img src="${teacher.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">`
+                    : '<i class="fas fa-chalkboard-teacher"></i>';
+                const materials = getMaterials();
+                const mat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+                const matName = mat ? mat.name : 'materi ini';
+
+                chatBox.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>';
+
+                fetch(`/api/chat/${currentUser.username}`)
+                    .then(r => r.json())
+                    .then(d => {
+                        chatBox.innerHTML = '';
+                        const history = (d.success && d.history && d.history.length > 0) ? d.history : [];
+                        if (history.length === 0) {
+                            const greeting = `Halo **${currentUser.name}**! 👋\n\nSaya NARA-AI, asisten belajar **${teacher.name}**.\n\nKamu baru saja membaca materi **${matName}**. Sekarang saatnya masuk ke **Mode Penguatan Literasi & Numerasi Tahap 1**!\n\n🎯 **Apakah kamu sudah siap diuji pemahamanmu?**\n\n- Ketik **"Siap"** → NARA-AI langsung mengujimu\n- Ketik **"Belum"** atau ajukan pertanyaan → NARA-AI akan membantumu memahami materi dulu`;
+                            appendFloatingMessage('bot', formatMessageLocal(greeting), teacherPhoto);
+                            const histories = getChatHistories();
+                            histories[currentUser.username] = [{ role: 'bot', text: greeting, time: new Date().toISOString() }];
+                            saveChatHistories(histories);
+                        } else {
+                            history.forEach(m => appendFloatingMessage(m.role, formatMessageLocal(m.text), teacherPhoto));
+                        }
+                    })
+                    .catch(() => {
+                        chatBox.innerHTML = '';
+                        const users2 = getUsers();
+                        const t2 = users2.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+                        const tp2 = t2.photo ? `<img src="${t2.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
+                        const greeting = `Halo **${currentUser.name}**! 👋\n\nSaya NARA-AI, asisten **${t2.name}**. Saatnya masuk ke **Mode Penguatan Literasi & Numerasi Tahap 1**!\n\n🎯 **Apakah kamu siap diuji pemahamanmu?**\n\n- Ketik **"Siap"** → langsung diuji\n- Ketik **"Belum"** atau tanya seputar materi → saya bantu memahami dulu`;
+                        appendFloatingMessage('bot', formatMessageLocal(greeting), tp2);
+                    });
+            }
+
+            chatInput.focus();
         } catch (err) {
             console.error('Queue check failed:', err);
-            alert('Gagal menghubungkan ke sistem antrian. Silakan coba lagi.');
+            alert('Gagal menghubungkan ke sistem. Silakan coba lagi.');
         }
     } else {
         panel.style.display = 'none';
@@ -1118,15 +1208,20 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     // STEP 1: Siswa konfirmasi siap diuji → kirim ke chat biasa agar AI membuat SOAL
     if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isAffirmativeResponse(msg)) {
         waitingForTestQuestion = true;
-        updateChatState(false); // Reset dulu
-        // Ubah pesan jadi sinyal eksplisit ke AI untuk segera menampilkan pertanyaan
+        updateChatState(false);
         msg = "Saya Sudah Siap diuji. Berikan saya SATU pertanyaan uji pemahaman sekarang.";
-        // Lanjutkan ke alur chat biasa di bawah (tidak return di sini)
+        // Lanjutkan ke alur chat biasa
     }
-    // STEP 1.5: Siswa menyatakan belum siap → minta AI jelaskan dengan analogi
+    // STEP 1.5: Siswa belum siap → mode pemantik (Socratic)
     else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isNegativeResponse(msg)) {
-        // Ubah pesan jadi sinyal eksplisit ke AI untuk menjelaskan dengan analogi
-        msg = "Saya belum siap diuji. Tolong jelaskan materi ini dengan analogi yang sederhana dan mudah dipahami anak SMP.";
+        // Instruksikan AI untuk memberikan pertanyaan pemantik, bukan jawaban langsung
+        msg = `[MODE PEMANTIK] Siswa menyatakan belum siap diuji dan ingin berdiskusi tentang materi terlebih dahulu. JANGAN berikan penjelasan langsung. Mulailah dengan SATU pertanyaan pemantik (Socratic) yang mengajak siswa berpikir tentang inti materi. Jika siswa menjawab dengan baik, lanjutkan dengan pertanyaan pemantik berikutnya atau tanyakan apakah sudah siap diuji.`;
+    }
+    // STEP 1.6: Siswa bertanya tentang materi (bukan sapaan, bukan siap/belum) → pertanyaan pemantik
+    else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !isGreetingMessage(msg)) {
+        // Siswa mengajukan pertanyaan/diskusi → AI balas dengan pertanyaan pemantik
+        const originalMsg = msg;
+        msg = `[MODE PEMANTIK] Siswa bertanya: "${originalMsg}". JANGAN jawab langsung. Balas dengan SATU pertanyaan pemantik yang membantu siswa menemukan jawabannya sendiri melalui pemikiran kritis. Jika siswa berhasil menjawab pertanyaan pemantik dengan baik, puji dan tanyakan apakah sudah siap diuji pemahamannya.`;
     }
     // STEP 2: Siswa sudah menerima soal dan sekarang mengirim JAWABAN → kirim ke evaluasi
     else if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
