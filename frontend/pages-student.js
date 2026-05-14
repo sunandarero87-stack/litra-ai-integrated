@@ -838,6 +838,8 @@ function updateChatState(waiting, explanation = undefined) {
 let lastAiExplanation = '';
 let waitingForUnderstandingAnswer = false; // True = siswa sedang menjawab soal, siap dinilai
 let waitingForTestQuestion = false;         // True = siswa konfirmasi siap, AI sedang mengirim soal
+let waitingForPemantikAnswer = false;       // True = AI sudah kirim pemantik pasca skor merah, tunggu jawaban
+let lastPemantikQuestion = '';             // Simpan pertanyaan pemantik terakhir untuk konteks evaluasi
 let lastUserMessage = ''; // Simpan pesan terakhir siswa untuk deteksi sapaan
 
 /**
@@ -1048,7 +1050,7 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 }, 600);
 
             } else {
-                // ❌ BELUM LULUS (<50): UI Merah, sembunyikan tombol lanjut, tampilkan opsi ulangi
+                // ❌ BELUM LULUS (<50): UI Merah → NARA-AI kirim pertanyaan pemantik otomatis
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'none';
                 localStorage.removeItem('tahap1_ready_' + currentUser.username);
@@ -1056,13 +1058,22 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
                     <i class="fas fa-times-circle" style="font-size:1.4rem;"></i>
                     <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Belum mencapai nilai minimum. Pelajari kembali materinya dan coba uji lagi ya! 💪</div>
+                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Yuk, kita perkuat pemahamanmu dulu sebelum uji ulang! 💪</div>
                 </div>`;
 
-                // Tampilkan pilihan: Kembali ke Materi atau Siap Uji Ulang
-                setTimeout(() => {
-                    showGagalButtons(score);
-                }, 600);
+                appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
+
+                const historiesTmp = getChatHistories();
+                if (!historiesTmp[currentUser.username]) historiesTmp[currentUser.username] = [];
+                historiesTmp[currentUser.username].push({ role: 'bot', text: feedbackText, time: new Date().toISOString() });
+                saveChatHistories(historiesTmp);
+
+                // Kirim pertanyaan pemantik otomatis setelah jeda
+                setTimeout(async () => {
+                    const pemantikMsg = `[MODE PEMANTIK REMEDIASI] Siswa baru saja mendapat skor ${score}% pada uji pemahaman — di bawah nilai minimum. Bantu siswa memahami materi dengan SATU pertanyaan pemantik (Socratic) yang relevan dengan soal yang baru dijawab. Jangan berikan kunci jawaban. Mulai dengan kalimat yang menyemangati siswa.`;
+                    await sendPemantikRemediasi(pemantikMsg, teacherPhoto);
+                }, 1200);
+                return; // Jangan append feedbackText dua kali
             }
 
             appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
@@ -1077,6 +1088,168 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
         appendFloatingMessage('bot', 'Maaf, gagal menganalisis jawabanmu. Silakan coba lagi.', teacherPhoto);
     }
 }
+
+/**
+ * Kirim pertanyaan pemantik ke AI (pasca skor merah) via /api/chat biasa.
+ * Setelah AI menjawab, set waitingForPemantikAnswer = true.
+ */
+async function sendPemantikRemediasi(pemantikMsg, teacherPhoto) {
+    const chatBox = document.getElementById('floating-chat-messages');
+    const input = document.getElementById('floating-chat-input');
+    if (input) { input.disabled = true; input.placeholder = 'Jawab pertanyaan pemantik di atas...'; }
+
+    // Tampilkan typing indicator
+    const typing = document.createElement('div');
+    typing.id = 'floating-typing-indicator';
+    typing.style.cssText = 'display:flex;gap:0.75rem;align-self:flex-start;';
+    typing.innerHTML = `
+        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">${teacherPhoto}</div>
+        <div style="padding:0.75rem 1rem;font-size:0.9rem;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
+            <div style="display:flex;gap:4px;padding:0.5rem 0;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
+            </div>
+        </div>`;
+    chatBox.appendChild(typing);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const users = getUsers();
+    const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+    const materials = getMaterials();
+    const mat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+    const matName = mat ? mat.name : 'materi ini';
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: pemantikMsg,
+                username: currentUser.username,
+                studentName: currentUser.name || currentUser.username,
+                selectedMaterial: matName,
+                teacherName: teacher.name
+            })
+        });
+        const data = await res.json();
+        document.getElementById('floating-typing-indicator')?.remove();
+
+        if (data.success) {
+            const pemantikReply = data.reply;
+            lastPemantikQuestion = pemantikReply;
+            waitingForPemantikAnswer = true;
+
+            // Tampilkan pertanyaan pemantik dengan badge khusus
+            const badgeHtml = `<div style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#a78bfa);color:white;font-size:0.7rem;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:0.5rem;letter-spacing:0.5px;">💡 PERTANYAAN PEMANTIK</div><br>`;
+            appendFloatingMessage('bot', badgeHtml + formatMessageLocal(pemantikReply), teacherPhoto);
+
+            const histories = getChatHistories();
+            if (!histories[currentUser.username]) histories[currentUser.username] = [];
+            histories[currentUser.username].push({ role: 'bot', text: pemantikReply, time: new Date().toISOString() });
+            saveChatHistories(histories);
+
+            // Aktifkan input untuk menjawab
+            if (input) { input.disabled = false; input.placeholder = 'Jawab pertanyaan pemantik di atas...'; input.focus(); }
+
+            // Tampilkan label petunjuk
+            const qr = document.getElementById('quick-replies');
+            if (qr) {
+                qr.style.display = 'flex';
+                qr.innerHTML = `<span style="font-size:0.82rem;color:var(--text-muted);align-self:center;">✏️ Tuliskan jawabanmu untuk pertanyaan pemantik di atas...</span>`;
+            }
+        }
+    } catch (err) {
+        document.getElementById('floating-typing-indicator')?.remove();
+        appendFloatingMessage('bot', 'Maaf, gagal mengirim pertanyaan. Silakan ketik pertanyaanmu sendiri.', teacherPhoto);
+        if (input) { input.disabled = false; input.placeholder = 'Ketik pertanyaanmu...'; }
+    }
+}
+
+/**
+ * Evaluasi jawaban siswa terhadap pertanyaan pemantik remediasi.
+ * Dipanggil dari sendFloatingChat saat waitingForPemantikAnswer = true.
+ */
+async function evaluasiJawabanPemantik(jawabanSiswa, teacherPhoto) {
+    waitingForPemantikAnswer = false;
+    hidePahamButtons();
+
+    const chatBox = document.getElementById('floating-chat-messages');
+    const input = document.getElementById('floating-chat-input');
+    if (input) input.disabled = true;
+
+    const typing = document.createElement('div');
+    typing.id = 'floating-typing-indicator';
+    typing.style.cssText = 'display:flex;gap:0.75rem;align-self:flex-start;';
+    typing.innerHTML = `
+        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">${teacherPhoto}</div>
+        <div style="padding:0.75rem 1rem;font-size:0.9rem;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
+            <div style="display:flex;gap:4px;padding:0.5rem 0;">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
+            </div>
+        </div>`;
+    chatBox.appendChild(typing);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    const users = getUsers();
+    const teacher = users.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
+    const materials = getMaterials();
+    const mat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+    const matName = mat ? mat.name : 'materi ini';
+
+    // Instruksikan AI untuk mengevaluasi jawaban pemantik siswa
+    const evalMsg = `[EVALUASI JAWABAN PEMANTIK] Pertanyaan pemantik yang diberikan: "${lastPemantikQuestion}". Jawaban siswa: "${jawabanSiswa}". 
+Tugasmu:
+1. Evaluasi apakah jawaban siswa menunjukkan pemahaman yang memadai (baik/cukup/kurang).
+2. Jika BAIK: Puji siswa, nyatakan pemahamannya sudah membaik, lalu KONFIRMASI apakah siswa siap untuk pertanyaan uji pemahaman ulang. Akhiri dengan "Apakah kamu siap untuk uji pemahaman sekarang? Ketik 'Siap' untuk mulai."
+3. Jika KURANG: Berikan penjelasan yang mudah dipahami tentang konsep tersebut, SERTAKAN minimal 1 contoh penerapan dalam kehidupan sehari-hari yang relevan. Di akhir penjelasan, konfirmasi: "Sekarang kamu sudah mengerti konsepnya? Ayo kita coba uji pemahamanmu! Ketik 'Siap' untuk mulai uji pemahaman."`;
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: evalMsg,
+                username: currentUser.username,
+                studentName: currentUser.name || currentUser.username,
+                selectedMaterial: matName,
+                teacherName: teacher.name
+            })
+        });
+        const data = await res.json();
+        document.getElementById('floating-typing-indicator')?.remove();
+
+        if (data.success) {
+            const aiReply = data.reply;
+            lastAiExplanation = aiReply;
+            appendFloatingMessage('bot', formatMessageLocal(aiReply), teacherPhoto);
+
+            const histories = getChatHistories();
+            if (!histories[currentUser.username]) histories[currentUser.username] = [];
+            histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
+            saveChatHistories(histories);
+
+            // Setelah evaluasi pemantik, siswa bisa ketik "Siap" untuk lanjut uji
+            // waitingForTestQuestion akan di-set saat siswa kirim "Siap"
+            const qr = document.getElementById('quick-replies');
+            if (qr) {
+                qr.style.display = 'flex';
+                qr.innerHTML = `
+                    <button class="btn btn-primary btn-sm" onclick="sendFloatingChat('Siap')" style="padding:0.4rem 0.9rem;font-size:0.85rem;">
+                        <i class="fas fa-check-circle"></i> Siap Uji Pemahaman
+                    </button>`;
+            }
+        }
+    } catch (err) {
+        document.getElementById('floating-typing-indicator')?.remove();
+        appendFloatingMessage('bot', 'Maaf, terjadi gangguan. Silakan coba lagi.', teacherPhoto);
+    } finally {
+        if (input) { input.disabled = false; input.placeholder = 'Ketik pertanyaanmu...'; input.focus(); }
+    }
+}
+
 
 function startChatbotCountdown(score) {
     // Guard: Hanya tampilkan countdown jika siswa LULUS (skor >= 75)
@@ -1205,21 +1378,27 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     input.disabled = true;
     hidePahamButtons();
 
+    // STEP 0.5: Siswa sedang dalam mode pemantik remediasi (pasca skor merah)
+    if (waitingForPemantikAnswer && typeof quickMsg !== 'string') {
+        input.disabled = false;
+        input.focus();
+        evaluasiJawabanPemantik(msg, teacherPhoto);
+        return;
+    }
+
     // STEP 1: Siswa konfirmasi siap diuji → kirim ke chat biasa agar AI membuat SOAL
-    if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isAffirmativeResponse(msg)) {
+    if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !waitingForPemantikAnswer && isAffirmativeResponse(msg)) {
         waitingForTestQuestion = true;
         updateChatState(false);
         msg = "Saya Sudah Siap diuji. Berikan saya SATU pertanyaan uji pemahaman sekarang.";
         // Lanjutkan ke alur chat biasa
     }
     // STEP 1.5: Siswa belum siap → mode pemantik (Socratic)
-    else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && isNegativeResponse(msg)) {
-        // Instruksikan AI untuk memberikan pertanyaan pemantik, bukan jawaban langsung
+    else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !waitingForPemantikAnswer && isNegativeResponse(msg)) {
         msg = `[MODE PEMANTIK] Siswa menyatakan belum siap diuji dan ingin berdiskusi tentang materi terlebih dahulu. JANGAN berikan penjelasan langsung. Mulailah dengan SATU pertanyaan pemantik (Socratic) yang mengajak siswa berpikir tentang inti materi. Jika siswa menjawab dengan baik, lanjutkan dengan pertanyaan pemantik berikutnya atau tanyakan apakah sudah siap diuji.`;
     }
     // STEP 1.6: Siswa bertanya tentang materi (bukan sapaan, bukan siap/belum) → pertanyaan pemantik
-    else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !isGreetingMessage(msg)) {
-        // Siswa mengajukan pertanyaan/diskusi → AI balas dengan pertanyaan pemantik
+    else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !waitingForPemantikAnswer && !isGreetingMessage(msg)) {
         const originalMsg = msg;
         msg = `[MODE PEMANTIK] Siswa bertanya: "${originalMsg}". JANGAN jawab langsung. Balas dengan SATU pertanyaan pemantik yang membantu siswa menemukan jawabannya sendiri melalui pemikiran kritis. Jika siswa berhasil menjawab pertanyaan pemantik dengan baik, puji dan tanyakan apakah sudah siap diuji pemahamannya.`;
     }
