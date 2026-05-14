@@ -200,14 +200,18 @@ function renderTahap1(main) {
         <div class="material-list mt-2" id="material-list-container" style="max-height: 400px; overflow-y: auto;">
             ${materials.map((m, i) => `
                 <div class="material-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="viewMaterial('${m._id}', '${m.type}')">
-                    <div>
-                        <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : m.type === 'html' || m.type === 'ai' ? 'fa-robot' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle;"></i>
-                        <span style="font-weight: 500;">${m.name}</span>
-                        <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
+                    <div style="display:flex; align-items:center;">
+                        <i class="fas ${m.type === 'pdf' ? 'fa-file-pdf' : m.type === 'html' || m.type === 'ai' ? 'fa-robot' : 'fa-file-word'}" style="color: var(--primary); font-size: 1.5rem; margin-right: 1rem; vertical-align: middle; flex-shrink:0;"></i>
+                        <div>
+                            <span style="font-weight: 500;">${m.name}</span>
+                            <small class="text-muted d-block mt-1">Diupload: ${new Date(m.date).toLocaleDateString('id-ID')}</small>
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem;" onclick="event.stopPropagation()">
+                    <div style="display: flex; gap: 0.5rem; flex-shrink:0;" onclick="event.stopPropagation()">
                         <button class="btn btn-outline btn-sm" onclick="downloadMaterial('${m._id}', '${m.name}', '${m.type}', event)" title="Download Materi"><i class="fas fa-download"></i></button>
-                        <button class="btn btn-primary btn-sm" onclick="viewMaterial('${m._id}', '${m.type}')">Buka</button>
+                        <button class="btn btn-primary btn-sm material-buka-btn" onclick="viewMaterial('${m._id}', '${m.type}')" style="position:relative; animation: pulse-buka 1.8s infinite; box-shadow: 0 0 0 0 rgba(99,102,241,0.7);">
+                            <i class="fas fa-book-open" style="margin-right:0.3rem;"></i>Buka
+                        </button>
                     </div>
                 </div>`).join('') || '<p class="text-muted text-center mt-2">Belum ada materi untuk dipelajari.</p>'}
         </div>
@@ -615,6 +619,46 @@ async function toggleChatbot() {
     const isOpening = panel.style.display === 'none';
 
     if (isOpening) {
+        // === CEK: Apakah siswa sudah membuka materi? ===
+        if (!currentMaterial) {
+            // Tampilkan panel chatbot dengan pesan pengarahan
+            panel.style.display = 'flex';
+
+            const chatBox = document.getElementById('floating-chat-messages');
+            chatBox.innerHTML = '';
+
+            // Tampilkan pesan pengarahan
+            const guideDiv = document.createElement('div');
+            guideDiv.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:1.5rem; text-align:center; gap:1rem;';
+            guideDiv.innerHTML = `
+                <div style="font-size:3rem; animation: bounce-arrow 1.5s infinite;">📚</div>
+                <h4 style="color:var(--text-primary); font-size:1rem; margin:0;">Pelajari Materi Dulu, ya!</h4>
+                <p style="color:var(--text-secondary); font-size:0.88rem; line-height:1.6; max-width:280px; margin:0;">
+                    Sebelum berdiskusi dengan NARA-AI, kamu perlu membuka dan membaca materi terlebih dahulu.<br><br>
+                    Klik tombol <strong style="color:var(--primary);">"<i class='fas fa-book-open'></i> Buka"</strong> pada materi di atas.
+                </p>
+                <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem; margin-top:0.5rem;">
+                    <div style="font-size:1.8rem; color:var(--primary-light); animation: bounce-arrow 1.2s infinite;"><i class="fas fa-arrow-up"></i></div>
+                    <span style="font-size:0.8rem; font-weight:700; background:var(--primary); color:white; padding:4px 16px; border-radius:20px; letter-spacing:0.5px; animation: pulse-buka 1.8s infinite; box-shadow: 0 0 0 0 rgba(99,102,241,0.7);"><i class="fas fa-book-open" style="margin-right:4px;"></i>Buka Materi</span>
+                </div>
+                <button onclick="toggleChatbot()" style="margin-top:0.5rem; background:none; border:1px solid var(--border-color); color:var(--text-secondary); border-radius:8px; padding:0.4rem 1rem; cursor:pointer; font-size:0.82rem;">Tutup</button>
+            `;
+            chatBox.appendChild(guideDiv);
+
+            // Disable input area sementara
+            const chatInput = document.getElementById('floating-chat-input');
+            const sendBtn = chatInput ? chatInput.nextElementSibling : null;
+            if (chatInput) { chatInput.disabled = true; chatInput.placeholder = 'Buka materi terlebih dahulu...'; }
+            if (sendBtn) sendBtn.disabled = true;
+            return;
+        }
+
+        // Re-enable input jika sebelumnya di-disable
+        const chatInput = document.getElementById('floating-chat-input');
+        const sendBtn = chatInput ? chatInput.nextElementSibling : null;
+        if (chatInput) { chatInput.disabled = false; chatInput.placeholder = 'Ketik pertanyaanmu...'; }
+        if (sendBtn) sendBtn.disabled = false;
+
         // Cek antrian ke server
         try {
             const res = await fetch('/api/chat/check-queue', {

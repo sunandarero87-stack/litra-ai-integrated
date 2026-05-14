@@ -659,6 +659,19 @@ tr:hover td {
     animation: pulse 1s infinite;
 }
 
+/* Pulse khusus tombol Buka materi (ripple box-shadow) */
+@keyframes pulse-buka {
+    0%   { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+    60%  { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+
+/* Bounce atas-bawah untuk ikon panah pengarahan */
+@keyframes bounce-arrow {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-8px); }
+}
+
 /* ============= LOGIN PAGE ============= */
 .page {
     display: none;
