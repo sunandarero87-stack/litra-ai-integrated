@@ -15,7 +15,6 @@ let currentKeyIndex = 0;
 const FALLBACK_MODELS = [
     AI_MODEL,
     "llama-3.1-8b-instant",
-    "gemma2-9b-it",
     "llama-3.3-70b-versatile"
 ].filter((v, i, a) => v && a.indexOf(v) === i); // Unik dan tidak kosong
 
