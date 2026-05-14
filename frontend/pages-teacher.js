@@ -372,10 +372,18 @@ window.showStudentAnalysis = async function (username, studentName) {
         modal.id = 'analysis-modal';
         modal.className = 'modal';
         modal.style.display = 'none';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        modal.style.zIndex = '99999';
         modal.style.alignItems = 'center';
         modal.style.justifyContent = 'center';
+        modal.style.padding = '1rem';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px; width: 90%; background: var(--bg-card); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+            <div class="modal-content" style="max-width: 700px; width: 100%; background: var(--bg-card, #fff); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden; position: relative;">
                 <div class="modal-header" style="background: var(--gradient-primary); color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; font-size: 1.2rem;"><i class="fas fa-robot"></i> Analisis Kemampuan: <span id="analysis-student-name"></span></h3>
                     <span class="close" style="color: white; font-size: 1.5rem; cursor: pointer; opacity: 0.8;" onclick="closeAnalysisModal()">&times;</span>
