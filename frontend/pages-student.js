@@ -1070,7 +1070,7 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
 
                 // Kirim pertanyaan pemantik otomatis setelah jeda
                 setTimeout(async () => {
-                    const pemantikMsg = `[MODE PEMANTIK REMEDIASI] Siswa baru saja mendapat skor ${score}% pada uji pemahaman — di bawah nilai minimum. Bantu siswa memahami materi dengan SATU pertanyaan pemantik (Socratic) yang relevan dengan soal yang baru dijawab. Jangan berikan kunci jawaban. Mulai dengan kalimat yang menyemangati siswa.`;
+                    const pemantikMsg = `[MODE PEMANTIK REMEDIASI] Siswa mendapat skor ${score}% pada uji pemahaman — di bawah nilai minimum. Mula-mula berikan penjelasan ringkas yang mudah dipahami tentang konsep materi tersebut. SETELAH penjelasan, berikan SATU pertanyaan pemantik (Socratic) yang relevan untuk mengajak siswa berpikir mandiri. Mulailah dengan kalimat yang menyemangati siswa.`;
                     await sendPemantikRemediasi(pemantikMsg, teacherPhoto);
                 }, 1200);
                 return; // Jangan append feedbackText dua kali
@@ -1203,8 +1203,9 @@ async function evaluasiJawabanPemantik(jawabanSiswa, teacherPhoto) {
     const evalMsg = `[EVALUASI JAWABAN PEMANTIK] Pertanyaan pemantik yang diberikan: "${lastPemantikQuestion}". Jawaban siswa: "${jawabanSiswa}". 
 Tugasmu:
 1. Evaluasi apakah jawaban siswa menunjukkan pemahaman yang memadai (baik/cukup/kurang).
-2. Jika BAIK: Puji siswa, nyatakan pemahamannya sudah membaik, lalu KONFIRMASI apakah siswa siap untuk pertanyaan uji pemahaman ulang. Akhiri dengan "Apakah kamu siap untuk uji pemahaman sekarang? Ketik 'Siap' untuk mulai."
-3. Jika KURANG: Berikan penjelasan yang mudah dipahami tentang konsep tersebut, SERTAKAN minimal 1 contoh penerapan dalam kehidupan sehari-hari yang relevan. Di akhir penjelasan, konfirmasi: "Sekarang kamu sudah mengerti konsepnya? Ayo kita coba uji pemahamanmu! Ketik 'Siap' untuk mulai uji pemahaman."`;
+2. Jika BAIK: Berikan pujian kepada siswa.
+3. Jika KURANG: Berikan kata-kata penyemangat (jangan menyalahkan), lalu berikan penjelasan ringkas dan mudah dipahami, SERTAKAN minimal 1 contoh penerapan dalam kehidupan sehari-hari yang relevan.
+4. SETELAH memberikan pujian atau penjelasan (tergantung hasil evaluasi), LANGSUNG berikan SATU pertanyaan Uji Pemahaman baru kepada siswa. Jangan bertanya apakah mereka siap, langsung uji sekarang!`;
 
     try {
         const res = await fetch('/api/chat', {
@@ -1231,15 +1232,14 @@ Tugasmu:
             histories[currentUser.username].push({ role: 'bot', text: aiReply, time: new Date().toISOString() });
             saveChatHistories(histories);
 
-            // Setelah evaluasi pemantik, siswa bisa ketik "Siap" untuk lanjut uji
-            // waitingForTestQuestion akan di-set saat siswa kirim "Siap"
+            // Karena AI langsung memberikan pertanyaan Uji Pemahaman baru,
+            // atur state untuk menunggu jawaban pemahaman dari siswa
+            updateChatState(true, aiReply);
+
             const qr = document.getElementById('quick-replies');
             if (qr) {
                 qr.style.display = 'flex';
-                qr.innerHTML = `
-                    <button class="btn btn-primary btn-sm" onclick="sendFloatingChat('Siap')" style="padding:0.4rem 0.9rem;font-size:0.85rem;">
-                        <i class="fas fa-check-circle"></i> Siap Uji Pemahaman
-                    </button>`;
+                qr.innerHTML = `<span style="font-size:0.82rem;color:var(--text-muted);align-self:center;">✏️ Ketik jawaban uji pemahaman di kolom chat di bawah...</span>`;
             }
         }
     } catch (err) {
