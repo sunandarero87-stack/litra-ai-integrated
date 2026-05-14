@@ -1386,6 +1386,8 @@ function sendFloatingChat(quickMsg, isSilent = false) {
         return;
     }
 
+    let isSendingPemantik = false;
+
     // STEP 1: Siswa konfirmasi siap diuji → kirim ke chat biasa agar AI membuat SOAL
     if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !waitingForPemantikAnswer && isAffirmativeResponse(msg)) {
         waitingForTestQuestion = true;
@@ -1395,12 +1397,14 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     }
     // STEP 1.5: Siswa belum siap → mode pemantik (Socratic)
     else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !waitingForPemantikAnswer && isNegativeResponse(msg)) {
-        msg = `[MODE PEMANTIK] Siswa menyatakan belum siap diuji dan ingin berdiskusi tentang materi terlebih dahulu. JANGAN berikan penjelasan langsung. Mulailah dengan SATU pertanyaan pemantik (Socratic) yang mengajak siswa berpikir tentang inti materi. Jika siswa menjawab dengan baik, lanjutkan dengan pertanyaan pemantik berikutnya atau tanyakan apakah sudah siap diuji.`;
+        msg = `[MODE PEMANTIK] Siswa menyatakan belum siap diuji atau belum paham. MULA-MULA, berikan penjelasan ringkas dan mudah dipahami tentang materi tersebut. SETELAH penjelasan, berikan SATU pertanyaan pemantik (Socratic) yang mengajak siswa berpikir tentang inti materi. Mulailah dengan kalimat yang ramah dan menyemangati.`;
+        isSendingPemantik = true;
     }
     // STEP 1.6: Siswa bertanya tentang materi (bukan sapaan, bukan siap/belum) → pertanyaan pemantik
     else if (!waitingForTestQuestion && !waitingForUnderstandingAnswer && !waitingForPemantikAnswer && !isGreetingMessage(msg)) {
         const originalMsg = msg;
-        msg = `[MODE PEMANTIK] Siswa bertanya: "${originalMsg}". JANGAN jawab langsung. Balas dengan SATU pertanyaan pemantik yang membantu siswa menemukan jawabannya sendiri melalui pemikiran kritis. Jika siswa berhasil menjawab pertanyaan pemantik dengan baik, puji dan tanyakan apakah sudah siap diuji pemahamannya.`;
+        msg = `[MODE PEMANTIK] Siswa bertanya: "${originalMsg}". MULA-MULA, berikan jawaban ringkas dan jelas atas pertanyaan tersebut. SETELAH memberikan jawaban, berikan SATU pertanyaan pemantik (Socratic) untuk memandu siswa memikirkan lebih dalam. Mulailah dengan sapaan yang ramah.`;
+        isSendingPemantik = true;
     }
     // STEP 2: Siswa sudah menerima soal dan sekarang mengirim JAWABAN → kirim ke evaluasi
     else if (waitingForUnderstandingAnswer && typeof quickMsg !== 'string') {
@@ -1473,11 +1477,23 @@ function sendFloatingChat(quickMsg, isSilent = false) {
                     return; // Jangan tampilkan tombol Paham/Belum Paham
                 }
 
+                // Jika AI mengirimkan pertanyaan pemantik (awal diskusi)
+                if (isSendingPemantik) {
+                    waitingForPemantikAnswer = true;
+                    lastPemantikQuestion = aiReply;
+                    const qr = document.getElementById('quick-replies');
+                    if (qr) {
+                        qr.style.display = 'flex';
+                        qr.innerHTML = `<span style="font-size:0.82rem;color:var(--text-muted);align-self:center;">✏️ Tuliskan jawabanmu untuk pertanyaan pemantik di atas...</span>`;
+                    }
+                    return; // Jangan tampilkan tombol Paham/Belum Paham
+                }
+
                 // Tampilkan tombol Paham/Belum Paham hanya jika:
                 // 1. Tidak sedang menunggu jawaban uji pemahaman
                 // 2. Pesan siswa bukan sapaan
                 // 3. SEDANG MEMBAHAS MATERI (currentMaterial tidak null)
-                if (!waitingForUnderstandingAnswer && !isGreetingMessage(lastUserMessage) && currentMaterial) {
+                if (!waitingForUnderstandingAnswer && !waitingForPemantikAnswer && !isGreetingMessage(lastUserMessage) && currentMaterial) {
                     showPahamButtons();
                 }
             } else {
