@@ -496,6 +496,27 @@ Keluaran (Output) WAJIB berupa teks HTML murni dari elemen terluarnya. Jangan me
 
     return htmlContent;
 }
+async function analyzeCompetency(studentData) {
+    try {
+        const payload = {
+            messages: [
+                { role: "system", content: "Kamu adalah AI Analis Pedagogi ahli yang bertugas memberikan feedback personal (kekuatan, area peningkatan, dan rekomendasi) berdasarkan data skor kemampuan literasi dan numerasi siswa. Output WAJIB dalam format JSON object murni berisi 3 key: 'kekuatan' (string), 'areaPeningkatan' (string), dan 'rekomendasi' (string). WAJIB gunakan Bahasa Indonesia yang memotivasi, ramah, dan profesional." },
+                { role: "user", content: `Analisis data progres dan nilai ujian siswa berikut ini:\n\n${JSON.stringify(studentData)}\n\nBerikan analisis mendalam, spesifik pada literasi dan numerasi jika tersedia.` }
+            ],
+            temperature: 0.5,
+            max_tokens: 1024
+        };
+        const response = await requestWithFallback(payload);
+        return JSON.parse(cleanJson(response.data.choices[0].message.content));
+    } catch (e) {
+        console.error("Competency Analysis Error:", e.message);
+        return { 
+            kekuatan: "Siswa telah menunjukkan usaha dalam proses pembelajaran.", 
+            areaPeningkatan: "Diperlukan lebih banyak latihan literasi dan numerasi, atau ada gangguan sistem AI.", 
+            rekomendasi: "Terus tingkatkan semangat belajar dan lengkapi semua tahapan asesmen." 
+        };
+    }
+}
 
 module.exports = {
     generateResponse,
@@ -507,6 +528,7 @@ module.exports = {
     generateBankSoalFromMaterial,
     analyzeUnderstanding,
     generateLearningMaterial,
+    analyzeCompetency,
     requestWithFallback,
     cleanJson
 };

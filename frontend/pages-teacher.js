@@ -312,6 +312,7 @@ function renderStudentResults(main) {
                         <th onclick="sortTable('table-student-results', 3)" style="cursor:pointer; color:var(--info)" title="Klik untuk mengurutkan">Nilai Refleksi <br><small>(Tahap 2)</small> <i class="fas fa-sort text-muted"></i></th>
                         <th onclick="sortTable('table-student-results', 4)" style="cursor:pointer; color:var(--success)" title="Klik untuk mengurutkan">Nilai Asesmen <br><small>(Tahap 3)</small> <i class="fas fa-sort text-muted"></i></th>
                         <th onclick="sortTable('table-student-results', 5)" style="cursor:pointer; color:var(--primary)" title="Klik untuk mengurutkan">Nilai 7 Kebiasaan <br><small>(Tahap 4)</small> <i class="fas fa-sort text-muted"></i></th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -354,12 +355,154 @@ function renderStudentResults(main) {
             <td>${tahap2Display}</td>
             <td>${assessmentDisplay}</td>
             <td>${tahap4Display}</td>
+            <td><button class="btn btn-sm btn-outline" style="color:var(--primary); border-color:var(--primary)" onclick="showStudentAnalysis('${s.username}', '${s.name}')"><i class="fas fa-chart-pie"></i> Analisis AI</button></td>
         </tr>`;
-    }).join('') || '<tr><td colspan="6" class="text-center text-muted">Belum ada data</td></tr>'}
+    }).join('') || '<tr><td colspan="7" class="text-center text-muted">Belum ada data</td></tr>'}
                 </tbody>
             </table>
         </div>
     </div>`;
+}
+
+// ---- STUDENT AI COMPETENCY ANALYSIS ----
+window.showStudentAnalysis = async function (username, studentName) {
+    let modal = document.getElementById('analysis-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'analysis-modal';
+        modal.className = 'modal';
+        modal.style.display = 'none';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px; width: 90%; background: var(--bg-card); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden;">
+                <div class="modal-header" style="background: var(--gradient-primary); color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.2rem;"><i class="fas fa-robot"></i> Analisis Kemampuan: <span id="analysis-student-name"></span></h3>
+                    <span class="close" style="color: white; font-size: 1.5rem; cursor: pointer; opacity: 0.8;" onclick="closeAnalysisModal()">&times;</span>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
+                    <div id="analysis-loading" style="text-align: center; padding: 2rem;">
+                        <i class="fas fa-circle-notch fa-spin fa-3x" style="color: var(--primary);"></i>
+                        <p style="margin-top: 1rem; color: var(--text-secondary);">AI sedang menganalisis kompetensi siswa...</p>
+                    </div>
+                    <div id="analysis-content" style="display: none;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center;">
+                            <div style="text-align:center;">
+                                <canvas id="analysis-pie-chart" width="200" height="200"></canvas>
+                            </div>
+                            <div style="display:flex; flex-direction: column; gap: 1rem;">
+                                <div style="background: rgba(76, 175, 80, 0.1); border-left: 4px solid #4caf50; padding: 1rem; border-radius: 4px;">
+                                    <h4 style="color: #4caf50; margin-top:0; margin-bottom: 0.5rem;"><i class="fas fa-star"></i> Kekuatan</h4>
+                                    <p id="analysis-strength" style="font-size:0.9rem; margin:0; line-height: 1.5;"></p>
+                                </div>
+                                <div style="background: rgba(244, 67, 54, 0.1); border-left: 4px solid #f44336; padding: 1rem; border-radius: 4px;">
+                                    <h4 style="color: #f44336; margin-top:0; margin-bottom: 0.5rem;"><i class="fas fa-tools"></i> Perlu Ditingkatkan</h4>
+                                    <p id="analysis-weakness" style="font-size:0.9rem; margin:0; line-height: 1.5;"></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1.5rem; background: var(--bg-input); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <h4 style="color: var(--primary); margin-top:0; margin-bottom: 0.5rem;"><i class="fas fa-lightbulb"></i> Rekomendasi NARA-AI</h4>
+                            <p id="analysis-recommendation" style="font-size:0.9rem; margin:0; line-height: 1.6;"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Setup close click outside
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) closeAnalysisModal();
+        });
+    }
+
+    document.getElementById('analysis-student-name').innerText = studentName;
+    document.getElementById('analysis-loading').style.display = 'block';
+    document.getElementById('analysis-content').style.display = 'none';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await fetch('/api/progress/analyze-competency', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            document.getElementById('analysis-loading').style.display = 'none';
+            document.getElementById('analysis-content').style.display = 'block';
+            
+            // Populate AI Data
+            const ai = data.analysis;
+            document.getElementById('analysis-strength').innerText = ai.kekuatan || "Belum ada analisis.";
+            document.getElementById('analysis-weakness').innerText = ai.areaPeningkatan || "Belum ada analisis.";
+            document.getElementById('analysis-recommendation').innerText = ai.rekomendasi || "Belum ada analisis.";
+
+            // Render Chart
+            const scores = data.data.tahap3_Uji_Pemahaman;
+            let litScore = 0, numScore = 0;
+            if (scores && scores !== "Belum Asesmen") {
+                litScore = scores.literasi_skor || 0;
+                numScore = scores.numerasi_skor || 0;
+            }
+
+            // Hancurkan chart lama jika ada (menghindari duplikasi render chart.js)
+            if (window.competencyChart) {
+                window.competencyChart.destroy();
+            }
+
+            const ctx = document.getElementById('analysis-pie-chart').getContext('2d');
+            window.competencyChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Literasi', 'Numerasi', 'Kekurangan'],
+                    datasets: [{
+                        data: [
+                            litScore, 
+                            numScore, 
+                            (200 - litScore - numScore > 0) ? (200 - litScore - numScore) : 0
+                        ],
+                        backgroundColor: [
+                            '#3b82f6', // blue
+                            '#f59e0b', // amber
+                            'rgba(200, 200, 200, 0.2)' // gray for missing
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '65%',
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.label === 'Kekurangan') return '';
+                                    return context.label + ': ' + context.raw + '%';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+        } else {
+            alert(data.error || 'Gagal memuat analisis.');
+            closeAnalysisModal();
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Terjadi kesalahan koneksi saat memuat analisis AI.');
+        closeAnalysisModal();
+    }
+}
+
+window.closeAnalysisModal = function() {
+    const modal = document.getElementById('analysis-modal');
+    if (modal) modal.style.display = 'none';
 }
 
 function filterResultsByClass() {

@@ -2,7 +2,7 @@ const Progress = require('../models/Progress');
 const Setting = require('../models/Setting');
 const Violation = require('../models/Violation');
 const ChatLog = require('../models/ChatLog');
-
+const aiService = require('../services/aiService');
 
 // Get all progress data to sync to the client
 exports.syncAll = async (req, res) => {
@@ -301,6 +301,43 @@ exports.clearViolations = async (req, res) => {
         await Violation.deleteMany({});
         res.json({ success: true, message: 'Semua data pelanggaran berhasil dihapus' });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.analyzeStudentCompetency = async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) return res.status(400).json({ error: 'Username diperlukan' });
+
+        const p = await Progress.findOne({ username });
+        if (!p) return res.status(404).json({ error: 'Data progres siswa tidak ditemukan' });
+
+        const dataToAnalyze = {
+            username: p.username,
+            tahap1_Membaca: p.tahap1Complete ? "Selesai" : "Belum",
+            tahap2_Refleksi_Socratic: {
+                selesai: p.tahap2Complete,
+                nilai: p.tahap2Score || 0,
+                siapUji: p.isReady
+            },
+            tahap3_Uji_Pemahaman: p.assessmentResult ? {
+                total_skor: Math.round((p.assessmentResult.score / p.assessmentResult.total) * 100),
+                literasi_skor: Math.round((p.assessmentResult.literasi / p.assessmentResult.litTotal) * 100),
+                numerasi_skor: Math.round((p.assessmentResult.numerasi / p.assessmentResult.numTotal) * 100),
+                lulus: p.assessmentResult.pass
+            } : "Belum Asesmen"
+        };
+
+        const analysis = await aiService.analyzeCompetency(dataToAnalyze);
+        
+        res.json({
+            success: true,
+            data: dataToAnalyze,
+            analysis: analysis
+        });
+    } catch (err) {
+        console.error('Error analyzeStudentCompetency:', err);
         res.status(500).json({ error: err.message });
     }
 };
