@@ -370,49 +370,73 @@ window.showStudentAnalysis = async function (username, studentName) {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'analysis-modal';
-        modal.className = 'modal';
-        modal.style.display = 'none';
-        modal.style.position = 'fixed';
-        modal.style.top = '0';
-        modal.style.left = '0';
-        modal.style.width = '100vw';
-        modal.style.height = '100vh';
-        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-        modal.style.zIndex = '90';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        // Padding is now handled by styles.css to properly account for sidebar
-        // modal.style.padding = '1rem';
+        // Using inline styles for reliable cross-browser behavior
+        modal.style.cssText = [
+            'display:none',
+            'position:fixed',
+            'top:0',
+            'left:260px',
+            'right:0',
+            'bottom:0',
+            'background:rgba(0,0,0,0.65)',
+            'backdrop-filter:blur(4px)',
+            'z-index:500',
+            'align-items:center',
+            'justify-content:center',
+            'padding:1.5rem',
+            'overflow-y:auto',
+        ].join(';');
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 700px; width: 100%; background: var(--bg-card, #fff); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); overflow: hidden; position: relative;">
-                <div class="modal-header" style="background: var(--gradient-primary); color: white; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; font-size: 1.2rem;"><i class="fas fa-robot"></i> Analisis Kemampuan: <span id="analysis-student-name"></span></h3>
-                    <span class="close" style="color: white; font-size: 1.5rem; cursor: pointer; opacity: 0.8;" onclick="closeAnalysisModal()">&times;</span>
+            <div id="analysis-modal-box" style="
+                width: 100%;
+                max-width: 820px;
+                background: var(--bg-card);
+                border: 1px solid var(--border-color);
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                overflow: hidden;
+                animation: slideUp 0.3s ease;
+                margin: auto;
+            ">
+                <div style="background: var(--gradient-primary); color: white; padding: 1.25rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 0.6rem;">
+                        <i class="fas fa-robot"></i>
+                        Analisis Kemampuan Siswa: <span id="analysis-student-name" style="color: #ffd54f;"></span>
+                    </h3>
+                    <button onclick="closeAnalysisModal()" style="background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">&times;</button>
                 </div>
-                <div class="modal-body" style="padding: 1.5rem; max-height: 70vh; overflow-y: auto;">
-                    <div id="analysis-loading" style="text-align: center; padding: 2rem;">
+                <div style="padding: 1.75rem; max-height: 78vh; overflow-y: auto;">
+                    <div id="analysis-loading" style="text-align: center; padding: 3rem 2rem;">
                         <i class="fas fa-circle-notch fa-spin fa-3x" style="color: var(--primary);"></i>
-                        <p style="margin-top: 1rem; color: var(--text-secondary);">AI sedang menganalisis kompetensi siswa...</p>
+                        <p style="margin-top: 1.25rem; color: var(--text-secondary); font-size: 1rem;">AI sedang menganalisis kompetensi siswa...</p>
                     </div>
                     <div id="analysis-content" style="display: none;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: center;">
-                            <div style="text-align:center;">
-                                <canvas id="analysis-pie-chart" width="200" height="200"></canvas>
+                        <!-- Chart + Kekuatan/Kelemahan row -->
+                        <div style="display: grid; grid-template-columns: 220px 1fr; gap: 1.75rem; align-items: start; margin-bottom: 1.5rem;">
+                            <div style="text-align: center; background: var(--bg-input); border-radius: 12px; padding: 1rem;">
+                                <canvas id="analysis-pie-chart" width="200" height="200" style="max-width: 180px;"></canvas>
                             </div>
-                            <div style="display:flex; flex-direction: column; gap: 1rem;">
-                                <div style="background: rgba(76, 175, 80, 0.1); border-left: 4px solid #4caf50; padding: 1rem; border-radius: 4px;">
-                                    <h4 style="color: #4caf50; margin-top:0; margin-bottom: 0.5rem;"><i class="fas fa-star"></i> Kekuatan</h4>
-                                    <p id="analysis-strength" style="font-size:0.9rem; margin:0; line-height: 1.5;"></p>
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div style="background: rgba(76, 175, 80, 0.1); border-left: 4px solid #4caf50; padding: 1.1rem 1.25rem; border-radius: 8px;">
+                                    <h4 style="color: #4caf50; margin: 0 0 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                                        <i class="fas fa-star"></i> Kekuatan
+                                    </h4>
+                                    <p id="analysis-strength" style="font-size: 0.92rem; margin: 0; line-height: 1.65; color: var(--text-primary);"></p>
                                 </div>
-                                <div style="background: rgba(244, 67, 54, 0.1); border-left: 4px solid #f44336; padding: 1rem; border-radius: 4px;">
-                                    <h4 style="color: #f44336; margin-top:0; margin-bottom: 0.5rem;"><i class="fas fa-tools"></i> Perlu Ditingkatkan</h4>
-                                    <p id="analysis-weakness" style="font-size:0.9rem; margin:0; line-height: 1.5;"></p>
+                                <div style="background: rgba(244, 67, 54, 0.1); border-left: 4px solid #f44336; padding: 1.1rem 1.25rem; border-radius: 8px;">
+                                    <h4 style="color: #f44336; margin: 0 0 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                                        <i class="fas fa-tools"></i> Perlu Ditingkatkan
+                                    </h4>
+                                    <p id="analysis-weakness" style="font-size: 0.92rem; margin: 0; line-height: 1.65; color: var(--text-primary);"></p>
                                 </div>
                             </div>
                         </div>
-                        <div style="margin-top: 1.5rem; background: var(--bg-input); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
-                            <h4 style="color: var(--primary); margin-top:0; margin-bottom: 0.5rem;"><i class="fas fa-lightbulb"></i> Rekomendasi NARA-AI</h4>
-                            <p id="analysis-recommendation" style="font-size:0.9rem; margin:0; line-height: 1.6;"></p>
+                        <!-- Rekomendasi full width -->
+                        <div style="background: rgba(26, 115, 232, 0.08); border: 1px solid rgba(26, 115, 232, 0.25); border-left: 4px solid var(--primary); padding: 1.1rem 1.25rem; border-radius: 8px;">
+                            <h4 style="color: var(--primary-light); margin: 0 0 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem;">
+                                <i class="fas fa-lightbulb"></i> Rekomendasi NARA-AI
+                            </h4>
+                            <p id="analysis-recommendation" style="font-size: 0.92rem; margin: 0; line-height: 1.7; color: var(--text-primary);"></p>
                         </div>
                     </div>
                 </div>
@@ -421,7 +445,7 @@ window.showStudentAnalysis = async function (username, studentName) {
         document.body.appendChild(modal);
         
         // Setup close click outside
-        window.addEventListener('click', (e) => {
+        modal.addEventListener('click', (e) => {
             if (e.target === modal) closeAnalysisModal();
         });
     }
