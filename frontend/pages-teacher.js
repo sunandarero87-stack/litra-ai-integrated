@@ -2522,18 +2522,13 @@ function changeTeacherPage(direction) {
 }
 
 // ---- TEACHER ACCOUNT MANAGEMENT ----
-async function renderTeacherAccounts(main) {
+function renderTeacherAccounts(main, skipSync = false) {
     if (currentUser.role !== 'admin') {
         main.innerHTML = '<div class="alert alert-danger">Akses ditolak. Menu ini hanya untuk Administrator.</div>';
         return;
     }
 
-    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat data akun guru...</p></div>';
-    
-    try {
-        await syncUsers();
-    } catch (e) { console.error(e); }
-
+    // Render langsung dari cache localStorage (tidak perlu await syncUsers)
     const users = getUsers();
     const teachers = users.filter(u => u.role === 'guru');
 
@@ -2644,6 +2639,15 @@ async function renderTeacherAccounts(main) {
         ` : ''}
     </div>
     <div id="modal-container"></div>`;
+
+    // Sinkronisasi di background (non-blocking) — hanya sekali saat pertama kali dibuka
+    if (!skipSync) {
+        syncUsers().then(() => {
+            if (currentPage === 'teacher-accounts') {
+                renderTeacherAccounts(document.getElementById('main-content'), true);
+            }
+        }).catch(e => console.error('Background sync guru gagal:', e));
+    }
 }
 
 function showAddTeacherModal() {
