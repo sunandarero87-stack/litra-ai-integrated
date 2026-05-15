@@ -2869,7 +2869,14 @@ function changeStudentPage(direction) {
 // ---- STUDENT ACCOUNT MANAGEMENT ----
 function renderStudentAccounts(main) {
     const users = getUsers();
-    const students = users.filter(u => u.role === 'siswa');
+    const isGuru = currentUser.role === 'guru';
+    const assignedClasses = getAssignedClasses();
+
+    // Guru hanya melihat siswa dari kelas yang diampu
+    let students = users.filter(u => u.role === 'siswa');
+    if (isGuru && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas')) {
+        students = students.filter(s => assignedClasses.includes(s.kelas));
+    }
 
     const totalPages = Math.ceil(students.length / studentsPerPage) || 1;
     if (currentStudentAccountPage > totalPages) currentStudentAccountPage = totalPages;
@@ -2878,9 +2885,15 @@ function renderStudentAccounts(main) {
     const startIndex = (currentStudentAccountPage - 1) * studentsPerPage;
     const paginatedStudents = students.slice(startIndex, startIndex + studentsPerPage);
 
+    const kelasLabel = isGuru && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas')
+        ? assignedClasses.join(', ') : '';
+
     main.innerHTML = `
         <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
-        <h3>Akun Siswa (${students.length})</h3>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <h3 style="margin-bottom:0;"><i class="fas fa-users" style="color:var(--primary);"></i> Akun Siswa (${students.length})</h3>
+            ${kelasLabel ? `<span class="badge badge-info" style="font-size:0.75rem; padding:0.3rem 0.7rem;"><i class="fas fa-school"></i> Kelas: ${kelasLabel}</span>` : ''}
+        </div>
         <div class="flex gap-1" style="align-items:center;">
             <input type="text" id="search-student-accounts" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Siswa/Kelas/Username..." onkeyup="filterTable('search-student-accounts', 'table-student-accounts')">
             ${currentUser.role === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="bulkDeleteStudents()" id="btn-bulk-delete" style="display:none;"><i class="fas fa-trash"></i> Hapus Terpilih (<span id="count-selected">0</span>)</button>` : ''}
@@ -2941,17 +2954,38 @@ function renderStudentAccounts(main) {
 }
 
 function showAddStudentModal() {
+    const isGuru = currentUser.role === 'guru';
+    const assignedClasses = getAssignedClasses();
+    const hasLimitedClass = isGuru && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas');
+
+    // Jika guru memiliki kelas terbatas, hanya tampilkan kelas yang diampu
+    const classList = hasLimitedClass
+        ? assignedClasses
+        : ['7.1','7.2','7.3','7.4','7.5','7.6','7.7','7.8','7.9','7.10','7.11',
+           '8.1','8.2','8.3','8.4','8.5','8.6','8.7','8.8','8.9','8.10',
+           '9.1','9.2','9.3','9.4','9.5','9.6','9.7','9.8','9.9','9.10'];
+
+    const classOptions = classList.map(k => `<option value="${k}">${k}</option>`).join('');
+
     document.getElementById('modal-container').innerHTML = `
     <div class="modal-overlay" onclick="if(event.target===this)this.remove()">
     <div class="modal">
-        <div class="modal-header"><h2>Tambah Siswa Baru</h2><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button></div>
+        <div class="modal-header">
+            <h2><i class="fas fa-user-plus"></i> Tambah Siswa Baru</h2>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        ${hasLimitedClass ? `
+        <div style="background:rgba(79,195,247,0.1); border-left:3px solid var(--primary-light); padding:0.6rem 1rem; margin:0 0 0.5rem 0; font-size:0.85rem; color:var(--text-secondary);">
+            <i class="fas fa-info-circle" style="color:var(--primary-light);"></i> 
+            Anda hanya dapat menambahkan siswa ke kelas yang Anda ampu: <strong>${assignedClasses.join(', ')}</strong>
+        </div>` : ''}
         <div class="form-group"><label>Username</label><input type="text" id="new-student-username" placeholder="contoh: siswa001"></div>
         <div class="form-group"><label>Nama Lengkap</label><input type="text" id="new-student-name" placeholder="Nama lengkap siswa"></div>
-        <div class="form-group"><label>Kelas</label><select id="new-student-kelas"><option value="7.6">7.6</option><option value="7.7">7.7</option><option value="7.8">7.8</option><option value="7.9">7.9</option><option value="7.10">7.10</option><option value="7.11">7.11</option></select></div>
+        <div class="form-group"><label>Kelas</label><select id="new-student-kelas">${classOptions}</select></div>
         <div class="form-group"><label>Password Awal</label><input type="text" id="new-student-password" value="siswa123" placeholder="Password awal"></div>
         <div class="modal-actions">
             <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
-            <button class="btn btn-primary" onclick="addStudentAccount()">Simpan</button>
+            <button class="btn btn-primary" onclick="addStudentAccount()"><i class="fas fa-save"></i> Simpan</button>
         </div>
     </div>
     </div>`;
@@ -3261,23 +3295,33 @@ async function changeProfilePassword() {
 
 // ---- MONITORING STATUS SISWA ----
 async function renderMonitoring(main) {
-    main.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Memuat status siswa...</p></div>';
+    const isGuru = currentUser.role === 'guru';
+    const assignedClasses = getAssignedClasses();
+    const hasLimitedClass = isGuru && assignedClasses.length > 0 && !assignedClasses.includes('Semua Kelas');
 
-    try {
-        await syncUsers();
-    } catch (e) {
-        console.error("Gagal sync user untuk monitoring", e);
+    // Render dari cache dulu agar tidak ada loading lama
+    const users = getUsers();
+
+    // Guru hanya melihat siswa (bukan guru lain), dan hanya dari kelasnya
+    let targetRole = 'siswa';
+    if (!isGuru) {
+        const selector = document.getElementById('monitor-role-selector');
+        targetRole = selector ? selector.value : 'siswa';
     }
 
-    const targetRole = document.getElementById('monitor-role-selector') ? document.getElementById('monitor-role-selector').value : 'siswa';
-    const users = getUsers();
-    const selectedUsers = targetRole === 'all' ? users.filter(u => ['siswa', 'guru'].includes(u.role)) : users.filter(u => u.role === targetRole);
+    let selectedUsers = targetRole === 'all'
+        ? users.filter(u => ['siswa', 'guru'].includes(u.role))
+        : users.filter(u => u.role === targetRole);
+
+    // Filter berdasarkan kelas guru jika guru memiliki kelas terbatas
+    if (hasLimitedClass) {
+        selectedUsers = selectedUsers.filter(s => assignedClasses.includes(s.kelas));
+    }
+
     const roleLabel = targetRole === 'siswa' ? 'Siswa' : targetRole === 'guru' ? 'Guru' : 'Semua';
 
     const now = Date.now();
     let onlineCount = 0;
-
-    // threshold: 2 minutes
     const onlineThreshold = 2 * 60 * 1000;
 
     const userStatus = selectedUsers.map(s => {
@@ -3296,28 +3340,29 @@ async function renderMonitoring(main) {
                 else timeStr = new Date(s.lastSeen).toLocaleDateString('id-ID');
             }
         }
-
         return { ...s, isOnline, timeStr, lastSeenTime };
     });
 
-    // sort: online first, then by lastSeen desc
     userStatus.sort((a, b) => {
-        if (a.isOnline === b.isOnline) {
-            return b.lastSeenTime - a.lastSeenTime;
-        }
+        if (a.isOnline === b.isOnline) return b.lastSeenTime - a.lastSeenTime;
         return a.isOnline ? -1 : 1;
     });
 
     main.innerHTML = `
     <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap; gap:0.5rem">
-        <h3><i class="fas fa-desktop"></i> Monitoring Status Aktif</h3>
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <h3 style="margin-bottom:0;"><i class="fas fa-desktop"></i> ${isGuru ? 'Status Siswa' : 'Monitoring Status Aktif'}</h3>
+            ${hasLimitedClass ? `<span class="badge badge-info" style="font-size:0.75rem; padding:0.3rem 0.7rem;"><i class="fas fa-school"></i> Kelas: ${assignedClasses.join(', ')}</span>` : ''}
+        </div>
         <div class="flex gap-1">
+            ${!isGuru ? `
             <label class="text-muted" style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0;">Role:</label>
             <select id="monitor-role-selector" class="form-control" style="width:auto; margin-bottom:0;" onchange="renderMonitoring(document.getElementById('main-content'))">
                 <option value="siswa" ${targetRole === 'siswa' ? 'selected' : ''}>Hanya Siswa</option>
                 <option value="guru" ${targetRole === 'guru' ? 'selected' : ''}>Hanya Guru</option>
                 <option value="all" ${targetRole === 'all' ? 'selected' : ''}>Semua User</option>
-            </select>
+            </select>` : ''}
+            <button class="btn btn-outline btn-sm" onclick="renderMonitoring(document.getElementById('main-content'))"><i class="fas fa-sync-alt"></i> Refresh</button>
         </div>
     </div>
     
