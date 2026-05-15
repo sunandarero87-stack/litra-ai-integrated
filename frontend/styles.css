@@ -2282,3 +2282,15 @@ tr:hover td {
     border: none;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
+/* Custom style for analysis modal to align properly with sidebar */
+#analysis-modal {
+    padding-left: calc(var(--sidebar-width) + 1rem) !important;
+}
+
+@media (max-width: 768px) {
+    #analysis-modal {
+        padding-left: 1rem !important;
+        z-index: 99999 !important;
+    }
+}
+
