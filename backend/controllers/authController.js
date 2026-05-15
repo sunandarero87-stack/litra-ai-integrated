@@ -77,6 +77,30 @@ async function checkTeacherAssignmentConflicts(proposedTeachers, excludeUsername
 
 const initDefaultUsers = async () => {
     try {
+        // Migration: Ensure all existing usernames are lowercase and have no spaces
+        const allUsers = await User.find({ 
+            $or: [
+                { username: { $regex: /[A-Z]/ } },
+                { username: { $regex: /\s/ } }
+            ]
+        });
+
+        if (allUsers.length > 0) {
+            console.log(`[Migration] Found ${allUsers.length} usernames needing normalization...`);
+            for (const u of allUsers) {
+                const normalized = u.username.replace(/\s+/g, '').toLowerCase();
+                if (normalized !== u.username) {
+                    const exists = await User.findOne({ username: normalized });
+                    if (!exists) {
+                        await User.updateOne({ _id: u._id }, { $set: { username: normalized } });
+                        console.log(`[Migration] Normalized: "${u.username}" -> "${normalized}"`);
+                    } else {
+                        console.warn(`[Migration] Skipping: "${u.username}" (normalized version "${normalized}" already exists)`);
+                    }
+                }
+            }
+        }
+
         const count = await User.countDocuments();
         if (count === 0) {
             await User.insertMany([
