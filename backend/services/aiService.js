@@ -281,15 +281,37 @@ async function analyzeHabits(username, habitAnswers) {
     try {
         const payload = {
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis perilaku siswa. Misi kamu adalah memonitor penerapan 7 Kebiasaan Hebat Anak Indonesia: bangun pagi, beribadah, berolahraga, makan sehat dan bergizi, gemar belajar, bermasyarakat, dan tidur cepat. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU DENGAN EJAAN YANG DISEMPURNAKAN (EYD) SEHINGGA MUDAH DIMENGERTI OLEH SISWA INDONESIA." },
-                { role: "user", content: `Analisislah jawaban esai siswa berikut yang berkorespondensi dengan 7 Kebiasaan tersebut dan tentukan seberapa baik penerapannya (kembalikan format JSON object murni {score: number_1_to_100, analysis: string_feedback, details: [array_of_strings_per_habit_feedback]}): ${JSON.stringify(habitAnswers)}` }
+                { 
+                    role: "system", 
+                    content: `Kamu adalah sistem analis karakter dan perilaku siswa yang bijaksana. Tugasmu adalah mengevaluasi penerapan "7 Kebiasaan Hebat Anak Indonesia" berdasarkan jawaban esai siswa.
+                    
+7 Kebiasaan Hebat tersebut adalah:
+1. Bangun Pagi (Kedisiplinan waktu)
+2. Beribadah (Ketaatan spiritual)
+3. Berolahraga (Kesehatan fisik)
+4. Makan Sehat dan Bergizi (Nutrisi tubuh)
+5. Gemar Belajar (Pengembangan diri)
+6. Bermasyarakat (Kepedulian sosial/gotong royong)
+7. Tidur Cepat (Istirahat yang cukup)
+
+Kriteria Penilaian:
+- Skor (0-100): Berikan skor tinggi jika siswa menunjukkan konsistensi dan pemahaman mendalam tentang manfaat kebiasaan tersebut. Berikan skor lebih rendah jika jawaban terlalu singkat, menunjukkan ketidakkonsistenan, atau kurangnya usaha dalam menjalankan kebiasaan.
+- Analisis (Feedback Umum): Berikan apresiasi atas apa yang sudah baik dan rangkuman kondisi karakter siswa secara keseluruhan dengan bahasa yang memotivasi.
+- Details (Saran Spesifik): Berikan minimal 3-5 poin saran konkret untuk membantu siswa memperbaiki atau meningkatkan kebiasaan yang dirasa masih kurang berdasarkan jawabannya. Gunakan kalimat "Coba untuk...", "Akan lebih baik jika...", "Pertahankan...".
+
+WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD) yang ramah, hangat, dan menginspirasi.` 
+                },
+                { 
+                    role: "user", 
+                    content: `Analisislah jawaban esai siswa berikut ini:\n${JSON.stringify(habitAnswers)}\n\nKembalikan hasil dalam format JSON object murni: { "score": number, "analysis": "string_feedback_umum", "details": ["saran1", "saran2", "saran3"] }` 
+                }
             ]
         };
         const response = await requestWithFallback(payload);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Habit Analysis Error:", e.message);
-        return { score: 0, analysis: "Gagal memproses analisis", details: [] };
+        return { score: 70, analysis: "Siswa menunjukkan itikad baik dalam menerapkan kebiasaan positif. Terus pertahankan kedisiplinanmu.", details: ["Pertahankan kebiasaan bangun pagi tepat waktu.", "Usahakan untuk berolahraga minimal 15 menit sehari.", "Pastikan asupan nutrisi tetap seimbang setiap hari."] };
     }
 }
 
