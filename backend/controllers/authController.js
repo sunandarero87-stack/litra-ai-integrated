@@ -1,48 +1,70 @@
 const User = require('../models/User');
 
 // HELPER: Validation to prevent same subject in same class assigned to different teachers
+// HELPER: Validation to prevent same subject in same class assigned to different teachers
 async function checkTeacherAssignmentConflicts(proposedTeachers, excludeUsername = null) {
     try {
         // 1. Fetch all current DB teachers to map existing ownerships
         const query = { role: 'guru' };
         if (excludeUsername) query.username = { $ne: excludeUsername };
-        const currentTeachers = await User.find(query);
+        const currentTeachers = await User.find(query).lean(); // Use lean for performance
 
         const registry = new Map();
         const getCombos = (t) => {
+            if (!t) return { classes: [], mapels: [] };
             const classes = String(t.kelas || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
             const mapels = String(t.mapel || '').split(',').map(m => m.trim().toLowerCase()).filter(Boolean);
             return { classes, mapels };
         };
 
         // Pre-fill registry with existing DB allocations
-        currentTeachers.forEach(t => {
+        for (const t of currentTeachers) {
             const { classes, mapels } = getCombos(t);
-            classes.forEach(c => {
-                mapels.forEach(m => {
-                    registry.set(`${c}|${m}`, t.name || t.username);
-                });
-            });
-        });
-
-        // 2. Check proposed teachers matrix
-        for (const proposed of proposedTeachers) {
-            if (proposed.role !== 'guru') continue;
-            const { classes, mapels } = getCombos(proposed);
+            const ownerName = t.name || t.username;
             
             for (const c of classes) {
                 for (const m of mapels) {
-                    const key = `${c}|${m}`;
-                    if (registry.has(key)) {
-                        const existingOwner = registry.get(key);
-                        if (existingOwner !== proposed.name && existingOwner !== proposed.username) {
+                    // Jika ada guru "Semua Kelas", maka semua kelas untuk mapel tersebut terkunci
+                    if (c === 'semua kelas') {
+                        registry.set(`any|${m}`, ownerName);
+                    }
+                    registry.set(`${c}|${m}`, ownerName);
+                }
+            }
+        }
+
+        // 2. Check proposed teachers matrix
+        for (const proposed of proposedTeachers) {
+            if (!proposed || proposed.role !== 'guru') continue;
+            const { classes, mapels } = getCombos(proposed);
+            const proposedName = proposed.name || proposed.username;
+            
+            for (const c of classes) {
+                for (const m of mapels) {
+                    // Cek konflik dengan "Semua Kelas" atau kelas spesifik
+                    const existingOwner = registry.get(`${c}|${m}`) || registry.get(`any|${m}`);
+                    
+                    if (existingOwner) {
+                        // Jika owner-nya bukan guru yang sama (cek username atau name)
+                        if (existingOwner !== proposedName && existingOwner !== proposed.username) {
                             return {
                                 conflict: true,
                                 error: `🚨 GAGAL: Mata Pelajaran [${m.toUpperCase()}] untuk Kelas [${c.toUpperCase()}] sudah diampu oleh Guru "${existingOwner}". Silakan pilih kelas atau mapel berbeda.`
                             };
                         }
                     }
-                    registry.set(key, proposed.name || proposed.username);
+                    
+                    // Jika yang diinput adalah "Semua Kelas", cek apakah mapel ini sudah diampu guru lain di kelas manapun
+                    if (c === 'semua kelas') {
+                        for (const [key, owner] of registry.entries()) {
+                            if (key.endsWith(`|${m}`) && owner !== proposedName && owner !== proposed.username) {
+                                return {
+                                    conflict: true,
+                                    error: `🚨 GAGAL: Mata Pelajaran [${m.toUpperCase()}] tidak bisa diset "Semua Kelas" karena sudah ada guru lain yang mengampu mapel ini di kelas tertentu.`
+                                };
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -197,16 +219,14 @@ const bulkUpdateClass = async (req, res) => {
 
 const getUsers = async (req, res) => {
     try {
-        const users = await User.find({}).select('-password -sessionId');
-        // Optimization: Remove photos for students to reduce payload size.
-        // Students only need the teacher's photo for the chatbot.
-        // Their own photo is already in their session.
+        const users = await User.find({}).select('-password -sessionId').lean();
+        // Optimization: Students only need basic info to reduce payload size.
+        // Teacher photo is kept for chatbot, but student photo is removed from global list.
         const optimizedUsers = users.map(u => {
-            const userObj = u.toObject();
-            if (userObj.role === 'siswa') {
-                delete userObj.photo;
+            if (u.role === 'siswa') {
+                delete u.photo;
             }
-            return userObj;
+            return u;
         });
         res.json(optimizedUsers);
     } catch (err) {

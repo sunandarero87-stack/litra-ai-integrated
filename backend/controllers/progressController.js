@@ -9,14 +9,15 @@ exports.syncAll = async (req, res) => {
     try {
         const { username } = req.query;
         const query = username ? { username } : {};
-        const progresses = await Progress.find(query);
-        const settingsDoc = await Setting.findOne({ key: 'assessmentSettings' });
+        // Use lean() for much better performance on large datasets
+        const progresses = await Progress.find(query).lean();
+        const settingsDoc = await Setting.findOne({ key: 'assessmentSettings' }).lean();
 
-        let studentProgress = {};
-        let assessmentResults = {};
-        let assessmentApprovals = {};
+        const studentProgress = {};
+        const assessmentResults = {};
+        const assessmentApprovals = {};
 
-        progresses.forEach(p => {
+        for (const p of progresses) {
             studentProgress[p.username] = {
                 tahap: p.tahap,
                 tahap1Complete: p.tahap1Complete,
@@ -41,7 +42,7 @@ exports.syncAll = async (req, res) => {
                     approvedBy: p.approvedBy
                 };
             }
-        });
+        }
 
         res.json({
             success: true,

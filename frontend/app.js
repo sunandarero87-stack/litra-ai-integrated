@@ -3,12 +3,27 @@
 // Auth, Navigation, State Management
 // ============================================
 
-// ---- STATE ----
+// ---- STATE & CACHE ----
 let currentUser = null;
 let currentPage = 'dashboard';
 let assessmentTimer = null;
 let assessmentTimeLeft = 0;
 let tabViolationCount = 0;
+
+// Local cache to avoid redundant JSON.parse calls during a single render cycle
+const dataCache = {
+    users: null,
+    materials: null,
+    studentProgress: null,
+    assessmentResults: null,
+    assessmentApprovals: null,
+    assessmentSettings: null
+};
+
+// Helper to clear cache after sync or updates
+function clearDataCache() {
+    Object.keys(dataCache).forEach(k => dataCache[k] = null);
+}
 
 // Stage Timer Config (in seconds) — Tahap 1 dikecualikan (tidak ada timer/anti-cheat)
 const STAGE_DURATION = {
@@ -23,6 +38,7 @@ async function syncUsers() {
         if (usersRes.ok) {
             const users = await usersRes.json();
             localStorage.setItem('users', JSON.stringify(users));
+            dataCache.users = users; // Update cache
         }
     } catch (err) {
         console.error('Gagal sinkronisasi data user:', err);
@@ -31,6 +47,7 @@ async function syncUsers() {
 
 async function syncData() {
     try {
+        clearDataCache(); // Clear before syncing new data
         const isStudent = currentUser && currentUser.role === 'siswa';
         const usernameParam = isStudent ? `?username=${currentUser.username}` : '';
 
@@ -46,25 +63,33 @@ async function syncData() {
                 const existingProgress = getStudentProgress();
                 const mergedProgress = { ...existingProgress, ...data.studentProgress };
                 localStorage.setItem('studentProgress', JSON.stringify(mergedProgress));
+                dataCache.studentProgress = mergedProgress;
 
                 const existingResults = getAssessmentResults();
                 const mergedResults = { ...existingResults, ...data.assessmentResults };
                 localStorage.setItem('assessmentResults', JSON.stringify(mergedResults));
+                dataCache.assessmentResults = mergedResults;
 
                 const existingApprovals = getApprovals();
                 const mergedApprovals = { ...existingApprovals, ...data.assessmentApprovals };
                 localStorage.setItem('assessmentApprovals', JSON.stringify(mergedApprovals));
+                dataCache.assessmentApprovals = mergedApprovals;
             } else {
                 localStorage.setItem('studentProgress', JSON.stringify(data.studentProgress || {}));
                 localStorage.setItem('assessmentResults', JSON.stringify(data.assessmentResults || {}));
                 localStorage.setItem('assessmentApprovals', JSON.stringify(data.assessmentApprovals || {}));
+                dataCache.studentProgress = data.studentProgress;
+                dataCache.assessmentResults = data.assessmentResults;
+                dataCache.assessmentApprovals = data.assessmentApprovals;
             }
             localStorage.setItem('assessmentSettings', JSON.stringify(data.assessmentSettings || { duration: 90 }));
+            dataCache.assessmentSettings = data.assessmentSettings;
         }
 
         if (materialsRes.ok) {
             const data = await materialsRes.json();
             localStorage.setItem('materials', JSON.stringify(data.materials || []));
+            dataCache.materials = data.materials;
         }
 
         // Prioritas 2: Users (Background sync as it can be large)
@@ -72,6 +97,7 @@ async function syncData() {
             .then(res => res.ok ? res.json() : [])
             .then(users => {
                 localStorage.setItem('users', JSON.stringify(users));
+                dataCache.users = users;
                 if (['student-accounts', 'monitoring', 'tahap1'].includes(currentPage)) {
                     renderPage(currentPage);
                 }
@@ -149,17 +175,43 @@ async function initApp() {
 }
 
 // ---- DATA HELPERS ----
-function getUsers() { return JSON.parse(localStorage.getItem('users') || '[]'); }
-function saveUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
-function getMaterials() { return JSON.parse(localStorage.getItem('materials') || '[]'); }
-function saveMaterials(m) { localStorage.setItem('materials', JSON.stringify(m)); }
+function getUsers() { 
+    if (dataCache.users) return dataCache.users;
+    dataCache.users = JSON.parse(localStorage.getItem('users') || '[]');
+    return dataCache.users;
+}
+function saveUsers(users) { 
+    localStorage.setItem('users', JSON.stringify(users));
+    dataCache.users = users;
+}
+function getMaterials() { 
+    if (dataCache.materials) return dataCache.materials;
+    dataCache.materials = JSON.parse(localStorage.getItem('materials') || '[]');
+    return dataCache.materials;
+}
+function saveMaterials(m) { 
+    localStorage.setItem('materials', JSON.stringify(m));
+    dataCache.materials = m;
+}
 function getChatHistories() { return JSON.parse(localStorage.getItem('chatHistories') || '{}'); }
 function saveChatHistories(h) { localStorage.setItem('chatHistories', JSON.stringify(h)); }
-function getStudentProgress() { return JSON.parse(localStorage.getItem('studentProgress') || '{}'); }
-function saveStudentProgress(p) { localStorage.setItem('studentProgress', JSON.stringify(p)); }
-function getAssessmentResults() { return JSON.parse(localStorage.getItem('assessmentResults') || '{}'); }
+function getStudentProgress() { 
+    if (dataCache.studentProgress) return dataCache.studentProgress;
+    dataCache.studentProgress = JSON.parse(localStorage.getItem('studentProgress') || '{}');
+    return dataCache.studentProgress;
+}
+function saveStudentProgress(p) { 
+    localStorage.setItem('studentProgress', JSON.stringify(p));
+    dataCache.studentProgress = p;
+}
+function getAssessmentResults() { 
+    if (dataCache.assessmentResults) return dataCache.assessmentResults;
+    dataCache.assessmentResults = JSON.parse(localStorage.getItem('assessmentResults') || '{}');
+    return dataCache.assessmentResults;
+}
 function saveAssessmentResults(r) {
     localStorage.setItem('assessmentResults', JSON.stringify(r));
+    dataCache.assessmentResults = r;
     if (currentUser && r[currentUser.username]) {
         fetch('/api/progress/result', {
             method: 'POST',
@@ -168,9 +220,14 @@ function saveAssessmentResults(r) {
         }).catch(err => console.error(err));
     }
 }
-function getApprovals() { return JSON.parse(localStorage.getItem('assessmentApprovals') || '{}'); }
+function getApprovals() { 
+    if (dataCache.assessmentApprovals) return dataCache.assessmentApprovals;
+    dataCache.assessmentApprovals = JSON.parse(localStorage.getItem('assessmentApprovals') || '{}');
+    return dataCache.assessmentApprovals;
+}
 function saveApprovals(a) {
     localStorage.setItem('assessmentApprovals', JSON.stringify(a));
+    dataCache.assessmentApprovals = a;
 }
 async function saveApprovalForUser(username, approvalData) {
     const a = getApprovals();
@@ -179,7 +236,7 @@ async function saveApprovalForUser(username, approvalData) {
     } else {
         delete a[username];
     }
-    localStorage.setItem('assessmentApprovals', JSON.stringify(a));
+    saveApprovals(a);
     try {
         await fetch('/api/progress/approval', {
             method: 'POST',
@@ -190,9 +247,14 @@ async function saveApprovalForUser(username, approvalData) {
         console.error('Failed to sync approval', err);
     }
 }
-function getAssessmentSettings() { return JSON.parse(localStorage.getItem('assessmentSettings') || '{"duration":90, "questionAmount":50}'); }
+function getAssessmentSettings() { 
+    if (dataCache.assessmentSettings) return dataCache.assessmentSettings;
+    dataCache.assessmentSettings = JSON.parse(localStorage.getItem('assessmentSettings') || '{"duration":90, "questionAmount":50}');
+    return dataCache.assessmentSettings;
+}
 function saveAssessmentSettings(s) {
     localStorage.setItem('assessmentSettings', JSON.stringify(s));
+    dataCache.assessmentSettings = s;
     fetch('/api/progress/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

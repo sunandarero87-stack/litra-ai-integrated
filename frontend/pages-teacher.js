@@ -2718,7 +2718,8 @@ async function addTeacherAccount() {
         });
 
         if (!res.ok) {
-            alert('Gagal menambah akun guru. Username mungkin sudah terpakai.');
+            const errData = await res.json().catch(() => ({}));
+            alert(errData.error || 'Gagal menambah akun guru. Username mungkin sudah terpakai.');
             return;
         }
 
