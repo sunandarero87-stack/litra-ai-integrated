@@ -105,7 +105,10 @@ const initDefaultUsers = async () => {
 
 const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        let { username, password } = req.body;
+        // Normalize username for case-insensitive matching
+        username = String(username || '').trim().toLowerCase();
+        
         const sessionId = Date.now().toString() + Math.random().toString(36).substring(2);
         const user = await User.findOneAndUpdate(
             { username, password },
@@ -139,7 +142,8 @@ const changePassword = async (req, res) => {
 
 const resetUserPassword = async (req, res) => {
     try {
-        const { username, newPassword } = req.body;
+        let { username, newPassword } = req.body;
+        username = String(username || '').trim().toLowerCase();
         const user = await User.findOneAndUpdate(
             { username },
             { password: newPassword, mustChangePassword: true }, // Reset forces change on login
@@ -155,7 +159,8 @@ const resetUserPassword = async (req, res) => {
 
 const updateProfile = async (req, res) => {
     try {
-        const { username, name, photo } = req.body;
+        let { username, name, photo } = req.body;
+        username = String(username || '').trim().toLowerCase();
         const user = await User.findOneAndUpdate(
             { username },
             { name, photo },
@@ -171,7 +176,8 @@ const updateProfile = async (req, res) => {
 // Admin: Update Single User
 const updateUser = async (req, res) => {
     try {
-        const { username } = req.params;
+        let { username } = req.params;
+        username = String(username || '').trim().toLowerCase();
         const updates = req.body;
         
         // Prevent hacking crucial security fields through basic update if not careful
@@ -236,7 +242,13 @@ const getUsers = async (req, res) => {
 
 const createUsers = async (req, res) => {
     try {
-        const usersToCreate = Array.isArray(req.body) ? req.body : [req.body];
+        let usersToCreate = Array.isArray(req.body) ? req.body : [req.body];
+
+        // Normalize usernames to lowercase
+        usersToCreate = usersToCreate.map(u => ({
+            ...u,
+            username: String(u.username || '').replace(/\s+/g, '').toLowerCase()
+        }));
 
         // NEW: Enforce strict mapping validation for new additions
         const validation = await checkTeacherAssignmentConflicts(usersToCreate);
@@ -244,15 +256,23 @@ const createUsers = async (req, res) => {
             return res.status(400).json({ error: validation.error });
         }
 
-        const existingUsers = await User.find({ username: { $in: usersToCreate.map(u => u.username) } });
+        const requestedUsernames = usersToCreate.map(u => u.username);
+        const existingUsers = await User.find({ username: { $in: requestedUsernames } });
         const existingUsernames = existingUsers.map(u => u.username);
+
+        // Jika user tunggal (dari modal) dan sudah ada, beri error spesifik
+        if (usersToCreate.length === 1 && existingUsernames.includes(usersToCreate[0].username)) {
+            return res.status(400).json({ error: `🚨 GAGAL: Username "${usersToCreate[0].username}" sudah terdaftar. Gunakan username lain.` });
+        }
 
         const newUsers = usersToCreate.filter(u => !existingUsernames.includes(u.username));
         if (newUsers.length > 0) {
             await User.insertMany(newUsers);
+        } else {
+            return res.status(400).json({ error: 'Tidak ada user baru yang ditambahkan (semua username sudah ada).' });
         }
 
-        res.json({ message: `${newUsers.length} user(s) created.` });
+        res.json({ message: `${newUsers.length} user(s) created.`, count: newUsers.length });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -260,7 +280,8 @@ const createUsers = async (req, res) => {
 
 const deleteUser = async (req, res) => {
     try {
-        const { username } = req.params;
+        let { username } = req.params;
+        username = String(username || '').trim().toLowerCase();
         await User.findOneAndDelete({ username });
         res.json({ message: 'User deleted' });
     } catch (err) {
