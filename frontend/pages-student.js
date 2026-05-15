@@ -247,8 +247,8 @@ function renderTahap1(main) {
     <div id="floating-chatbot-container" style="display:flex; position: fixed; bottom: 20px; right: 0; left: 0; padding: 0 20px; z-index: 99999; align-items: flex-end; flex-direction: column; pointer-events: none;">
         <div id="chatbot-panel" style="display: none; width: 100%; max-width: 100vw; height: 75vh; max-height: 80vh; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin-bottom: 1rem; flex-direction: column; overflow: hidden; animation: slideUp 0.3s ease; pointer-events: auto;">
             <div class="chat-header" style="background: var(--gradient-primary); color: white; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
-                <div class="bot-avatar" style="width:40px;height:40px;border-radius:50%;background:white;color:var(--primary);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-                    ${teacherPhoto}
+                <div class="bot-avatar" style="width:44px;height:44px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;padding:2px;">
+                    <img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
                 </div>
                 <div class="chat-header-info" style="flex:1">
                     <h3 style="font-size:0.95rem; margin:0">NARA-AI Asisten ${teacher.name}</h3>
@@ -273,8 +273,8 @@ function renderTahap1(main) {
                 <button onclick="sendFloatingChat()" class="btn btn-primary" style="padding:0.7rem 1.2rem;"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>
-        <button id="chatbot-toggle-btn" onclick="toggleChatbot()" style="width: 60px; height: 60px; border-radius: 50%; background: var(--gradient-primary); color: white; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid white; transition: transform 0.3s; pointer-events: auto;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'">
-            <i class="fas fa-comment-dots"></i>
+        <button id="chatbot-toggle-btn" onclick="toggleChatbot()" style="width: 65px; height: 65px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid var(--primary); box-shadow: 0 4px 15px rgba(99,102,241,0.5); transition: transform 0.3s; pointer-events: auto; overflow: hidden; padding: 0;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1.0)'">
+            <img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
         </button>
     </div>
     `;
@@ -790,13 +790,13 @@ function appendFloatingMessage(role, html, teacherPhoto) {
         div.style.flexDirection = 'row-reverse';
     }
 
-    let avatarIcon = role === 'bot' ? teacherPhoto : '<i class="fas fa-user"></i>';
+    let avatarIcon = role === 'bot' ? '<img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">' : '<i class="fas fa-user"></i>';
     let bgColor = role === 'bot' ? 'var(--bg-input)' : 'var(--primary)';
     let color = role === 'bot' ? 'inherit' : 'white';
     let borderRadius = role === 'bot' ? '8px 8px 8px 4px' : '8px 8px 4px 8px';
 
     div.innerHTML = `
-        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:${role === 'bot' ? 'white' : 'var(--bg-input)'};color:${role === 'bot' ? 'var(--primary)' : 'var(--text-secondary)'};font-size:0.8rem;">
+        <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:${role === 'bot' ? 'white' : 'var(--bg-input)'};color:${role === 'bot' ? 'var(--primary)' : 'var(--text-secondary)'};font-size:0.8rem;border:${role === 'bot' ? '2px solid var(--primary)' : 'none'};">
             ${avatarIcon}
         </div>
         <div style="padding:0.75rem 1rem;font-size:0.9rem;line-height:1.6;background:${bgColor};color:${color};border-radius:${borderRadius}; overflow-x: auto; max-width: 100%;">
@@ -983,7 +983,9 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
     typing.id = 'floating-typing-indicator';
     typing.style.cssText = 'display:flex;gap:0.75rem;align-self:flex-start;';
     typing.innerHTML = `
-        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">${teacherPhoto}</div>
+        <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;border:2px solid var(--primary);">
+            <img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+        </div>
         <div style="padding:0.75rem 1rem;font-size:0.9rem;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
             <div style="display:flex;gap:4px;padding:0.5rem 0;">
                 <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
@@ -1103,13 +1105,8 @@ async function sendPemantikRemediasi(pemantikMsg, teacherPhoto) {
     typing.id = 'floating-typing-indicator';
     typing.style.cssText = 'display:flex;gap:0.75rem;align-self:flex-start;';
     typing.innerHTML = `
-        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">${teacherPhoto}</div>
-        <div style="padding:0.75rem 1rem;font-size:0.9rem;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
-            <div style="display:flex;gap:4px;padding:0.5rem 0;">
-                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
-                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
-                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
-            </div>
+        <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;border:2px solid var(--primary);">
+            <img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
         </div>`;
     chatBox.appendChild(typing);
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -1182,13 +1179,8 @@ async function evaluasiJawabanPemantik(jawabanSiswa, teacherPhoto) {
     typing.id = 'floating-typing-indicator';
     typing.style.cssText = 'display:flex;gap:0.75rem;align-self:flex-start;';
     typing.innerHTML = `
-        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">${teacherPhoto}</div>
-        <div style="padding:0.75rem 1rem;font-size:0.9rem;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
-            <div style="display:flex;gap:4px;padding:0.5rem 0;">
-                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;"></span>
-                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
-                <span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
-            </div>
+        <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;border:2px solid var(--primary);">
+            <img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
         </div>`;
     chatBox.appendChild(typing);
     chatBox.scrollTop = chatBox.scrollHeight;
@@ -1421,8 +1413,8 @@ function sendFloatingChat(quickMsg, isSilent = false) {
     typing.style.display = 'flex';
     typing.style.gap = '0.75rem';
     typing.innerHTML = `
-        <div style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;color:var(--primary);font-size:0.8rem;">
-            ${teacherPhoto}
+        <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;background:white;border:2px solid var(--primary);">
+            <img src="nara-ai-bot.png" alt="NARA-AI" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
         </div>
         <div style="padding:0.75rem 1rem;font-size:0.9rem;line-height:1.6;background:var(--bg-input);border-radius:8px 8px 8px 4px;">
             <div class="typing-indicator" style="display:flex; gap:4px; padding:0.5rem 0;">
