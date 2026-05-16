@@ -2332,3 +2332,35 @@ tr:hover td {
     }
 }
 
+
+/* ============= AI ANALYSIS STYLING ============= */
+.ai-analysis-structured {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.analysis-section {
+    transition: all var(--transition-normal);
+}
+
+.analysis-section:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+}
+
+.analysis-section h5 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Custom RGB variables for background opacity */
+:root {
+    --primary-rgb: 26, 115, 232;
+    --accent-rgb: 255, 213, 79;
+    --success-rgb: 76, 175, 80;
+}

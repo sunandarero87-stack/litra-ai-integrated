@@ -69,7 +69,13 @@ exports.updateProgress = async (req, res) => {
         // Ensure aiReadiness is a string to prevent Mongoose CastError if frontend sends an object
         if (progressData.aiReadiness && typeof progressData.aiReadiness === 'object') {
             const originalObj = progressData.aiReadiness;
-            progressData.aiReadiness = originalObj.analysis || JSON.stringify(originalObj);
+            // If it's the new structured analysis, store the whole thing as JSON string
+            if (originalObj.analysis && typeof originalObj.analysis === 'object') {
+                progressData.aiReadiness = JSON.stringify(originalObj);
+            } else {
+                progressData.aiReadiness = originalObj.analysis || JSON.stringify(originalObj);
+            }
+            
             if (progressData.isReady === undefined) {
                 progressData.isReady = originalObj.ready || false;
             }

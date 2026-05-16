@@ -187,14 +187,42 @@ async function analyzeReadiness(username, reflectionAnswers) {
     try {
         const payload = {
             messages: [
-                { role: "system", content: "Kamu adalah sistem analis evaluasi siswa. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD)." },
-                { role: "user", content: `Analisislah kesiapan siswa (JSON {ready, score, analysis, recommendation}): ${JSON.stringify(reflectionAnswers)}` }
+                { 
+                    role: "system", 
+                    content: "Kamu adalah Pakar Pedagogi dan Ahli Bahasa NARA-AI. Tugasmu adalah menganalisis jawaban refleksi siswa secara mendalam. Berikan umpan balik yang konstruktif mencakup dua aspek utama: 1) Analisis Isi (kedalaman pemahaman, relevansi), dan 2) Analisis Penulisan (tata bahasa, tanda baca, kerapihan).\n\nWAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD) yang sangat ramah dan memotivasi." 
+                },
+                { 
+                    role: "user", 
+                    content: `Analisislah jawaban refleksi siswa berikut: ${JSON.stringify(reflectionAnswers)}
+                    
+OUTPUT WAJIB DALAM FORMAT JSON BERIKUT:
+{
+  "ready": boolean,
+  "score": number (0-100),
+  "analysis": {
+    "isi": "Analisis detail tentang kelebihan dan kekurangan isi/konten jawaban...",
+    "penulisan": "Analisis detail tentang kelebihan dan kekurangan cara penulisan (EYD)...",
+    "umum": "Kesimpulan singkat..."
+  },
+  "recommendation": "Saran konkret untuk peningkatan..."
+}` 
+                }
             ]
         };
         const response = await requestWithFallback(payload, [MODEL_FAST, MODEL_HEAVY]);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
-        return { ready: true, score: 70, analysis: "Analisis default", recommendation: "Lanjut" };
+        console.error("AI Analysis Error:", e);
+        return { 
+            ready: true, 
+            score: 70, 
+            analysis: {
+                isi: "Jawabanmu sudah cukup baik namun perlu diperdalam.",
+                penulisan: "Penulisan sudah cukup rapi.",
+                umum: "Analisis default"
+            }, 
+            recommendation: "Terus tingkatkan pemahamanmu." 
+        };
     }
 }
 

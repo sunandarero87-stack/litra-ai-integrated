@@ -1581,6 +1581,52 @@ let reflectionQuestions = [];
 let reflectionAnswers = {};
 let reflectionLoading = false;
 
+/**
+ * Format AI Readiness analysis into a structured HTML display
+ */
+function formatAiReadiness(data) {
+    if (!data) return '<p class="text-muted">Analisis tidak tersedia.</p>';
+
+    let parsed = data;
+    if (typeof data === 'string') {
+        try {
+            parsed = JSON.parse(data);
+        } catch (e) {
+            // Jika bukan JSON, anggap sebagai teks biasa
+            return `<p style="line-height: 1.6; text-align: justify; color: var(--text-primary); font-size: 0.95rem; font-weight: 500;">${data}</p>`;
+        }
+    }
+
+    // Jika data adalah object hasil analisis baru
+    if (parsed && parsed.analysis && typeof parsed.analysis === 'object') {
+        const a = parsed.analysis;
+        return `
+            <div class="ai-analysis-structured">
+                <div class="analysis-section mb-2" style="background: rgba(var(--primary-rgb), 0.05); padding: 1rem; border-radius: 12px; border-left: 4px solid var(--primary);">
+                    <h5 style="margin: 0 0 0.5rem; color: var(--primary); font-size: 0.9rem; font-weight: 700;"><i class="fas fa-file-alt"></i> Analisis Isi (Konten Jawaban)</h5>
+                    <p style="font-size: 0.88rem; line-height: 1.6; color: var(--text-primary); margin: 0;">${a.isi || 'Tidak tersedia.'}</p>
+                </div>
+                <div class="analysis-section mb-2" style="background: rgba(var(--accent-rgb), 0.05); padding: 1rem; border-radius: 12px; border-left: 4px solid var(--accent);">
+                    <h5 style="margin: 0 0 0.5rem; color: var(--accent); font-size: 0.9rem; font-weight: 700;"><i class="fas fa-pen-nib"></i> Analisis Penulisan (EYD & Tata Bahasa)</h5>
+                    <p style="font-size: 0.88rem; line-height: 1.6; color: var(--text-primary); margin: 0;">${a.penulisan || 'Tidak tersedia.'}</p>
+                </div>
+                <div class="analysis-section" style="padding: 0.5rem 1rem;">
+                    <p style="font-size: 0.88rem; font-style: italic; color: var(--text-secondary); margin: 0;"><strong>Kesimpulan:</strong> ${a.umum || ''}</p>
+                </div>
+                ${parsed.recommendation ? `
+                <div class="mt-3" style="background: var(--bg-input); padding: 1rem; border-radius: 12px; border: 1px dashed var(--border-color);">
+                    <h5 style="margin: 0 0 0.4rem; color: var(--success); font-size: 0.9rem; font-weight: 700;"><i class="fas fa-lightbulb"></i> Rekomendasi Guru NARA:</h5>
+                    <p style="font-size: 0.88rem; color: var(--text-primary); margin: 0;">${parsed.recommendation}</p>
+                </div>` : ''}
+            </div>
+        `;
+    }
+
+    // Fallback untuk format objek lama atau tidak dikenal
+    const text = parsed.analysis || parsed.umum || JSON.stringify(parsed);
+    return `<p style="line-height: 1.6; text-align: justify; color: var(--text-primary); font-size: 0.95rem; font-weight: 500;">${text}</p>`;
+}
+
 async function renderTahap2(main) {
     // Reset local cache agar selalu mengambil yang terbaru dari server berdasarkan chat terakhir
     if (typeof lastRenderedTahap === 'undefined' || lastRenderedTahap !== 'tahap2') {
@@ -1642,11 +1688,11 @@ async function renderTahap2(main) {
 
             <div class="card mt-2" style="border: 1px solid ${isReady ? 'var(--success-light)' : 'var(--danger-light)'}; background: ${isReady ? 'rgba(34, 197, 94, 0.02)' : 'rgba(239, 68, 68, 0.02)'}; padding: 1.5rem; border-radius: 16px; text-align: left; margin-bottom: 1.5rem;">
                 <h4 style="color: ${isReady ? 'var(--success)' : 'var(--danger)'}; margin-bottom: 0.75rem; font-size: 1.1rem; font-weight: 700;">
-                    <i class="fas fa-robot"></i> Rekomendasi & Analisis AI:
+                    <i class="fas fa-robot"></i> Analisis & Evaluasi NARA-AI:
                 </h4>
-                <p style="line-height: 1.6; text-align: justify; color: var(--text-primary); font-size: 0.95rem; font-weight: 500;">
-                    ${progress.aiReadiness || 'Analisis tidak tersedia.'}
-                </p>
+                <div class="analysis-content-wrapper">
+                    ${formatAiReadiness(progress.aiReadiness)}
+                </div>
                 <div class="mt-2" style="font-size: 0.88rem; color: var(--text-muted); font-weight: 600;">
                     <strong>Skor Kesiapan Belajar:</strong> ${progress.tahap2Score || 0}%
                 </div>
@@ -1792,9 +1838,11 @@ async function renderTahap2(main) {
             // Update local progress with analysis and raw reflection answers
             const progress = getProgress(currentUser.username);
             progress.tahap2Complete = true;
-            progress.aiReadiness = analysisData.analysis.analysis;
+            
+            // Simpan seluruh objek analisis ke aiReadiness (nanti di-stringify oleh updateProgress)
+            progress.aiReadiness = analysisData.analysis;
             progress.isReady = analysisData.analysis.ready;
-            progress.tahap2Score = analysisData.analysis.score ?? null; // Simpan nilai refleksi Tahap 2
+            progress.tahap2Score = analysisData.analysis.score ?? null; 
             progress.reflectionAnswers = answers; // Save raw answers for later generation
             updateProgress(currentUser.username, progress);
 
