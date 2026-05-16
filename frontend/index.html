@@ -24,7 +24,16 @@
                         <img src="nara-logo-transparent.png" alt="NARA-AI Asisten Virtual Guru" class="main-login-logo">
                     </div>
                 </div>
+                <div class="login-tabs">
+                    <button type="button" id="tab-umum" class="login-tab active" onclick="setLoginRole('umum')">
+                        <i class="fas fa-users"></i> Umum
+                    </button>
+                    <button type="button" id="tab-ortu" class="login-tab" onclick="setLoginRole('orang_tua')">
+                        <i class="fas fa-user-friends"></i> Wali Murid
+                    </button>
+                </div>
                 <form id="login-form" onsubmit="return handleLogin(event)">
+                    <input type="hidden" id="login-role" value="umum">
                     <div class="form-group">
                         <label><i class="fas fa-user"></i> Username</label>
                         <input type="text" id="login-username" required placeholder="Masukkan username"
@@ -153,6 +162,7 @@
     <script src="data.js?v=11"></script>
     <script src="pages-student.js?v=11"></script>
     <script src="pages-teacher.js?v=11"></script>
+    <script src="pages-parent.js?v=11"></script>
     <script src="app.js?v=11"></script>
 </body>
 

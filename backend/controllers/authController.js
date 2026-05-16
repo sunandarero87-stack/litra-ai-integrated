@@ -129,12 +129,12 @@ const initDefaultUsers = async () => {
 
 const login = async (req, res) => {
     try {
-        let { username, password } = req.body;
+        let { username, password, role: requestedRole } = req.body;
         // Normalize username for case-insensitive matching
         username = String(username || '').trim().toLowerCase();
         
         const sessionId = Date.now().toString() + Math.random().toString(36).substring(2);
-        const user = await User.findOneAndUpdate(
+        let user = await User.findOneAndUpdate(
             { username, password },
             { sessionId },
             { returnDocument: 'after' }
@@ -143,6 +143,18 @@ const login = async (req, res) => {
         if (!user) {
             return res.status(401).json({ error: 'Username atau password salah!' });
         }
+
+        // Special handling for Parent Login: Parent uses Student's account
+        if (requestedRole === 'orang_tua') {
+            if (user.role !== 'siswa') {
+                return res.status(403).json({ error: 'Hanya akun siswa yang dapat diakses oleh Orang Tua.' });
+            }
+            // Return user object with overridden role for frontend identification
+            const parentUser = user.toObject();
+            parentUser.role = 'orang_tua';
+            return res.json({ message: 'Parent login success', user: parentUser });
+        }
+
         res.json({ message: 'Login success', user });
     } catch (err) {
         res.status(500).json({ error: 'Server error' });

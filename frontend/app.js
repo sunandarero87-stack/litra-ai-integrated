@@ -439,6 +439,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---- AUTH ----
+function setLoginRole(role) {
+    document.getElementById('login-role').value = role;
+    document.querySelectorAll('.login-tab').forEach(tab => tab.classList.remove('active'));
+    if (role === 'orang_tua') {
+        document.getElementById('tab-ortu').classList.add('active');
+    } else {
+        document.getElementById('tab-umum').classList.add('active');
+    }
+}
+
 async function handleLogin(e) {
     e.preventDefault();
     const username = document.getElementById('login-username').value.trim();
@@ -451,10 +461,11 @@ async function handleLogin(e) {
     btn.disabled = true;
 
     try {
+        const role = document.getElementById('login-role').value;
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, role })
         });
 
         const data = await res.json();
@@ -476,6 +487,11 @@ async function handleLogin(e) {
             showPage('page-change-password');
         } else if (user.role === 'siswa') {
             showStudentOnboarding();
+        } else if (user.role === 'orang_tua') {
+            showAppShell();
+            requestAnimationFrame(() => {
+                navigateTo('dashboard');
+            });
         } else {
             showAppShell();
             // Use requestAnimationFrame to ensure the UI transition happens before heavy rendering
@@ -652,12 +668,17 @@ function updateSidebar() {
     const nav = document.getElementById('sidebar-nav');
     const role = currentUser.role;
     document.getElementById('sidebar-username').textContent = currentUser.name;
-    document.getElementById('sidebar-role').textContent = role === 'admin' ? 'Administrator' : role === 'guru' ? 'Guru' : 'Siswa';
+    document.getElementById('sidebar-role').textContent = role === 'admin' ? 'Administrator' : role === 'guru' ? 'Guru' : role === 'orang_tua' ? 'Wali Murid' : 'Siswa';
 
     updateAvatar('sidebar-avatar', currentUser);
     let items = '';
 
-    if (role === 'siswa') {
+    if (role === 'orang_tua') {
+        items = `
+            <div class="nav-section">Menu Wali Murid</div>
+            <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-home"></i> Dashboard Monitoring</button>
+            <button class="nav-item" onclick="navigateTo('profile')"><i class="fas fa-user"></i> Profil</button>`;
+    } else if (role === 'siswa') {
         items = `
             <div class="nav-section">Menu Utama</div>
             <button class="nav-item active" onclick="navigateTo('dashboard')"><i class="fas fa-home"></i> Dashboard</button>
@@ -806,7 +827,11 @@ function renderPage(page) {
 
     switch (page) {
         case 'dashboard':
-            role === 'siswa' ? renderStudentDashboard(main) : renderTeacherDashboard(main);
+            if (role === 'orang_tua') {
+                renderParentDashboard(main);
+            } else {
+                role === 'siswa' ? renderStudentDashboard(main) : renderTeacherDashboard(main);
+            }
             break;
         case 'profile':
             renderProfile(main);

@@ -782,6 +782,43 @@ tr:hover td {
     font-size: 0.8rem;
 }
 
+/* Login Tabs */
+.login-tabs {
+    display: flex;
+    background: var(--bg-input);
+    padding: 0.35rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.login-tab {
+    flex: 1;
+    padding: 0.6rem;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.login-tab.active {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.login-tab i {
+    font-size: 0.9rem;
+}
+
 /* Floating decoration shapes */
 .login-decoration {
     position: absolute;

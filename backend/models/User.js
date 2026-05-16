@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     name: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'guru', 'siswa'], required: true },
+    role: { type: String, enum: ['admin', 'guru', 'siswa', 'orang_tua'], required: true },
     kelas: { type: String },
     mapel: { type: String }, // Tambahan field untuk guru: Mata Pelajaran
     mustChangePassword: { type: Boolean, default: true },
