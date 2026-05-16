@@ -5,7 +5,9 @@
  */
 
 function renderParentDashboard(container) {
-    const studentUsername = currentUser.username;
+    // Gunakan linkedStudent jika role adalah orang_tua, jika tidak fallback ke username sendiri (legacy)
+    const studentUsername = currentUser.role === 'orang_tua' ? currentUser.linkedStudent : currentUser.username;
+    
     const progress = getProgress(studentUsername);
     const results = getAssessmentResults();
     const myResult = results[studentUsername] || progress.assessmentResult || { score: 0, total: 10, literasi: 0, numerasi: 0 };
@@ -17,6 +19,10 @@ function renderParentDashboard(container) {
     if (progress.tahap2Complete) overallProgress += 25;
     if (progress.tahap3Complete) overallProgress += 25;
     if (progress.tahap4Complete) overallProgress += 25;
+
+    // Gunakan info siswa dari user object jika tersedia (untuk akun ortu terpisah)
+    const displayName = currentUser.role === 'orang_tua' ? (currentUser.studentName || studentUsername) : currentUser.name;
+    const displayKelas = currentUser.role === 'orang_tua' ? (currentUser.studentKelas || '-') : (currentUser.kelas || '-');
 
     container.innerHTML = `
         <div class="dashboard-parent" style="max-width: 1100px; margin: 0 auto; animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
@@ -31,14 +37,14 @@ function renderParentDashboard(container) {
                             </div>
                             <div>
                                 <h2 style="font-size: 2rem; font-weight: 800; margin: 0; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Monitor Belajar Anak</h2>
-                                <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0;">Pendampingan Belajar Digital untuk <strong>${currentUser.name}</strong></p>
+                                <p style="color: var(--text-secondary); font-size: 1.1rem; margin: 0;">Pendampingan Belajar Digital untuk <strong>${displayName}</strong></p>
                             </div>
                         </div>
                     </div>
                     <div style="display: flex; gap: 1rem;">
                         <div style="text-align: right; margin-right: 1rem; border-right: 1px solid rgba(255,255,255,0.1); padding-right: 1.5rem;">
                             <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Kelas Aktif</div>
-                            <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary-light);">${currentUser.kelas || '-'}</div>
+                            <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary-light);">${displayKelas}</div>
                         </div>
                         <button class="btn btn-primary" onclick="downloadParentReportPDF()" style="padding: 0.8rem 1.8rem; border-radius: 14px; font-weight: 700; box-shadow: 0 10px 20px rgba(26, 115, 232, 0.2); transition: all 0.3s ease;">
                             <i class="fas fa-file-pdf" style="margin-right: 8px;"></i> Laporan Progres

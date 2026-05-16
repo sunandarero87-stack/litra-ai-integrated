@@ -5311,3 +5311,169 @@ window.executeBulkClassEdit = async function(role, btn) {
         btn.innerHTML = '<i class="fas fa-exchange-alt"></i> Eksekusi Edit Massal';
     }
 };
+
+// ---- PARENT ACCOUNT MANAGEMENT ----
+let currentParentAccountPage = 1;
+const parentsPerPage = 15;
+
+function renderParentAccounts(main) {
+    const users = getUsers();
+    const parents = users.filter(u => u.role === 'orang_tua');
+    
+    const totalPages = Math.ceil(parents.length / parentsPerPage) || 1;
+    if (currentParentAccountPage > totalPages) currentParentAccountPage = totalPages;
+    if (currentParentAccountPage < 1) currentParentAccountPage = 1;
+
+    const startIndex = (currentParentAccountPage - 1) * parentsPerPage;
+    const paginatedParents = parents.slice(startIndex, startIndex + parentsPerPage);
+
+    main.innerHTML = `
+        <div class="flex justify-between items-center mb-2" style="flex-wrap:wrap;gap:0.5rem">
+            <h3 style="margin-bottom:0;"><i class="fas fa-user-friends" style="color:var(--primary);"></i> Manajemen Akun Orang Tua (${parents.length})</h3>
+            <div class="flex gap-1" style="align-items:center;">
+                <input type="text" id="search-parent-accounts" class="form-control" style="margin-bottom:0; width:200px; padding:0.4rem;" placeholder="Cari Orang Tua..." onkeyup="filterTable('search-parent-accounts', 'table-parent-accounts')">
+                <button class="btn btn-primary btn-sm" onclick="showAddParentModal()"><i class="fas fa-plus"></i> Tambah Akun Ortu</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="table-container">
+                <table id="table-parent-accounts">
+                    <thead>
+                        <tr>
+                            <th>Username</th><th>Nama Orang Tua</th><th>Tautan Siswa</th><th>Dibuat</th><th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${paginatedParents.map(p => {
+                            const linkedStudentName = p.linkedStudent ? (users.find(u => u.username === p.linkedStudent)?.name || p.linkedStudent) : '<span class="text-danger">Belum Ditautkan</span>';
+                            return `<tr>
+                                <td>${p.username}</td>
+                                <td>${p.name}</td>
+                                <td>${linkedStudentName}</td>
+                                <td>${new Date(p.createdAt).toLocaleDateString('id-ID')}</td>
+                                <td>
+                                    <div class="flex gap-1">
+                                        <button class="btn btn-sm btn-success" onclick="showLinkStudentModal('${p.username}')" title="Tautkan ke Siswa"><i class="fas fa-link"></i> Tautkan</button>
+                                        <button class="btn btn-sm btn-info" onclick="showEditAccountModal('${p.username}', 'orang_tua')" title="Edit Data"><i class="fas fa-pencil-alt"></i></button>
+                                        <button class="btn btn-sm btn-warning" onclick="resetStudentPassword('${p.username}')" title="Reset Password"><i class="fas fa-key"></i></button>
+                                        ${currentUser.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${p.username}')"><i class="fas fa-trash"></i></button>` : ''}
+                                    </div>
+                                </td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="5" class="text-center text-muted">Belum ada akun orang tua</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+            ${totalPages > 1 ? `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1rem; padding: 0.5rem;">
+                <div class="text-muted" style="font-size: 0.9rem;">Halaman ${currentParentAccountPage} dari ${totalPages}</div>
+                <div style="display:flex; gap:0.5rem;">
+                    <button class="btn btn-outline btn-sm" onclick="changeParentPage(-1)" ${currentParentAccountPage === 1 ? 'disabled' : ''}>Prev</button>
+                    <button class="btn btn-outline btn-sm" onclick="changeParentPage(1)" ${currentParentAccountPage === totalPages ? 'disabled' : ''}>Next</button>
+                </div>
+            </div>` : ''}
+        </div>
+        <div id="modal-container-parent"></div>`;
+}
+
+function changeParentPage(delta) {
+    currentParentAccountPage += delta;
+    renderParentAccounts(document.getElementById('main-content'));
+}
+
+function showAddParentModal() {
+    document.getElementById('modal-container-parent').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-plus"></i> Tambah Akun Orang Tua</h2>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <div class="form-group"><label>Username</label><input type="text" id="new-parent-username" placeholder="contoh: ortu_siswa001"></div>
+        <div class="form-group"><label>Nama Lengkap Wali Murid</label><input type="text" id="new-parent-name" placeholder="Nama lengkap orang tua/wali"></div>
+        <div class="form-group"><label>Password Awal</label><input type="text" id="new-parent-password" value="ortu123"></div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+            <button class="btn btn-primary" onclick="addParentAccount()"><i class="fas fa-save"></i> Simpan</button>
+        </div>
+    </div>
+    </div>`;
+}
+
+async function addParentAccount() {
+    const username = document.getElementById('new-parent-username').value.trim();
+    const name = document.getElementById('new-parent-name').value.trim();
+    const password = document.getElementById('new-parent-password').value;
+
+    if (!username || !name || !password) return alert('Semua field wajib diisi!');
+
+    try {
+        const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, name, password, role: 'orang_tua', mustChangePassword: true })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('Akun Orang Tua berhasil dibuat!');
+            await syncUsers();
+            renderParentAccounts(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal membuat akun.');
+        }
+    } catch (err) {
+        alert('Server error.');
+    }
+}
+
+function showLinkStudentModal(parentUsername) {
+    const users = getUsers();
+    const students = users.filter(u => u.role === 'siswa').sort((a,b) => a.name.localeCompare(b.name));
+    
+    const studentOptions = students.map(s => `<option value="${s.username}">${s.name} (${s.kelas || '-'})</option>`).join('');
+
+    document.getElementById('modal-container-parent').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this)this.remove()">
+    <div class="modal">
+        <div class="modal-header">
+            <h2><i class="fas fa-link"></i> Tautkan Orang Tua ke Siswa</h2>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&times;</button>
+        </div>
+        <p class="text-muted mb-1">Pilih siswa yang akan dipantau oleh akun: <strong>${parentUsername}</strong></p>
+        <div class="form-group">
+            <label>Cari & Pilih Siswa</label>
+            <select id="link-student-username" class="form-control" style="width:100%">
+                <option value="">-- Pilih Siswa --</option>
+                ${studentOptions}
+            </select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Batal</button>
+            <button class="btn btn-primary" onclick="linkParentToStudent('${parentUsername}')"><i class="fas fa-check"></i> Tautkan Sekarang</button>
+        </div>
+    </div>
+    </div>`;
+}
+
+async function linkParentToStudent(parentUsername) {
+    const studentUsername = document.getElementById('link-student-username').value;
+    if (!studentUsername) return alert('Pilih siswa terlebih dahulu!');
+
+    try {
+        const res = await fetch('/api/auth/link-student', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ parentUsername, studentUsername })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert(data.message);
+            await syncUsers();
+            renderParentAccounts(document.getElementById('main-content'));
+        } else {
+            alert(data.error || 'Gagal menautkan.');
+        }
+    } catch (err) {
+        alert('Server error.');
+    }
+}

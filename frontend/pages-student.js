@@ -169,6 +169,28 @@ function escapeHtml(text) {
 }
 
 function renderTahap1(main) {
+    const progress = getProgress(currentUser.username);
+    // Jika siswa sudah lulus Tahap 1 (tahap1Complete) dan belum menyelesaikan Tahap 2, maka Tahap 1 dikunci
+    if (progress.tahap1Complete && !progress.tahap2Complete) {
+        main.innerHTML = `
+        <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background:linear-gradient(145deg, var(--bg-card), #0f172a); border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg);">
+            <div style="width:100px; height:100px; background:rgba(255,193,7,0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem;">
+                <i class="fas fa-lock" style="font-size:3rem; color:#ffc107; filter:drop-shadow(0 0 10px rgba(255,193,7,0.4));"></i>
+            </div>
+            <h2 style="font-size:1.75rem; font-weight:800; color:white;">Tahap 1 Terkunci</h2>
+            <p class="text-muted mt-1" style="max-width:450px; margin-left:auto; margin-right:auto; line-height:1.6;">
+                Kamu telah menyelesaikan eksplorasi materi dan saat ini sedang berada di <strong>Tahap 2 (Refleksi Mandiri)</strong>. 
+                <br><br>Untuk menjaga fokus belajarmu, akses materi Tahap 1 dikunci sementara hingga kamu menyelesaikan refleksi.
+            </p>
+            <div class="mt-3">
+                <button class="btn btn-primary" onclick="navigateTo('tahap2')" style="padding:0.8rem 2rem; font-weight:600; border-radius:12px;">
+                    <i class="fas fa-arrow-right"></i> Lanjutkan ke Tahap 2
+                </button>
+            </div>
+        </div>`;
+        return;
+    }
+
     let materials = getMaterials();
     // Filter materials by class: show if 'Semua Kelas' or matches student's base grade (e.g. 7.6 -> 7 matches 7.7 -> 7)
     materials = materials.filter(m => {

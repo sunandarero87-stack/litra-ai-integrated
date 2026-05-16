@@ -21,6 +21,7 @@ exports.syncAll = async (req, res) => {
             studentProgress[p.username] = {
                 tahap: p.tahap,
                 tahap1Complete: p.tahap1Complete,
+                tahap1Score: p.tahap1Score, // Added missing field
                 tahap2Complete: p.tahap2Complete,
                 tahap3Complete: p.tahap3Complete,
                 tahap4Complete: p.tahap4Complete,
@@ -30,6 +31,7 @@ exports.syncAll = async (req, res) => {
                 tahap4Details: p.tahap4Details,
                 aiReadiness: p.aiReadiness,
                 isReady: p.isReady,
+                reflectionAnswers: p.reflectionAnswers || [], // Added
                 // Only send generatedAssessment for individual student sync to keep payload small
                 generatedAssessment: username ? p.generatedAssessment : []
             };

@@ -700,6 +700,7 @@ function updateSidebar() {
             
             <div class="nav-section">Manajemen Siswa</div>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
+            <button class="nav-item" onclick="navigateTo('parent-accounts')"><i class="fas fa-user-friends"></i> Akun Orang Tua</button>
             <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Siswa</button>
             
             <div class="nav-section">Profil</div>
@@ -724,6 +725,7 @@ function updateSidebar() {
             <div class="nav-section">Akun User</div>
             <button class="nav-item" onclick="navigateTo('teacher-accounts')"><i class="fas fa-user-tie"></i> Akun Guru</button>
             <button class="nav-item" onclick="navigateTo('student-accounts')"><i class="fas fa-users"></i> Akun Siswa</button>
+            <button class="nav-item" onclick="navigateTo('parent-accounts')"><i class="fas fa-user-friends"></i> Akun Orang Tua</button>
             
             <div class="nav-section">Monitoring</div>
             <button class="nav-item" onclick="navigateTo('monitoring')"><i class="fas fa-desktop"></i> Status Online</button>
@@ -794,6 +796,7 @@ function navigateTo(page) {
         'schedule-mgmt': 'Penjadwalan Waktu Akses',
         'banksoal': 'Bank Soal (HOTS)',
         'student-accounts': 'Manajemen Akun Siswa',
+        'parent-accounts': 'Manajemen Akun Orang Tua',
         'teacher-accounts': 'Manajemen Akun Guru',
         'chat-history': 'Riwayat Chat Siswa',
         'monitoring': 'Monitoring Status Aktif',
@@ -873,6 +876,9 @@ function renderPage(page) {
             break;
         case 'student-accounts':
             renderStudentAccounts(main);
+            break;
+        case 'parent-accounts':
+            if (typeof renderParentAccounts === 'function') renderParentAccounts(main);
             break;
         case 'teacher-accounts':
             if (typeof renderTeacherAccounts === 'function') renderTeacherAccounts(main);

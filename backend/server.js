@@ -98,6 +98,7 @@ app.post('/api/auth/login', authController.login);
 app.post('/api/auth/change-password', authController.changePassword);
 app.post('/api/auth/reset-password', authController.resetUserPassword);
 app.post('/api/auth/heartbeat', authController.heartbeat);
+app.post('/api/auth/link-student', authController.linkStudent);
 app.get('/api/users', authController.getUsers);
 app.post('/api/users', authController.createUsers);
 app.post('/api/users/upload', upload.single('file'), authController.uploadExcel);

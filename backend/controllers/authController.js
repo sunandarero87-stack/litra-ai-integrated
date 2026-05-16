@@ -144,21 +144,42 @@ const login = async (req, res) => {
             return res.status(401).json({ error: 'Username atau password salah!' });
         }
 
-        // Special handling for Parent Login: Parent uses Student's account
+        // Special handling for Parent Login
         if (requestedRole === 'orang_tua') {
-            if (user.role !== 'siswa') {
-                return res.status(403).json({ error: 'Hanya akun siswa yang dapat diakses oleh Orang Tua.' });
+            // Case 1: Logging in with a dedicated Parent Account
+            if (user.role === 'orang_tua') {
+                if (!user.linkedStudent) {
+                    return res.status(403).json({ error: 'Akun Orang Tua ini belum ditautkan ke akun siswa manapun. Silakan hubungi Guru/Admin.' });
+                }
+                
+                // Fetch the linked student's info to pass to the frontend
+                const student = await User.findOne({ username: user.linkedStudent, role: 'siswa' });
+                if (!student) {
+                    return res.status(404).json({ error: 'Siswa yang ditautkan tidak ditemukan.' });
+                }
+
+                // Generate unique session ID for parent
+                const parentSessionId = Date.now().toString() + Math.random().toString(36).substring(2);
+                await User.updateOne({ _id: user._id }, { $set: { parentSessionId, sessionId: parentSessionId } });
+                
+                const parentData = user.toObject();
+                parentData.sessionId = parentSessionId;
+                // Add student info for dashboard context
+                parentData.studentName = student.name;
+                parentData.studentKelas = student.kelas;
+                parentData.studentPhoto = student.photo;
+
+                return res.json({ message: 'Parent login success', user: parentData });
+            } 
+            
+            // Case 2: Legacy/Shared account (Siswa account with Ortu role)
+            // The user wants "Hanya orang tua yang ditautkan akunnya bisa login", 
+            // so we should restrict shared account login if we want to enforce the new system.
+            if (user.role === 'siswa') {
+                return res.status(403).json({ error: 'Gunakan Akun Orang Tua khusus yang telah diberikan oleh Guru/Admin.' });
             }
-            
-            // Generate unique session ID for parent
-            const parentSessionId = Date.now().toString() + Math.random().toString(36).substring(2);
-            await User.updateOne({ _id: user._id }, { $set: { parentSessionId } });
-            
-            // Return user object with overridden role and the specific parent session ID
-            const parentUser = user.toObject();
-            parentUser.role = 'orang_tua';
-            parentUser.sessionId = parentSessionId; // Ensure frontend uses this session ID
-            return res.json({ message: 'Parent login success', user: parentUser });
+
+            return res.status(403).json({ error: 'Peran tidak sesuai.' });
         }
 
         res.json({ message: 'Login success', user });
@@ -331,6 +352,29 @@ const deleteUser = async (req, res) => {
     }
 };
 
+const linkStudent = async (req, res) => {
+    try {
+        let { parentUsername, studentUsername } = req.body;
+        parentUsername = String(parentUsername || '').trim().toLowerCase();
+        studentUsername = String(studentUsername || '').trim().toLowerCase();
+
+        const student = await User.findOne({ username: studentUsername, role: 'siswa' });
+        if (!student) return res.status(404).json({ error: 'Siswa tidak ditemukan' });
+
+        const parent = await User.findOneAndUpdate(
+            { username: parentUsername, role: 'orang_tua' },
+            { linkedStudent: studentUsername },
+            { new: true }
+        );
+        if (!parent) return res.status(404).json({ error: 'Akun Orang Tua tidak ditemukan' });
+
+        res.json({ success: true, message: `Berhasil menautkan Orang Tua ke Siswa: ${student.name}`, parent });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+
 const uploadExcel = async (req, res) => {
     try {
         if (!req.file) {
@@ -467,14 +511,15 @@ module.exports = {
     initDefaultUsers,
     login,
     changePassword,
-    updateProfile,
     getUsers,
     createUsers,
     deleteUser,
+    updateUser,
+    updateProfile,
     uploadExcel,
     bulkDeleteUsers,
-    heartbeat,
+    bulkUpdateClass,
     resetUserPassword,
-    updateUser,
-    bulkUpdateClass
+    heartbeat,
+    linkStudent
 };

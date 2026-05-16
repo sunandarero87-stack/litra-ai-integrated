@@ -4,6 +4,7 @@ const progressSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     tahap: { type: Number, default: 1 },
     tahap1Complete: { type: Boolean, default: false },
+    tahap1Score: { type: Number, default: 0 },
     tahap2Complete: { type: Boolean, default: false },
     tahap3Complete: { type: Boolean, default: false },
     tahap4Complete: { type: Boolean, default: false },

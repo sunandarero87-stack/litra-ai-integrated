@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ['admin', 'guru', 'siswa', 'orang_tua'], required: true },
     kelas: { type: String },
     mapel: { type: String }, // Tambahan field untuk guru: Mata Pelajaran
+    linkedStudent: { type: String }, // Username of the linked student
     mustChangePassword: { type: Boolean, default: true },
     photo: { type: String },
     sessionId: { type: String },
