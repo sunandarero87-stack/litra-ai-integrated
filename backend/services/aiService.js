@@ -136,7 +136,7 @@ async function generateReflections(username, chatHistory) {
         const payload = {
             messages: [
                 { role: "system", content: "Kamu adalah AI Pakar Pedagogi yang merumuskan pertanyaan refleksi personal. Gunakan BAHASA INDONESIA BAKU (EYD) yang ramah dan suportif." },
-                { role: "user", content: `Analisis riwayat chat berikut dan buat 5 pertanyaan refleksi JSON array murni: ${historyText}` }
+                { role: "user", content: `Analisis riwayat chat berikut dan buat 5 pertanyaan refleksi unik. Output WAJIB dalam bentuk JSON array murni yang berisi STRING (contoh: ["pertanyaan1", "pertanyaan2", ...]). Jangan gunakan objek di dalam array: ${historyText}` }
             ]
         };
         const response = await requestWithFallback(payload, [MODEL_FAST, AI_MODEL]);

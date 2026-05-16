@@ -1716,21 +1716,24 @@ async function renderTahap2(main) {
         </div>
         <div class="card mt-2">
             <form id="reflection-form">
-                ${reflectionQuestions.map((q, i) => `
-                <div class="question-group mb-3" style="width: 100%; display: flex; flex-direction: column;">
-                    <label class="d-block mb-2"><strong>${i + 1}. ${q}</strong></label>
-                    <textarea 
-                        class="form-input reflection-input" 
-                        rows="5"
-                        style="width: 100%; min-height: 120px; box-sizing: border-box; resize: vertical;"
-                        onpaste="return false;" 
-                        oncopy="return false;" 
-                        oncontextmenu="return false;"
-                        data-question="${q}"
-                        placeholder="Ketik jawabanmu di sini... (Copy-paste dilarang)"
-                        required
-                    ></textarea>
-                </div>`).join('')}
+                ${reflectionQuestions.map((q, i) => {
+                    const questionText = typeof q === 'object' ? (q.question || q.pertanyaan || q.text || JSON.stringify(q)) : q;
+                    return `
+                    <div class="question-group mb-3" style="width: 100%; display: flex; flex-direction: column;">
+                        <label class="d-block mb-2"><strong>${i + 1}. ${questionText}</strong></label>
+                        <textarea 
+                            class="form-input reflection-input" 
+                            rows="5"
+                            style="width: 100%; min-height: 120px; box-sizing: border-box; resize: vertical;"
+                            onpaste="return false;" 
+                            oncopy="return false;" 
+                            oncontextmenu="return false;"
+                            data-question="${questionText}"
+                            placeholder="Ketik jawabanmu di sini... (Copy-paste dilarang)"
+                            required
+                        ></textarea>
+                    </div>`;
+                }).join('')}
                 <div class="quiz-nav">
                     <button type="button" class="btn btn-outline" onclick="navigateTo('dashboard')">Batal</button>
                     <button type="submit" class="btn btn-success" id="submit-reflection">
