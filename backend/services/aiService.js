@@ -232,7 +232,7 @@ async function analyzeHabits(username, habitAnswers) {
             messages: [
                 { 
                     role: "system", 
-                    content: `Kamu adalah sistem analis karakter dan perilaku siswa yang bijaksana. Tugasmu adalah mengevaluasi penerapan "7 Kebiasaan Hebat Anak Indonesia" berdasarkan jawaban esai siswa.
+                    content: `Kamu adalah Pakar Karakter dan Motivator Siswa NARA-AI. Tugasmu adalah mengevaluasi penerapan "7 Kebiasaan Hebat Anak Indonesia" berdasarkan jawaban esai siswa.
                     
 7 Kebiasaan Hebat tersebut adalah:
 1. Bangun Pagi (Kedisiplinan waktu)
@@ -243,18 +243,38 @@ async function analyzeHabits(username, habitAnswers) {
 6. Bermasyarakat (Kepedulian sosial/gotong royong)
 7. Tidur Cepat (Istirahat yang cukup)
 
-Kriteria Penilaian:
-- Skor (0-100): Berikan skor tinggi jika siswa menunjukkan konsistensi.
-- Analisis (Feedback Umum): Bahasa memotivasi.
-- Details (Saran Spesifik): 3-5 poin saran konkret.` 
+INSTRUKSI PENTING:
+1. **Verifikasi Relevansi**: Cek apakah jawaban siswa benar-benar menjawab pertanyaan tentang kebiasaan tersebut atau hanya asal-asalan/tidak relevan (misal: hanya ketikan acak, kata-kata kasar, atau curhat yang tidak nyambung).
+2. **Jika Tidak Relevan**: Berikan skor rendah (10-30), namun berikan MOTIVASI yang sangat kuat, lembut, dan menyentuh hati agar siswa mau berubah dan serius melakukan refleksi diri. Jangan menghakimi, tapi rangkul mereka dengan kata-kata.
+3. **Jika Relevan**: Berikan apresiasi yang tulus (Kelebihan), identifikasi apa yang masih bisa ditingkatkan (Kekurangan), dan berikan skor objektif (60-100).
+
+WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD) yang sangat ramah, inspiratif, dan memotivasi.
+
+OUTPUT WAJIB DALAM FORMAT JSON BERIKUT:
+{
+  "score": number (0-100),
+  "isRelevant": boolean,
+  "analysis": "Umpan balik utama yang berisi evaluasi dan motivasi mendalam...",
+  "details": [
+    "Saran/Pesan motivasi 1...",
+    "Saran/Pesan motivasi 2...",
+    "Saran/Pesan motivasi 3..."
+  ]
+}` 
                 },
-                { role: "user", content: `Analisislah jawaban esai siswa berikut ini:\n${JSON.stringify(habitAnswers)}` }
+                { role: "user", content: `Analisislah jawaban esai refleksi karakter siswa berikut ini:\n${JSON.stringify(habitAnswers)}` }
             ]
         };
         const response = await requestWithFallback(payload, [MODEL_HEAVY, MODEL_FALLBACK]);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
-        return { score: 70, analysis: "Terus tingkatkan kebiasaan positifmu.", details: ["Disiplin bangun pagi.", "Jaga kesehatan.", "Semangat belajar."] };
+        console.error("Habit Analysis Error:", e);
+        return { 
+            score: 70, 
+            isRelevant: true,
+            analysis: "Kamu memiliki potensi besar untuk menjadi anak yang hebat. Teruslah konsisten menjalankan 7 kebiasaan positif setiap hari.", 
+            details: ["Disiplin adalah kunci kesuksesan.", "Jaga kesehatanmu karena itu investasi masa depan.", "Tetaplah menjadi anak yang baik dan gemar menolong."] 
+        };
     }
 }
 

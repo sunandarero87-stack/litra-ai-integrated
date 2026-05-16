@@ -2258,6 +2258,52 @@ async function submitAssessment(autoRedirect = false) {
     </div>`;
 }
 
+/**
+ * Format Habit analysis for Stage 4
+ */
+function formatHabitAnalysis(analysis, details) {
+    if (!analysis) return '<p class="text-muted">Analisis tidak tersedia.</p>';
+
+    // Jika analysis adalah object (format baru)
+    if (typeof analysis === 'object' && analysis.analysis) {
+        const isIrrelevant = analysis.isRelevant === false;
+        return `
+            <div class="habit-analysis-container">
+                <div class="analysis-main-card mb-3" style="background: ${isIrrelevant ? 'rgba(var(--danger-rgb), 0.05)' : 'rgba(var(--success-rgb), 0.05)'}; padding: 1.5rem; border-radius: 16px; border: 1px solid ${isIrrelevant ? 'var(--danger)' : 'var(--success)'};">
+                    <h4 style="color: ${isIrrelevant ? 'var(--danger)' : 'var(--success)'}; margin-bottom: 0.5rem; font-weight: 800;">
+                        <i class="fas ${isIrrelevant ? 'fa-exclamation-circle' : 'fa-check-circle'}"></i> 
+                        ${isIrrelevant ? 'Pesan Motivasi NARA' : 'Analisis Karakter NARA'}
+                    </h4>
+                    <p style="line-height: 1.6; color: var(--text-primary); font-size: 0.95rem; text-align: justify;">${analysis.analysis}</p>
+                </div>
+                
+                ${details && details.length > 0 ? `
+                <div class="analysis-details">
+                    <h5 style="margin-bottom: 0.75rem; color: var(--primary-light); font-weight: 700;">
+                        <i class="fas fa-lightbulb"></i> ${isIrrelevant ? 'Langkah Kecil untuk Kamu:' : 'Saran Pengembangan Diri:'}
+                    </h5>
+                    <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.75rem;">
+                        ${details.map(d => `
+                            <li style="background: var(--bg-input); padding: 0.8rem 1rem; border-radius: 10px; border-left: 3px solid var(--primary-light); font-size: 0.9rem;">
+                                ${d}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>` : ''}
+            </div>
+        `;
+    }
+
+    // Fallback untuk string (format lama)
+    const detailsHtml = (details || []).map(d => `<li>${d}</li>`).join('');
+    return `
+        <div class="habit-analysis-legacy">
+            <p class="text-center" style="line-height: 1.6;">${analysis}</p>
+            ${detailsHtml ? `<ul class="mt-2" style="max-width:600px;margin:0 auto;text-align:left; color: var(--text-secondary); font-size: 0.9rem;">${detailsHtml}</ul>` : ''}
+        </div>
+    `;
+}
+
 // ---- TAHAP 4: REFLEKSI 7 KEBIASAAN HEBAT ----
 function renderTahap4(main) {
     const progress = getProgress(currentUser.username);
@@ -2267,20 +2313,31 @@ function renderTahap4(main) {
     }
 
     if (progress.tahap4Complete) {
-        const details = (progress.tahap4Details || []).map(d => `<li>${d}</li>`).join('');
         main.innerHTML = `
-        <div class="card fade-in">
-            <h3 class="card-title text-center mb-2">🎉 Selamat! Anda telah menyelesaikan Tahap 4</h3>
-            <div class="score-display text-center my-2">
-                <div class="score-circle pass mx-auto" style="width:120px;height:120px;font-size:2rem">
+        <div class="card fade-in" style="max-width: 800px; margin: 0 auto;">
+            <div class="text-center mb-3">
+                <h3 class="card-title" style="font-size: 1.5rem; font-weight: 800; background: var(--gradient-primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎉 Tahap 4 Selesai!</h3>
+                <p class="text-muted">Terima kasih telah berbagi refleksimu hari ini.</p>
+            </div>
+
+            <div class="score-display text-center my-3">
+                <div class="score-circle pass mx-auto" style="width:130px; height:130px; font-size: 2.2rem; border-width: 6px; box-shadow: 0 0 20px rgba(var(--success-rgb), 0.3);">
                     ${progress.tahap4Score}
                 </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Skor Karakter</p>
             </div>
-            <p class="text-center"><strong>Analisis AI:</strong> ${progress.tahap4Analysis}</p>
-            ${details ? `<ul class="mt-2" style="max-width:600px;margin:0 auto;text-align:left;">${details}</ul>` : ''}
-            <div class="text-center mt-3" style="display:flex; gap:1rem; justify-content:center;">
-                <button class="btn btn-outline" onclick="navigateTo('dashboard')">Kembali ke Dashboard</button>
-                <button class="btn btn-success" onclick="downloadProgressReportPDF()"><i class="fas fa-file-pdf"></i> Unduh Laporan PDF</button>
+
+            <div class="mt-3">
+                ${formatHabitAnalysis(progress.tahap4Analysis, progress.tahap4Details)}
+            </div>
+
+            <div class="text-center mt-4" style="display:flex; gap:1rem; justify-content:center; flex-wrap: wrap;">
+                <button class="btn btn-outline" onclick="navigateTo('dashboard')">
+                    <i class="fas fa-home"></i> Dashboard
+                </button>
+                <button class="btn btn-success" onclick="downloadProgressReportPDF()" style="background: var(--gradient-success);">
+                    <i class="fas fa-file-pdf"></i> Unduh Laporan PDF
+                </button>
             </div>
         </div>`;
         return;
@@ -2341,7 +2398,7 @@ async function submitHabitReflections(e) {
             updateProgress(currentUser.username, {
                 tahap4Complete: true,
                 tahap4Score: data.analysis.score || 0,
-                tahap4Analysis: data.analysis.analysis || "Analisis berhasil diselesaikan.",
+                tahap4Analysis: data.analysis, // Simpan seluruh objek analisis
                 tahap4Details: data.analysis.details || []
             });
             renderTahap4(document.getElementById('main-content'));
