@@ -1011,56 +1011,65 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
 
         if (data.success) {
             let feedbackText = data.result;
-            const scoreMatch = feedbackText.match(/\[SKOR:\s*(\d+)\]/i);
-            const score = scoreMatch ? parseInt(scoreMatch[1]) : 0;
+            
+            // Regex lebih tangguh untuk menangkap [SKOR: X], Skor: X, atau Skor: X/10
+            const scoreMatch = feedbackText.match(/(?:\[SKOR:|SKOR:|Skor:)\s*(\d+)(?:\/10)?/i);
+            let score = 0;
+            if (scoreMatch) {
+                score = parseInt(scoreMatch[1]);
+                // Jika skor dalam skala 10 (misal 8/10), konversi ke skala 100
+                if (feedbackText.includes(`${score}/10`)) {
+                    score = score * 10;
+                }
+                // Pastikan skor maksimal 100
+                if (score > 100) score = 100;
+            }
 
-            // Hapus tag [SKOR: X] dari teks yang ditampilkan
-            feedbackText = feedbackText.replace(/\[SKOR:\s*\d+\]/gi, '').trim();
+            // Hapus tag skor dari teks yang ditampilkan agar bersih
+            feedbackText = feedbackText.replace(/\[SKOR:\s*\d+\]/gi, '').replace(/Skor:\s*\d+(\/10)?/gi, '').trim();
 
-            if (score >= 75) {
-                // ✅ LULUS: tampilkan tombol lanjut + countdown otomatis
+            if (score >= 80) {
+                // ✅ HIJAU (80-100): Lanjut otomatis tanpa syarat
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'inline-block';
                 localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
 
-                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#1a7a4a,#22c55e);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
-                    <i class="fas fa-star" style="font-size:1.4rem;"></i>
-                    <div style="font-size:1rem;font-weight:700;margin-top:0.3rem;">Luar Biasa! Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Kamu berhasil! Menuju Tahap 2 dalam beberapa detik... 🎉</div>
+                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#166534,#22c55e);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(34,197,94,0.3);">
+                    <i class="fas fa-check-circle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
+                    <div style="font-size:1.1rem;font-weight:800;">Luar Biasa! Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Pemahamanmu sangat matang. Menuju Tahap 2 dalam beberapa detik... 🎉</div>
                 </div>`;
 
-                // Mulai hitungan mundur hanya jika LULUS
                 setTimeout(() => {
                     startChatbotCountdown(score);
                 }, 1500);
 
             } else if (score >= 50) {
-                // ⚠️ MENENGAH (50-74): UI Kuning, bisa lanjut tapi harus manual klik (tidak ada countdown)
+                // ⚠️ KUNING (50-79): Bisa lanjut atau uji ulang (manual)
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'inline-block';
                 localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
 
-                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#ca8a04,#eab308);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
-                    <i class="fas fa-exclamation-circle" style="font-size:1.4rem;"></i>
-                    <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Pemahamanmu cukup baik! Kamu bisa lanjut ke Tahap 2, atau menguji ulang pemahamanmu.</div>
+                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#a16207,#eab308);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(234,179,8,0.3);">
+                    <i class="fas fa-exclamation-triangle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
+                    <div style="font-size:1.1rem;font-weight:800;">Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Pemahamanmu sudah cukup. Kamu bisa lanjut ke Tahap 2 sekarang, atau tetap di sini untuk mengulang materi dan uji ulang agar lebih maksimal.</div>
                 </div>`;
 
-                // Tampilkan pilihan: Kembali, Uji Ulang, atau Lanjut
                 setTimeout(() => {
                     showGagalButtons(score);
-                }, 600);
+                }, 800);
 
             } else {
-                // ❌ BELUM LULUS (<50): UI Merah → NARA-AI kirim pertanyaan pemantik otomatis
+                // ❌ MERAH (<50): Tidak bisa lanjut, wajib remedial/penjelasan ulang
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'none';
                 localStorage.removeItem('tahap1_ready_' + currentUser.username);
 
-                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#7f1d1d,#ef4444);border-radius:10px;padding:0.8rem 1rem;color:white;text-align:center;margin-top:0.5rem;">
-                    <i class="fas fa-times-circle" style="font-size:1.4rem;"></i>
-                    <div style="font-size:0.95rem;font-weight:700;margin-top:0.3rem;">Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.82rem;opacity:0.9;margin-top:0.2rem;">Yuk, kita perkuat pemahamanmu dulu sebelum uji ulang! 💪</div>
+                feedbackText += `<br><br><div style="background:linear-gradient(135deg,#991b1b,#ef4444);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(239,68,68,0.3);">
+                    <i class="fas fa-times-circle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
+                    <div style="font-size:1.1rem;font-weight:800;">Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Mari kita pelajari kembali bagian ini. Tenang, NARA-AI akan membantumu memahami inti materinya sebelum uji ulang. 💪</div>
                 </div>`;
 
                 appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
@@ -1070,12 +1079,11 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 historiesTmp[currentUser.username].push({ role: 'bot', text: feedbackText, time: new Date().toISOString() });
                 saveChatHistories(historiesTmp);
 
-                // Kirim pertanyaan pemantik otomatis setelah jeda
                 setTimeout(async () => {
                     const pemantikMsg = `[MODE PEMANTIK REMEDIASI] Siswa mendapat skor ${score}% pada uji pemahaman — di bawah nilai minimum. Mula-mula berikan penjelasan ringkas yang mudah dipahami tentang konsep materi tersebut. SETELAH penjelasan, berikan SATU pertanyaan pemantik (Socratic) yang relevan untuk mengajak siswa berpikir mandiri. Mulailah dengan kalimat yang menyemangati siswa.`;
                     await sendPemantikRemediasi(pemantikMsg, teacherPhoto);
                 }, 1200);
-                return; // Jangan append feedbackText dua kali
+                return;
             }
 
             appendFloatingMessage('bot', formatMessageLocal(feedbackText), teacherPhoto);
