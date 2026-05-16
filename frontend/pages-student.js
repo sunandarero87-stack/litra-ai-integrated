@@ -1033,6 +1033,12 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'inline-block';
                 localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
+                
+                // Simpan progres ke server
+                updateProgress(currentUser.username, { 
+                    tahap1Score: score, 
+                    tahap1Complete: true 
+                });
 
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#166534,#22c55e);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(34,197,94,0.3);">
                     <i class="fas fa-check-circle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
@@ -1050,6 +1056,12 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 if (btnLanjut) btnLanjut.style.display = 'inline-block';
                 localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
 
+                // Simpan progres ke server (Bisa lanjut)
+                updateProgress(currentUser.username, { 
+                    tahap1Score: score, 
+                    tahap1Complete: true 
+                });
+
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#a16207,#eab308);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(234,179,8,0.3);">
                     <i class="fas fa-exclamation-triangle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
                     <div style="font-size:1.1rem;font-weight:800;">Skor Pemahaman: ${score}%</div>
@@ -1065,6 +1077,12 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 const btnLanjut = document.getElementById('btn-lanjut-tahap2');
                 if (btnLanjut) btnLanjut.style.display = 'none';
                 localStorage.removeItem('tahap1_ready_' + currentUser.username);
+
+                // Tetap simpan skor merah agar terpantau orang tua
+                updateProgress(currentUser.username, { 
+                    tahap1Score: score, 
+                    tahap1Complete: false 
+                });
 
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#991b1b,#ef4444);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(239,68,68,0.3);">
                     <i class="fas fa-times-circle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>

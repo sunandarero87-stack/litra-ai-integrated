@@ -57,7 +57,19 @@ function renderParentDashboard(container) {
                         </span>
                     </div>
                     <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Tahap 1: Eksplorasi</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;">Anak Anda telah membaca materi dan berdiskusi interaktif dengan NARA-AI.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.75rem;">Anak Anda telah membaca materi dan berdiskusi interaktif dengan NARA-AI.</p>
+                    
+                    ${progress.tahap1Score !== undefined ? `
+                        <div style="display: flex; align-items: center; gap: 0.8rem; background: rgba(0,0,0,0.2); padding: 0.5rem 0.8rem; border-radius: 8px;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.7rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Skor Pemahaman</div>
+                                <div class="progress-bar" style="height: 6px;">
+                                    <div class="progress-fill" style="width: ${progress.tahap1Score}%; background: ${progress.tahap1Score >= 80 ? 'var(--gradient-success)' : (progress.tahap1Score >= 50 ? 'var(--gradient-accent)' : 'var(--gradient-danger)')};"></div>
+                                </div>
+                            </div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: ${progress.tahap1Score >= 80 ? 'var(--success)' : (progress.tahap1Score >= 50 ? 'var(--accent)' : 'var(--danger)')};">${progress.tahap1Score}%</div>
+                        </div>
+                    ` : ''}
                 </div>
 
                 <!-- Tahap 2 Card -->
