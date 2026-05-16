@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
     mustChangePassword: { type: Boolean, default: true },
     photo: { type: String },
     sessionId: { type: String },
+    parentSessionId: { type: String }, // Added for simultaneous parent login
     createdAt: { type: Date, default: Date.now },
     lastSeen: { type: Date, default: Date.now }
 });

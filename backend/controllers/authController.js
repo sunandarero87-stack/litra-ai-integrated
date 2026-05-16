@@ -149,9 +149,15 @@ const login = async (req, res) => {
             if (user.role !== 'siswa') {
                 return res.status(403).json({ error: 'Hanya akun siswa yang dapat diakses oleh Orang Tua.' });
             }
-            // Return user object with overridden role for frontend identification
+            
+            // Generate unique session ID for parent
+            const parentSessionId = Date.now().toString() + Math.random().toString(36).substring(2);
+            await User.updateOne({ _id: user._id }, { $set: { parentSessionId } });
+            
+            // Return user object with overridden role and the specific parent session ID
             const parentUser = user.toObject();
             parentUser.role = 'orang_tua';
+            parentUser.sessionId = parentSessionId; // Ensure frontend uses this session ID
             return res.json({ message: 'Parent login success', user: parentUser });
         }
 
@@ -426,16 +432,25 @@ const bulkDeleteUsers = async (req, res) => {
 
 const heartbeat = async (req, res) => {
     try {
-        const { username, sessionId } = req.body;
+        const { username, sessionId, role } = req.body;
         if (!username) return res.status(400).json({ error: 'Username required' });
         
         const user = await User.findOne({ username });
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        // Jika sessionId tidak cocok, berarti ada login baru di tempat lain
         // Pengecualian: Admin dan Guru diizinkan memiliki beberapa sesi/tab untuk memudahkan manajemen
-        if (user.role === 'siswa' && sessionId && user.sessionId && user.sessionId !== sessionId) {
-            return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Akun Anda sedang digunakan di perangkat lain. Sesi ini telah berakhir.' });
+        if (user.role === 'siswa') {
+            if (role === 'orang_tua') {
+                // Periksa session ID khusus orang tua
+                if (sessionId && user.parentSessionId && user.parentSessionId !== sessionId) {
+                    return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Akun Orang Tua ini telah digunakan di perangkat lain.' });
+                }
+            } else {
+                // Periksa session ID khusus siswa
+                if (sessionId && user.sessionId && user.sessionId !== sessionId) {
+                    return res.status(401).json({ error: 'SESSION_EXPIRED', message: 'Akun Siswa Anda sedang digunakan di perangkat lain. Sesi ini telah berakhir.' });
+                }
+            }
         }
 
         await User.findOneAndUpdate(

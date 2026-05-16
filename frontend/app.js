@@ -270,6 +270,7 @@ function getProgress(username) {
         return {
             tahap: 1,
             tahap1Complete: false,
+            tahap1Score: 0,
             tahap2Complete: false,
             tahap2Score: 0,
             tahap3Complete: false,
@@ -325,7 +326,8 @@ setInterval(async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     username: currentUser.username,
-                    sessionId: currentUser.sessionId
+                    sessionId: currentUser.sessionId,
+                    role: currentUser.role
                 })
             });
 
