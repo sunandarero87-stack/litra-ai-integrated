@@ -10,11 +10,7 @@ const chatLogSchema = new mongoose.Schema({
         completion_tokens: { type: Number },
         total_tokens: { type: Number }
     },
-    metadata: {
-        stage: { type: Number },
-        selectedMaterial: { type: String },
-        violations: { type: Boolean, default: false }
-    },
+    metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
     timestamp: { type: Date, default: Date.now }
 });
 

@@ -132,17 +132,41 @@ TAHAP: ${stage}`;
 
 async function generateReflections(username, chatHistory) {
     try {
-        const historyText = chatHistory.map(m => `${m.role}: ${m.content}`).join('\n');
+        // Cari pesan terakhir siswa yang merupakan jawaban uji pemahaman (berdasarkan metadata jika ada, atau pesan user terakhir)
+        const understandingAnswer = [...chatHistory].reverse().find(m => m.metadata && m.metadata.type === 'understanding_test_answer') 
+                                    || [...chatHistory].reverse().find(m => m.role === 'user');
+        
+        const contextText = understandingAnswer 
+            ? `Jawaban Siswa pada Uji Pemahaman: "${understandingAnswer.content}"` 
+            : `Ringkasan diskusi: ${chatHistory.slice(-5).map(m => m.content).join(' ')}`;
+
         const payload = {
             messages: [
-                { role: "system", content: "Kamu adalah AI Pakar Pedagogi yang merumuskan pertanyaan refleksi personal. Gunakan BAHASA INDONESIA BAKU (EYD) yang ramah dan suportif." },
-                { role: "user", content: `Analisis riwayat chat berikut dan buat 5 pertanyaan refleksi unik. Output WAJIB dalam bentuk JSON array murni yang berisi STRING (contoh: ["pertanyaan1", "pertanyaan2", ...]). Jangan gunakan objek di dalam array: ${historyText}` }
+                { 
+                    role: "system", 
+                    content: "Kamu adalah Pakar Pedagogi NARA-AI. Tugasmu adalah merumuskan 5 pertanyaan refleksi yang sangat personal dan mendalam berdasarkan JAWABAN UJI PEMAHAMAN siswa. Pertanyaan harus memicu pemikiran kritis tentang bagaimana siswa akan menerapkan materi tersebut dalam kehidupan nyata atau pandangan pribadinya. Gunakan BAHASA INDONESIA BAKU (EYD) yang sangat ramah, suportif, dan memotivasi." 
+                },
+                { 
+                    role: "user", 
+                    content: `Berdasarkan jawaban siswa berikut, buatlah 5 pertanyaan refleksi unik (essay) yang akan membantu siswa memproses pemahamannya lebih dalam. 
+                    
+KONTEKS JAWABAN SISWA: 
+${contextText}
+
+Output WAJIB dalam bentuk JSON array murni berisi STRING. Contoh: ["...", "...", ...]` 
+                }
             ]
         };
-        const response = await requestWithFallback(payload, [MODEL_FAST, AI_MODEL]);
+        const response = await requestWithFallback(payload, [MODEL_FAST, MODEL_HEAVY]);
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (error) {
-        return ["Apa yang kamu pelajari?", "Apa yang sulit?", "Bagaimana perasaanmu?", "Apa targetmu?", "Ada pertanyaan lain?"];
+        return [
+            "Apa hal terpenting yang kamu pelajari dari materi ini?",
+            "Bagaimana kamu akan menerapkan ilmu ini dalam kehidupan sehari-hari?",
+            "Bagian mana yang menurutmu paling menarik untuk dipelajari lebih lanjut?",
+            "Apa kesulitan yang kamu hadapi saat memahami materi ini?",
+            "Apa target belajarmu selanjutnya setelah menguasai topik ini?"
+        ];
     }
 }
 
@@ -262,14 +286,34 @@ async function analyzeUnderstanding(username, originalExplanation, studentAnswer
     try {
         const payload = {
             messages: [
-                { role: "system", content: "Kamu adalah evaluator pemahaman siswa yang adil. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD)." },
-                { role: "user", content: `Evaluasi jawaban siswa terhadap materi.\nKonteks: ${originalExplanation}\nJawaban: ${studentAnswer}\nAkhiri dengan [SKOR: X]` }
+                { role: "system", content: "Kamu adalah evaluator pemahaman siswa yang adil. Berikan umpan balik yang konstruktif. WAJIB MENGGUNAKAN BAHASA INDONESIA BAKU (EYD). Di akhir jawabanmu, wajib sertakan skor dalam format [SKOR: X] (skala 0-100)." },
+                { role: "user", content: `Evaluasi jawaban siswa terhadap materi.\n\nPenjelasan Sebelumnya: ${originalExplanation}\nJawaban Siswa: ${studentAnswer}\n\nBerikan analisis singkat dan skor.` }
             ],
             temperature: 0.3,
             max_tokens: 512
         };
         const response = await requestWithFallback(payload, [MODEL_FAST, MODEL_HEAVY]);
-        return response.data.choices[0].message.content;
+        const aiReply = response.data.choices[0].message.content;
+
+        // Log to Chat History so it can be used for reflections in Stage 2
+        try {
+            await ChatLog.create({ 
+                username, 
+                role: 'user', 
+                content: studentAnswer, 
+                metadata: { type: 'understanding_test_answer' } 
+            });
+            await ChatLog.create({ 
+                username, 
+                role: 'bot', 
+                content: aiReply, 
+                metadata: { type: 'understanding_test_feedback' } 
+            });
+        } catch (e) {
+            console.error("Failed to log understanding test:", e);
+        }
+
+        return aiReply;
     } catch (e) {
         return "Terima kasih atas jawabanmu! [SKOR: 50]";
     }
