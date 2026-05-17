@@ -30,6 +30,16 @@ function renderParentDashboard(container) {
         t4AnalysisText = t4AnalysisText.analysis || '';
     }
 
+    let aiReadinessText = progress.aiReadiness;
+    if (typeof aiReadinessText === 'string' && aiReadinessText.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(aiReadinessText);
+            aiReadinessText = parsed.analysis ? (parsed.analysis.umum || parsed.analysis.isi || JSON.stringify(parsed.analysis)) : aiReadinessText;
+        } catch(e) {}
+    } else if (typeof aiReadinessText === 'object' && aiReadinessText !== null) {
+        aiReadinessText = aiReadinessText.analysis ? (aiReadinessText.analysis.umum || aiReadinessText.analysis.isi || JSON.stringify(aiReadinessText.analysis)) : JSON.stringify(aiReadinessText);
+    }
+
     // Menyusun Rekomendasi Komprehensif (Mewakili Tahap 1 - 4)
     let parentRecommendationText = '';
     let parentDetails = [];
@@ -177,7 +187,7 @@ function renderParentDashboard(container) {
                     <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem;">Analisis kesiapan belajar berdasarkan refleksi esai mandiri anak.</p>
                     <div style="background: rgba(0, 188, 212, 0.05); padding: 1rem; border-radius: 12px; font-size: 0.85rem; font-style: italic; border: 1px dashed rgba(0, 188, 212, 0.3); color: var(--secondary); line-height: 1.5;">
                         <i class="fas fa-quote-left" style="opacity: 0.5; margin-right: 5px;"></i>
-                        ${progress.aiReadiness || 'Menunggu hasil analisis refleksi anak untuk memberikan diagnosa kesiapan...'}
+                        ${aiReadinessText || 'Menunggu hasil analisis refleksi anak untuk memberikan diagnosa kesiapan...'}
                     </div>
                 </div>
 
