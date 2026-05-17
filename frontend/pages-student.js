@@ -2456,11 +2456,32 @@ async function clearChatHistory() {
 
 
 function downloadProgressReportPDF() {
-    const progress = getProgress(currentUser.username);
+    const studentUsername = currentUser.role === 'orang_tua' ? (currentUser.linkedStudent || currentUser.username) : currentUser.username;
+    const studentName = currentUser.role === 'orang_tua' ? (currentUser.studentName || studentUsername) : currentUser.name;
+
+    const progress = getProgress(studentUsername);
     const results = getAssessmentResults();
-    const myResult = results[currentUser.username] || progress.assessmentResult || { score: 0, total: 10, literasi: 0, numerasi: 0 };
-    const scorePct = myResult.pct !== undefined ? myResult.pct : Math.round((myResult.score / myResult.total) * 100);
+    const myResult = results[studentUsername] || progress.assessmentResult || { score: 0, total: 10, literasi: 0, numerasi: 0 };
+    const scorePct = myResult.pct !== undefined ? myResult.pct : (myResult.total > 0 ? Math.round((myResult.score / myResult.total) * 100) : 0);
     const passStatus = scorePct >= 70 ? 'LULUS' : 'REMEDIAL';
+
+    let t4AnalysisText = progress.tahap4Analysis;
+    if (typeof t4AnalysisText === 'object' && t4AnalysisText !== null) {
+        t4AnalysisText = t4AnalysisText.analysis || '';
+    }
+    t4AnalysisText = t4AnalysisText || 'Siswa menunjukkan pengamalan karakter 7 Kebiasaan Hebat Anak Indonesia yang sangat positif, terutama kedisiplinan beribadah dan gemar belajar mandiri.';
+
+    let aiReadinessText = progress.aiReadiness;
+    if (typeof aiReadinessText === 'string' && aiReadinessText.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(aiReadinessText);
+            aiReadinessText = parsed.analysis ? (parsed.analysis.umum || parsed.analysis.isi || JSON.stringify(parsed.analysis)) : aiReadinessText;
+        } catch(e) {}
+    } else if (typeof aiReadinessText === 'object' && aiReadinessText !== null) {
+        aiReadinessText = aiReadinessText.analysis ? (aiReadinessText.analysis.umum || aiReadinessText.analysis.isi || JSON.stringify(aiReadinessText.analysis)) : JSON.stringify(aiReadinessText);
+    }
+    aiReadinessText = aiReadinessText || 'Siswa menunjukkan kesiapan belajar mandiri yang sangat baik dengan kemampuan menganalisis materi secara logis dan menyusun kesimpulan reflektif secara orisinal.';
+
 
     const element = document.createElement('div');
     element.style.padding = '40px 50px';
@@ -2503,7 +2524,7 @@ function downloadProgressReportPDF() {
                 <tr>
                     <td style="width: 15%; padding: 6px 0; font-weight: 600; color: #475569;">Nama Siswa</td>
                     <td style="width: 2%; padding: 6px 0; color: #64748b;">:</td>
-                    <td style="width: 33%; padding: 6px 0; font-weight: 700; color: #0f172a;">${currentUser.name}</td>
+                    <td style="width: 33%; padding: 6px 0; font-weight: 700; color: #0f172a;">${studentName}</td>
                     <td style="width: 15%; padding: 6px 0; font-weight: 600; color: #475569;">Tanggal Cetak</td>
                     <td style="width: 2%; padding: 6px 0; color: #64748b;">:</td>
                     <td style="width: 33%; padding: 6px 0; color: #0f172a;">${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
@@ -2511,7 +2532,7 @@ function downloadProgressReportPDF() {
                 <tr>
                     <td style="padding: 6px 0; font-weight: 600; color: #475569;">Username</td>
                     <td style="padding: 6px 0; color: #64748b;">:</td>
-                    <td style="padding: 6px 0; color: #0f172a;">${currentUser.username}</td>
+                    <td style="padding: 6px 0; color: #0f172a;">${studentUsername}</td>
                     <td style="padding: 6px 0; font-weight: 600; color: #475569;">Status Program</td>
                     <td style="padding: 6px 0; color: #64748b;">:</td>
                     <td style="padding: 6px 0; color: #10b981; font-weight: 700;">SELESAI</td>
@@ -2568,7 +2589,7 @@ function downloadProgressReportPDF() {
                         <span>📝</span> Analisis Kesiapan Belajar Mandiri (Tahap 2)
                     </h4>
                     <p style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin: 0; font-style: italic;">
-                        "${progress.aiReadiness || 'Siswa menunjukkan kesiapan belajar mandiri yang sangat baik dengan kemampuan menganalisis materi secara logis dan menyusun kesimpulan reflektif secara orisinal.'}"
+                        "${aiReadinessText}"
                     </p>
                 </div>
 
@@ -2586,7 +2607,7 @@ function downloadProgressReportPDF() {
                         <span>🌱</span> Analisis & Umpan Balik Karakter (Tahap 4)
                     </h4>
                     <p style="font-size: 0.85rem; color: #334155; line-height: 1.5; margin: 0 0 8px 0; font-style: italic;">
-                        "${progress.tahap4Analysis || 'Siswa menunjukkan pengamalan karakter 7 Kebiasaan Hebat Anak Indonesia yang sangat positif, terutama kedisiplinan beribadah dan gemar belajar mandiri.'}"
+                        "${t4AnalysisText}"
                     </p>
                     ${progress.tahap4Details && progress.tahap4Details.length ? `
                         <div style="font-size: 0.8rem; color: #475569; padding-left: 15px;">
@@ -2624,7 +2645,7 @@ function downloadProgressReportPDF() {
 
     const opt = {
         margin: [10, 10, 10, 10],
-        filename: `Laporan_NARA_AI_${currentUser.username}.pdf`,
+        filename: `Laporan_NARA_AI_${studentUsername}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
