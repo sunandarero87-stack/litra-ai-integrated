@@ -281,8 +281,21 @@ OUTPUT WAJIB DALAM FORMAT JSON BERIKUT:
 async function generateBankSoal(objectivesArray, amount = 10, indicatorType = '', indicatorValue = '', penalaranLogis = 3) {
     const payload = {
         messages: [
-            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berstandar HOTS (Higher Order Thinking Skills). OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID." },
-            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda dari TP: ${JSON.stringify(objectivesArray)}` }
+            { 
+                role: "system", 
+                content: `Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berstandar HOTS (Higher Order Thinking Skills).
+OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID.
+Setiap objek soal dalam array HARUS memiliki format properti berikut persis:
+{
+  "question": "teks pertanyaan soal HOTS...",
+  "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+  "correct": 0, // Indeks jawaban yang benar (0 untuk Opsi A, 1 untuk Opsi B, 2 untuk Opsi C, 3 untuk Opsi D)
+  "explanation": "Pembahasan/penjelasan jawaban yang mendalam...",
+  "type": "literasi" // atau "numerasi"
+}
+Jangan gunakan nama properti bahasa Indonesia seperti "soal", "opsi", "kunci", atau "pembahasan". Gunakan persis kunci bahasa Inggris di atas!`
+            },
+            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda dari TP: ${JSON.stringify(objectivesArray)}. Pastikan tingkat penalaran logis adalah level ${penalaranLogis}.` }
         ],
         max_tokens: 4000,
         temperature: 0.6
@@ -294,8 +307,21 @@ async function generateBankSoal(objectivesArray, amount = 10, indicatorType = ''
 async function generateBankSoalFromMaterial(materialContent, amount = 10, indicatorType = '', indicatorValue = '', penalaranLogis = 3) {
     const payload = {
         messages: [
-            { role: "system", content: "Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berdasarkan materi pembelajaran berstandar HOTS. OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID." },
-            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda dari materi: ${materialContent.substring(0, 20000)}` }
+            { 
+                role: "system", 
+                content: `Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berdasarkan materi pembelajaran berstandar HOTS (Higher Order Thinking Skills).
+OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID.
+Setiap objek soal dalam array HARUS memiliki format properti berikut persis:
+{
+  "question": "teks pertanyaan soal HOTS...",
+  "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+  "correct": 0, // Indeks jawaban yang benar (0 untuk Opsi A, 1 untuk Opsi B, 2 untuk Opsi C, 3 untuk Opsi D)
+  "explanation": "Pembahasan/penjelasan jawaban yang mendalam...",
+  "type": "literasi" // atau "numerasi"
+}
+Jangan gunakan nama properti bahasa Indonesia seperti "soal", "opsi", "kunci", atau "pembahasan". Gunakan persis kunci bahasa Inggris di atas!`
+            },
+            { role: "user", content: `Buat TEPAT ${amount} buah soal pilihan ganda dari materi: ${materialContent.substring(0, 20000)}. Pastikan tingkat penalaran logis adalah level ${penalaranLogis}.` }
         ],
         max_tokens: 4000,
         temperature: 0.6
