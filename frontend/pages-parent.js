@@ -7,7 +7,7 @@
 function renderParentDashboard(container) {
     // Gunakan linkedStudent jika role adalah orang_tua, jika tidak fallback ke username sendiri (legacy)
     const studentUsername = currentUser.role === 'orang_tua' ? currentUser.linkedStudent : currentUser.username;
-    
+
     const progress = getProgress(studentUsername);
     const results = getAssessmentResults();
     const myResult = results[studentUsername] || progress.assessmentResult || { score: 0, total: 10, literasi: 0, numerasi: 0 };
@@ -104,9 +104,9 @@ function renderParentDashboard(container) {
                             <div class="progress-fill" style="width: ${progress.tahap1Score || 0}%; background: ${progress.tahap1Score >= 80 ? 'var(--gradient-success)' : (progress.tahap1Score >= 50 ? 'var(--gradient-accent)' : 'var(--gradient-danger)')}; border-radius: 5px; box-shadow: 0 0 10px ${progress.tahap1Score >= 80 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'};"></div>
                         </div>
                         <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.8rem; line-height: 1.4;">
-                            ${progress.tahap1Score >= 80 ? '✨ Pemahaman anak sangat baik terhadap materi ini.' : 
-                              (progress.tahap1Score >= 50 ? '💡 Anak sudah memahami dasar materi, namun perlu pengayaan.' : 
-                              (progress.tahap1Score !== undefined ? '⚠️ Perlu bimbingan lebih lanjut untuk mengulang materi.' : 'Menunggu anak menyelesaikan sesi diskusi.'))}
+                            ${progress.tahap1Score >= 80 ? '✨ Pemahaman anak sangat baik terhadap materi ini.' :
+            (progress.tahap1Score >= 50 ? '💡 Anak sudah memahami dasar materi, namun perlu pengayaan.' :
+                (progress.tahap1Score !== undefined ? '⚠️ Perlu bimbingan lebih lanjut untuk mengulang materi.' : 'Menunggu anak menyelesaikan sesi diskusi.'))}
                         </p>
                     </div>
                 </div>
@@ -206,7 +206,7 @@ function renderParentDashboard(container) {
 
             <!-- Footer Info -->
             <div style="text-align: center; margin-top: 3rem; color: var(--text-muted); font-size: 0.85rem;">
-                <p>© 2026 Litra-AI Ecosystem • Sistem Monitoring Orang Tua Terintegrasi</p>
+                <p>© 2026 NARA-AI Pak Nandar • Sistem Monitoring Orang Tua Terintegrasi</p>
             </div>
 
         </div>
