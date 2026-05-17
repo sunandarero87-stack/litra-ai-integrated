@@ -767,7 +767,7 @@ async function toggleChatbot() {
                         chatBox.innerHTML = '';
                         const history = (d.success && d.history && d.history.length > 0) ? d.history : [];
                         if (history.length === 0) {
-                            const greeting = `Halo **${currentUser.name}**! 👋\n\nSaya NARA-AI, asisten belajar **${teacher.name}**.\n\nKamu baru saja membaca materi **${matName}**. Sekarang saatnya masuk ke **Mode Penguatan Literasi & Numerasi Tahap 1**!\n\n🎯 **Apakah kamu sudah siap diuji pemahamanmu?**\n\n- Ketik **"Siap"** → NARA-AI langsung mengujimu\n- Ketik **"Belum"** atau ajukan pertanyaan → NARA-AI akan membantumu memahami materi dulu`;
+                            const greeting = `Halo **${currentUser.name}**! 👋\n\nAku NARA-AI, teman belajarmu yang asik! 😊\n\nWah, kamu udah selesai baca materi **${matName}** ya? Keren banget! Biar makin jago, yuk kita main tebak-tebakan seru buat uji pemahaman kamu!\n\n🎯 **Gimana, udah siap belum buat jawab tantangannya?**\n\n- Ketik **"Siap"** → Aku kasih dua tantangan seru: Literasi & Numerasi!\n- Ketik **"Belum"** atau tanya dulu → Aku bantu jelasin lagi sampai kamu paham, santai aja! 😄`;
                             appendFloatingMessage('bot', formatMessageLocal(greeting), teacherPhoto);
                             const histories = getChatHistories();
                             histories[currentUser.username] = [{ role: 'bot', text: greeting, time: new Date().toISOString() }];
@@ -781,7 +781,7 @@ async function toggleChatbot() {
                         const users2 = getUsers();
                         const t2 = users2.find(u => u.role === 'guru') || { name: 'Guru', photo: null };
                         const tp2 = t2.photo ? `<img src="${t2.photo}" alt="Guru" style="width:100%;height:100%;object-fit:cover;">` : '<i class="fas fa-chalkboard-teacher"></i>';
-                        const greeting = `Halo **${currentUser.name}**! 👋\n\nSaya NARA-AI, asisten **${t2.name}**. Saatnya masuk ke **Mode Penguatan Literasi & Numerasi Tahap 1**!\n\n🎯 **Apakah kamu siap diuji pemahamanmu?**\n\n- Ketik **"Siap"** → langsung diuji\n- Ketik **"Belum"** atau tanya seputar materi → saya bantu memahami dulu`;
+                        const greeting = `Halo **${currentUser.name}**! 👋\n\nAku NARA-AI, teman belajarmu! 😊\n\n**Udah siap dijawab soalnya?**\n\n- Ketik **"Siap"** → Aku langsung kasih soal!\n- Ketik **"Belum"** atau mau tanya dulu → Aku bantu jelasin, tenang aja! 😄`;
                         appendFloatingMessage('bot', formatMessageLocal(greeting), tp2);
                     });
             }
@@ -1779,8 +1779,8 @@ async function renderTahap2(main) {
     main.innerHTML = `
         <div class="quiz-container" oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;" onpaste="return false;" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
         <div class="quiz-header">
-            <h3>📝 Tahap 2: Refleksi Belajar</h3>
-            <p class="text-muted">Jawablah pertanyaan berikut dengan jujur berdasarkan apa yang telah kamu diskusikan dengan NARA-AI.</p>
+            <h3>📝 Tahap 2: Yuk Cerita Pengalaman Belajarmu!</h3>
+            <p class="text-muted">Jawab pertanyaan di bawah ini dengan jujur ya! Ceritain sesuai apa yang kamu rasakan dan kamu pelajari bareng NARA-AI. <strong>Tulis sendiri ya, jangan copy-paste 😊</strong></p>
         </div>
         <div class="card mt-2">
             <form id="reflection-form">
@@ -1816,13 +1816,28 @@ async function renderTahap2(main) {
         e.preventDefault();
         const btn = document.getElementById('submit-reflection');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menganalisis Refleksi...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> NARA-AI lagi baca jawabanmu... sabar ya!';
 
         const inputs = document.querySelectorAll('.reflection-input');
         const answers = Array.from(inputs).map(input => ({
             question: input.dataset.question,
             answer: input.value
         }));
+
+        // Tampilkan overlay loading yang ramah
+        const mainContent = document.getElementById('main-content');
+        mainContent.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:400px; padding:3rem; text-align:center;">
+                <div style="font-size:4rem; margin-bottom:1.5rem; animation: bounce-arrow 1s infinite;">🤖</div>
+                <h3 style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-bottom:0.75rem;">NARA-AI sedang baca refleksimu...</h3>
+                <p style="color:var(--text-secondary); max-width:400px; line-height:1.6;">Sebentar ya, NARA-AI lagi analisis jawabanmu dengan teliti! Ini untuk bantu kamu belajar lebih baik lagi 💪</p>
+                <div style="margin-top:2rem; display:flex; gap:0.5rem; justify-content:center;">
+                    <span style="width:12px;height:12px;border-radius:50%;background:var(--primary);animation:typing 1.4s ease infinite;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:var(--primary);animation:typing 1.4s ease infinite;animation-delay:0.2s;"></span>
+                    <span style="width:12px;height:12px;border-radius:50%;background:var(--primary);animation:typing 1.4s ease infinite;animation-delay:0.4s;"></span>
+                </div>
+            </div>
+        `;
 
         try {
             // 1. Analyze Readiness
@@ -1846,15 +1861,18 @@ async function renderTahap2(main) {
             progress.reflectionAnswers = answers; // Save raw answers for later generation
             updateProgress(currentUser.username, progress);
 
-            // Notify Guru Recommendation in background (handled by progress object usually)
-
-            alert('🎉 Refleksi berhasil dikirim! AI telah menganalisis kesiapanmu.');
+            // Langsung render hasil Tahap 2 tanpa alert
             renderTahap2(document.getElementById('main-content'));
         } catch (err) {
             console.error(err);
-            alert('Gagal mengirim refleksi. Silakan coba lagi.');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane"></i> Kirim Refleksi';
+            document.getElementById('main-content').innerHTML = `
+                <div class="card" style="text-align:center; padding:2rem;">
+                    <div style="font-size:3rem; margin-bottom:1rem;">😔</div>
+                    <h3>Aduh, ada masalah nih!</h3>
+                    <p class="text-muted">Gagal mengirim refleksi. Coba lagi ya!</p>
+                    <button class="btn btn-primary mt-2" onclick="navigateTo('tahap2')">Coba Lagi</button>
+                </div>
+            `;
         }
     });
 }
@@ -2344,13 +2362,13 @@ function renderTahap4(main) {
     }
 
     const questions = [
-        "1. Bangun Pagi: Jam berapa kamu bangun pagi hari ini dan kegiatan apa yang langsung kamu lakukan?",
-        "2. Beribadah: Bagaimana kamu memastikan untuk selalu melaksanakan ibadah sesuai ajaran agamamu sebelum ke sekolah?",
-        "3. Berolahraga: Olahraga atau aktivitas fisik apa yang rutin kamu lakukan minggu ini untuk menjaga kebugaran tubuh?",
-        "4. Makan Sehat dan Bergizi: Jelaskan menu makanan sarapan sehatmu hari ini yang memberikan energi untuk belajar.",
-        "5. Gemar Belajar: Bagaimana cara belajarmu di rumah untuk mempersiapkan materi besok setiap malam hari?",
-        "6. Bermasyarakat: Ceritakan satu pengalamanmu di mana kamu saling membantu teman atau tetangga di lingkunganmu.",
-        "7. Tidur Cepat: Jam berapa kamu biasanya tidur malam dan persiapan apa yang kamu lakukan sebelumnya agar tenang?"
+        "1. 🌅 Bangun Pagi: Tadi pagi kamu bangun jam berapa? Setelah bangun, kamu ngapain dulu?",
+        "2. 🙏 Beribadah: Gimana caramu supaya nggak lupa sholat/beribadah setiap hari, terutama sebelum berangkat sekolah?",
+        "3. 🏃 Olahraga: Minggu ini kamu olahraga apa aja? Ceritain kegiatan gerak badanmu yang seru!",
+        "4. 🥗 Makan Sehat: Tadi sarapan apa? Kira-kira kenapa makanan itu bagus buat tubuhmu?",
+        "5. 📚 Gemar Belajar: Kalau belajar di rumah, biasanya kamu ngapain dulu? Ceritain caramu biar semangat belajar!",
+        "6. 🤝 Bermasyarakat: Pernah nggak kamu bantu teman atau tetangga? Ceritain pengalaman serumu!",
+        "7. 😴 Tidur Cepat: Biasanya kamu tidur jam berapa? Sebelum tidur, kamu ngapain dulu supaya tidurnya nyenyak?"
     ];
 
     main.innerHTML = `
@@ -2590,14 +2608,15 @@ function downloadProgressReportPDF() {
                 </div>
                 <div style="text-align: center; width: 30%;">
                     <p style="margin: 0 0 60px 0; color: #475569;">Mengetahui,<br>Kepala SMP Negeri 1 Balikpapan</p>
-                    <p style="margin: 0; font-weight: 700; color: #0f172a; text-decoration: underline;">H. Aris, M.Pd.</p>
-                    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">NIP. 19740512 200212 1 003</p>
+                    <div style="width: 150px; border-bottom: 1px solid #1e293b; margin: 0 auto 5px auto;"></div>
+                    <p style="margin: 0; font-weight: 700; color: #0f172a;">.................................................</p>
+                    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">NIP. ................................</p>
                 </div>
                 <div style="text-align: center; width: 30%;">
                     <p style="margin: 0 0 60px 0; color: #475569;">Balikpapan, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>Guru Pendamping / Wali Kelas</p>
                     <div style="width: 150px; border-bottom: 1px solid #1e293b; margin: 0 auto 5px auto;"></div>
-                    <p style="margin: 0; font-weight: 700; color: #0f172a;">Sunandar Ero, S.Pd.</p>
-                    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">NIP. 19870824 201101 1 002</p>
+                    <p style="margin: 0; font-weight: 700; color: #0f172a;">.................................................</p>
+                    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 0.8rem;">NIP. ................................</p>
                 </div>
             </div>
         </div>
