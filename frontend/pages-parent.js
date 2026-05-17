@@ -24,6 +24,58 @@ function renderParentDashboard(container) {
     const displayName = currentUser.role === 'orang_tua' ? (currentUser.studentName || studentUsername) : currentUser.name;
     const displayKelas = currentUser.role === 'orang_tua' ? (currentUser.studentKelas || '-') : (currentUser.kelas || '-');
 
+    // Memproses teks analisis AI untuk menghindari [object Object]
+    let t4AnalysisText = progress.tahap4Analysis;
+    if (typeof t4AnalysisText === 'object' && t4AnalysisText !== null) {
+        t4AnalysisText = t4AnalysisText.analysis || '';
+    }
+
+    // Menyusun Rekomendasi Komprehensif (Mewakili Tahap 1 - 4)
+    let parentRecommendationText = '';
+    let parentDetails = [];
+    
+    if (overallProgress === 100) {
+        parentRecommendationText = `<strong>Rangkuman Pembelajaran (Tahap 1-4):</strong> Anak Anda telah menyelesaikan seluruh rangkaian pembelajaran NARA-AI dengan sangat baik. Pada Tahap 3 (Asesmen), ia meraih skor <strong>${scorePct}%</strong>. Selain itu, pada Tahap 4 (Karakter), ia menunjukkan perkembangan positif (Skor: <strong>${progress.tahap4Score || 0}%</strong>).`;
+        parentDetails = [
+            "Ajak anak berdiskusi ringan mengenai materi yang telah dipelajarinya untuk melatih daya ingat dan komunikasi.",
+            "Berikan apresiasi atas pencapaian skor dan kemandiriannya agar motivasi belajarnya terus meningkat.",
+            "Dampingi anak dalam mengaplikasikan 7 Kebiasaan Hebat dalam kegiatan sehari-hari di rumah."
+        ];
+    } else if (progress.tahap3Complete) {
+        parentRecommendationText = `<strong>Progres Saat Ini (Tahap 3 Selesai):</strong> Anak Anda telah melewati asesmen utama (Tahap 3) dengan skor <strong>${scorePct}%</strong>. Saat ini ia sedang atau akan memasuki Tahap 4 (Pembentukan Karakter). Berikan motivasi agar ia dapat merefleksikan 7 Kebiasaan Hebat dengan baik.`;
+        parentDetails = [
+            `Evaluasi bersama hasil asesmen ${scorePct}% yang didapat, fokus pada perbaikan pemahaman logika dan konsep dasar.`,
+            "Ingatkan anak untuk selalu teliti dan tidak terburu-buru saat menjawab pertanyaan evaluasi.",
+            "Berikan semangat untuk menyelesaikan Tahap 4 agar seluruh rangkaian pembelajaran tuntas."
+        ];
+    } else if (progress.tahap2Complete) {
+        parentRecommendationText = `<strong>Progres Saat Ini (Tahap 2 Selesai):</strong> Anak Anda telah menyelesaikan refleksi mandiri (Tahap 2) dan bersiap menghadapi asesmen utama (Tahap 3). Pastikan ia mengulang materi yang sulit sebelum mengerjakan soal evaluasi.`;
+        parentDetails = [
+            "Pantau persiapan anak sebelum menghadapi asesmen utama.",
+            "Pastikan anak mendapat istirahat yang cukup agar fokus saat mengerjakan soal.",
+            "Bantu ingatkan konsep-konsep kunci yang ada pada materi pembelajaran."
+        ];
+    } else if (progress.tahap1Complete) {
+        parentRecommendationText = `<strong>Progres Saat Ini (Tahap 1 Selesai):</strong> Anak Anda telah menyelesaikan eksplorasi materi (Tahap 1). Langkah selanjutnya adalah refleksi pemahaman (Tahap 2). Berikan dorongan agar ia berani mengungkapkan pemahamannya.`;
+        parentDetails = [
+            "Tanyakan poin menarik yang baru ia pelajari dari materi tersebut.",
+            "Berikan dorongan untuk selalu bertanya kepada guru atau AI jika ada yang belum dimengerti.",
+            "Latih anak untuk merangkum pelajaran dengan kata-katanya sendiri."
+        ];
+    } else {
+        parentRecommendationText = `Sistem NARA-AI sedang mengumpulkan data aktivitas belajar anak Anda. Rekomendasi personal akan muncul secara otomatis seiring dengan kemajuan belajar anak dari Tahap 1 hingga Tahap 4.`;
+        parentDetails = [];
+    }
+
+    // Tambahkan catatan khusus AI Tahap 4 jika sudah ada (mewakili hasil asesmen karakter)
+    if (t4AnalysisText && typeof t4AnalysisText === 'string' && t4AnalysisText.trim() !== '') {
+        parentRecommendationText += `<br><br><span style="color: var(--accent);"><strong>Catatan Khusus Karakter (Tahap 4):</strong></span><br><em style="color: var(--text-secondary);">"${t4AnalysisText}"</em>`;
+        if (progress.tahap4Details && Array.isArray(progress.tahap4Details)) {
+            // Kita bisa juga memasukkan rincian saran dari AI tahap 4 jika sudah lengkap
+            parentDetails = progress.tahap4Details;
+        }
+    }
+
     container.innerHTML = `
         <div class="dashboard-parent" style="max-width: 1100px; margin: 0 auto; animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
             
@@ -190,12 +242,12 @@ function renderParentDashboard(container) {
                 
                 <div style="background: rgba(0,0,0,0.3); padding: 1.8rem; border-radius: 18px; font-size: 1rem; line-height: 1.7; color: var(--text-primary); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);">
                     <i class="fas fa-lightbulb" style="color: var(--accent); margin-right: 10px;"></i>
-                    ${progress.tahap4Analysis || 'Sistem NARA-AI sedang mengumpulkan data aktivitas belajar anak Anda. Rekomendasi personal akan muncul secara otomatis setelah anak menyelesaikan Tahap 4 untuk memberikan gambaran menyeluruh tentang potensi dan area pengembangan.'}
+                    ${parentRecommendationText}
                 </div>
                 
-                ${progress.tahap4Details && progress.tahap4Details.length > 0 ? `
+                ${parentDetails && parentDetails.length > 0 ? `
                     <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
-                        ${progress.tahap4Details.slice(0, 3).map(d => `
+                        ${parentDetails.slice(0, 3).map(d => `
                             <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border-left: 3px solid var(--primary-light); font-size: 0.85rem; color: var(--text-secondary);">
                                 ${d}
                             </div>
