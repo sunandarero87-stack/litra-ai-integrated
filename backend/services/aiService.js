@@ -410,7 +410,40 @@ async function analyzeCompetency(studentData) {
     }
 }
 
+async function generateMathProblem(username) {
+    try {
+        const payload = {
+            messages: [
+                { 
+                    role: "system", 
+                    content: "Kamu adalah Guru Matematika AI yang ramah untuk siswa SD/SMP kelas menengah (usia 10-13 tahun). Tugasmu membuat 1 soal cerita matematika sederhana (aritmatika atau geometri dasar) yang membutuhkan logika untuk dipecahkan. OUTPUT WAJIB BERUPA JSON MURNI TANPA MARKDOWN atau teks lain. Gunakan format persis ini: {\"question\": \"Isi pertanyaan (tanpa kata Soal:)\", \"hints\": [\"Hint 1 (Petunjuk awal)\", \"Hint 2 (Langkah pengerjaan)\", \"Hint 3 (Sangat dekat dengan jawaban)\"], \"answer\": 15} Pastikan 'answer' adalah angka/number, bukan string." 
+                },
+                { 
+                    role: "user", 
+                    content: "Buatkan 1 soal cerita matematika yang membutuhkan pemikiran logis. Buat 3 langkah hint bertahap yang membantu siswa berpikir sendiri, dan berikan jawaban akhirnya berupa angka." 
+                }
+            ],
+            temperature: 0.7,
+            max_tokens: 1024
+        };
+        const response = await requestWithFallback(payload, [MODEL_FAST, MODEL_HEAVY]);
+        return JSON.parse(cleanJson(response.data.choices[0].message.content));
+    } catch (error) {
+        console.error("Math Generation Error:", error);
+        return {
+            question: "Sebuah lapangan berbentuk persegi panjang memiliki panjang 5 meter lebih dari lebarnya. Jika kelilingnya 50 meter, berapakah luasnya dalam meter persegi?",
+            hints: [
+                "Ingat rumus keliling persegi panjang: K = 2 × (panjang + lebar). Coba tuliskan persamaannya menggunakan lebar sebagai X.",
+                "Jika lebar adalah X, maka panjang adalah X + 5. Keliling = 2 × (X + X + 5) = 50. Cobalah pecahkan untuk mencari nilai X.",
+                "Setelah mendapat X = 10 (lebar), panjangnya adalah 10 + 5 = 15. Luas = panjang × lebar. Berapakah 15 × 10?"
+            ],
+            answer: 150
+        };
+    }
+}
+
 module.exports = {
+    generateMathProblem,
     generateResponse,
     generateReflections,
     generateAssessment,

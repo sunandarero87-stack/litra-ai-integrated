@@ -133,6 +133,16 @@ exports.handleChat = async (req, res) => {
     }
 };
 
+exports.generateMath = async (req, res) => {
+    try {
+        const { username } = req.body;
+        const problem = await aiService.generateMathProblem(username);
+        res.json({ success: true, problem });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 exports.handleReflections = async (req, res) => {
     try {
         const { username } = req.body;

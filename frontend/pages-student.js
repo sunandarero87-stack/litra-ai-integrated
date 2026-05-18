@@ -169,6 +169,118 @@ function escapeHtml(text) {
 }
 
 function renderTahap1(main) {
+    main.innerHTML = `
+    <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background:linear-gradient(145deg, var(--bg-card), #0f172a); border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg);">
+        <h2 style="font-size:1.75rem; font-weight:800; color:white; margin-bottom: 1rem;">Pilih Mode Belajar Tahap 1</h2>
+        <p class="text-muted" style="margin-bottom: 2rem;">Silakan pilih jalur pembelajaran yang ingin kamu mulai.</p>
+        <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+            <div class="tahap-card unlocked" onclick="renderTahap1Literasi(document.getElementById('main-content'))" style="cursor: pointer; width: 250px; background: var(--bg-card); border: 2px solid var(--primary); display: flex; flex-direction: column; align-items: center;">
+                <div class="tahap-icon chat" style="margin-bottom: 1rem;"><i class="fas fa-book-open"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">Tombol Literasi</h3>
+                <p>Eksplorasi Materi Guru</p>
+            </div>
+            <div class="tahap-card unlocked" onclick="renderTahap1Numerasi(document.getElementById('main-content'))" style="cursor: pointer; width: 250px; background: var(--bg-card); border: 2px solid var(--accent); display: flex; flex-direction: column; align-items: center;">
+                <div class="tahap-icon" style="background:var(--accent-light);color:var(--accent); margin-bottom: 1rem;"><i class="fas fa-calculator"></i></div>
+                <h3 style="margin-bottom: 0.5rem;">Tombol Numerasi</h3>
+                <p>Uji Nalar Matematika AI</p>
+            </div>
+        </div>
+    </div>
+    `;
+}
+
+let currentMathProblem = null;
+let currentHintIndex = 0;
+
+window.renderTahap1Numerasi = async function(main) {
+    main.innerHTML = `
+    <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background: #12141d; border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg); min-height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
+        <h3 style="color: white;">NARA-AI Sedang Menyiapkan Soal...</h3>
+        <p class="text-muted">Tunggu sebentar ya, soalnya dibuat khusus untukmu!</p>
+    </div>
+    `;
+
+    try {
+        const res = await fetch('/api/chat/generate-math', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: currentUser.username })
+        });
+        const data = await res.json();
+        if (data.success && data.problem) {
+            currentMathProblem = data.problem;
+            currentHintIndex = 0;
+            showMathProblemUI(main);
+        } else {
+            main.innerHTML = `<div style="color:var(--danger); padding: 2rem;">Gagal membuat soal. Silakan coba lagi.</div>`;
+        }
+    } catch (err) {
+        main.innerHTML = `<div style="color:var(--danger); padding: 2rem;">Terjadi kesalahan koneksi.</div>`;
+    }
+}
+
+window.showMathProblemUI = function(main) {
+    main.innerHTML = `
+    <div style="background-color: #12141d; color: white; padding: 4rem 2rem; border-radius: 16px; text-align: center; font-family: 'Inter', sans-serif; position: relative; min-height: 70vh;">
+        <button onclick="renderTahap1(document.getElementById('main-content'))" style="position: absolute; top: 1.5rem; left: 1.5rem; background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <h2 style="font-size: 1.2rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1.5rem; color: #fff;">SOAL:</h2>
+        <p style="font-size: 1.15rem; line-height: 1.8; max-width: 600px; margin: 0 auto 3rem auto; font-weight: 400;">
+            ${currentMathProblem.question}
+        </p>
+        
+        <div id="hint-container" style="margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left;">
+        </div>
+
+        <div style="margin-bottom: 2rem;">
+            <button id="btn-hint" class="btn btn-outline" style="border-radius: 20px; border: 1px solid white; background: transparent; color: white; padding: 0.5rem 1.5rem; font-weight: 600; cursor: pointer;" onclick="showNextHint()">
+                HINT BERTAHAP
+            </button>
+        </div>
+
+        <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; max-width: 400px; margin: 0 auto;">
+            <input type="number" id="math-answer-input" class="form-input" placeholder="Jawaban (Angka)" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.8rem; border-radius: 8px;">
+            <button class="btn btn-primary" onclick="checkMathAnswer()" style="padding: 0.8rem 1.5rem; border-radius: 8px;">Jawab</button>
+        </div>
+        <div id="math-feedback" style="margin-top: 1rem; font-weight: 600;"></div>
+    </div>
+    `;
+}
+
+window.showNextHint = function() {
+    if (!currentMathProblem || !currentMathProblem.hints) return;
+    if (currentHintIndex < currentMathProblem.hints.length) {
+        const hintContainer = document.getElementById('hint-container');
+        const hintDiv = document.createElement('div');
+        hintDiv.style.cssText = "background: rgba(255,255,255,0.05); border-left: 4px solid var(--accent); padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; animation: slideUp 0.3s ease;";
+        hintDiv.innerHTML = `<strong style="color:var(--accent)">Hint ${currentHintIndex + 1}:</strong> ${currentMathProblem.hints[currentHintIndex]}`;
+        hintContainer.appendChild(hintDiv);
+        currentHintIndex++;
+        
+        if (currentHintIndex >= currentMathProblem.hints.length) {
+            document.getElementById('btn-hint').style.display = 'none';
+        }
+    }
+}
+
+window.checkMathAnswer = function() {
+    const input = document.getElementById('math-answer-input').value;
+    const feedback = document.getElementById('math-feedback');
+    if (input === "") return;
+    
+    // Bandingkan sebagai float untuk toleransi
+    const isCorrect = parseFloat(input) === parseFloat(currentMathProblem.answer);
+    
+    if (isCorrect) {
+        feedback.style.color = 'var(--success)';
+        feedback.innerHTML = '<i class="fas fa-check-circle"></i> Jawaban Benar! Hebat! <br><button class="btn btn-sm btn-success mt-2" onclick="renderTahap1Numerasi(document.getElementById(\\'main-content\\'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>';
+    } else {
+        feedback.style.color = 'var(--danger)';
+        feedback.innerHTML = '<i class="fas fa-times-circle"></i> Jawaban masih kurang tepat, coba periksa lagi.';
+    }
+}
+
+window.renderTahap1Literasi = function(main) {
     const progress = getProgress(currentUser.username);
     // Jika siswa sudah lulus Tahap 1 (tahap1Complete) dan belum menyelesaikan Tahap 2, maka Tahap 1 dikunci
     if (progress.tahap1Complete && !progress.tahap2Complete) {
