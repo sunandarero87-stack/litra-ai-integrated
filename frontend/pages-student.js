@@ -176,12 +176,12 @@ function renderTahap1(main) {
         <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
             <div class="tahap-card unlocked" onclick="renderTahap1Literasi(document.getElementById('main-content'))" style="cursor: pointer; width: 250px; background: var(--bg-card); border: 2px solid var(--primary); display: flex; flex-direction: column; align-items: center;">
                 <div class="tahap-icon chat" style="margin-bottom: 1rem;"><i class="fas fa-book-open"></i></div>
-                <h3 style="margin-bottom: 0.5rem;">Tombol Literasi</h3>
+                <h3 style="margin-bottom: 0.5rem;">Penguatan Literasi</h3>
                 <p>Eksplorasi Materi Guru</p>
             </div>
             <div class="tahap-card unlocked" onclick="renderTahap1Numerasi(document.getElementById('main-content'))" style="cursor: pointer; width: 250px; background: var(--bg-card); border: 2px solid var(--accent); display: flex; flex-direction: column; align-items: center;">
                 <div class="tahap-icon" style="background:var(--accent-light);color:var(--accent); margin-bottom: 1rem;"><i class="fas fa-calculator"></i></div>
-                <h3 style="margin-bottom: 0.5rem;">Tombol Numerasi</h3>
+                <h3 style="margin-bottom: 0.5rem;">Penguatan Numerasi</h3>
                 <p>Uji Nalar Matematika AI</p>
             </div>
         </div>
