@@ -488,7 +488,11 @@ async function handleLogin(e) {
         if (user.mustChangePassword) {
             showPage('page-change-password');
         } else if (user.role === 'siswa') {
-            showStudentOnboarding();
+            showAppShell();
+            requestAnimationFrame(() => {
+                navigateTo('dashboard');
+                showStudentOnboarding();
+            });
         } else if (user.role === 'orang_tua') {
             showAppShell();
             requestAnimationFrame(() => {
@@ -546,7 +550,11 @@ async function handleChangePassword(e) {
         document.getElementById('change-password-form').reset();
 
         if (currentUser.role === 'siswa') {
-            showStudentOnboarding();
+            showAppShell();
+            requestAnimationFrame(() => {
+                navigateTo('dashboard');
+                showStudentOnboarding();
+            });
         } else {
             showAppShell();
             requestAnimationFrame(() => {
@@ -652,8 +660,6 @@ function closeStudentOnboarding() {
         overlay.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
             overlay.remove();
-            showAppShell();
-            navigateTo('dashboard'); // Pastikan dashboard terbuka
         }, 300);
     }
 }
