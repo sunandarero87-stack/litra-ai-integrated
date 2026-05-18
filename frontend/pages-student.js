@@ -250,10 +250,20 @@ window.showMathProblemUI = function(main) {
     const questionHtml = typeof marked !== 'undefined' ? marked.parse(currentMathProblem.question) : currentMathProblem.question;
 
     main.innerHTML = `
+    <style>
+        .math-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: block;
+        }
+    </style>
     <div style="background-color: #12141d; color: white; padding: 4rem 2rem; border-radius: 16px; text-align: center; font-family: 'Inter', sans-serif; position: relative; min-height: 70vh;">
         <button onclick="renderTahap1Numerasi(document.getElementById('main-content'))" style="position: absolute; top: 1.5rem; left: 1.5rem; background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-arrow-left"></i> Kembali</button>
         <h2 style="font-size: 1.2rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1.5rem; color: #fff;">SOAL:</h2>
-        <div style="font-size: 1.15rem; line-height: 1.8; max-width: 600px; margin: 0 auto 3rem auto; font-weight: 400; text-align: left; background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+        <div class="math-content" style="font-size: 1.15rem; line-height: 1.8; max-width: 600px; margin: 0 auto 3rem auto; font-weight: 400; text-align: left; background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
             ${questionHtml}
         </div>
         
@@ -285,7 +295,7 @@ window.showNextHint = function() {
         const hintRaw = currentMathProblem.hints[currentHintIndex];
         const hintHtml = typeof marked !== 'undefined' ? marked.parse(hintRaw) : hintRaw;
 
-        hintDiv.innerHTML = '<strong style="color:var(--accent); display:block; margin-bottom: 0.5rem;">Hint ' + (currentHintIndex + 1) + ':</strong> <div>' + hintHtml + '</div>';
+        hintDiv.innerHTML = '<strong style="color:var(--accent); display:block; margin-bottom: 0.5rem;">Hint ' + (currentHintIndex + 1) + ':</strong> <div class="math-content">' + hintHtml + '</div>';
         hintContainer.appendChild(hintDiv);
         currentHintIndex++;
         

@@ -416,11 +416,11 @@ async function generateMathProblem(username, topic = 'Bilangan') {
             messages: [
                 { 
                     role: "system", 
-                    content: "Kamu adalah Guru Matematika AI yang ramah untuk siswa SD/SMP (usia 10-14 tahun). Tugasmu membuat 1 soal cerita matematika yang membutuhkan logika. OUTPUT WAJIB BERUPA JSON MURNI TANPA MARKDOWN DI LUAR JSON. Gunakan format persis ini: {\"question\": \"Isi pertanyaan dengan Markdown\", \"hints\": [\"Hint 1\", \"Hint 2\", \"Hint 3\"], \"answer\": 15} Pastikan 'answer' adalah angka/number. PENTING: Untuk teks di dalam 'question' dan 'hints', SANGAT DIANJURKAN menggunakan sintaks Markdown (seperti **tebal**, *miring*) dan Unicode/simbol matematika (seperti √, ², π, dll) agar lebih menarik dan jelas." 
+                    content: "Kamu adalah Guru Matematika AI yang ramah untuk siswa SD/SMP (usia 10-14 tahun). Tugasmu membuat 1 soal cerita matematika yang membutuhkan logika. OUTPUT WAJIB BERUPA JSON MURNI TANPA MARKDOWN DI LUAR JSON. Gunakan format persis ini: {\"question\": \"Isi pertanyaan dengan Markdown\", \"hints\": [\"Hint 1\", \"Hint 2\", \"Hint 3\"], \"answer\": 15} Pastikan 'answer' adalah angka/number. PENTING: Untuk teks di dalam 'question', WAJIB sertakan satu gambar ilustrasi relevan di baris paling awal menggunakan Markdown dengan layanan Pollinations AI. Format gambar: `![Ilustrasi](https://image.pollinations.ai/prompt/english_description_with_underscores_no_spaces?width=600&height=300&nologo=true)`. Selain itu, SANGAT DIANJURKAN menggunakan sintaks Markdown (seperti **tebal**, *miring*) dan Unicode/simbol matematika (seperti √, ², π, dll) agar lebih menarik dan jelas." 
                 },
                 { 
                     role: "user", 
-                    content: `Buatkan 1 soal cerita matematika tentang topik **${topic}**. Buat 3 langkah hint bertahap yang membantu siswa berpikir sendiri, dan berikan jawaban akhirnya berupa angka.` 
+                    content: `Buatkan 1 soal cerita matematika tentang topik **${topic}**. Sertakan gambar ilustrasi yang sesuai dengan soal, buat 3 langkah hint bertahap yang membantu siswa berpikir sendiri, dan berikan jawaban akhirnya berupa angka.` 
                 }
             ],
             temperature: 0.7,
@@ -431,7 +431,7 @@ async function generateMathProblem(username, topic = 'Bilangan') {
     } catch (error) {
         console.error("Math Generation Error:", error);
         return {
-            question: "Sebuah lapangan berbentuk **persegi panjang** memiliki panjang 5 meter lebih dari lebarnya. Jika kelilingnya 50 meter, berapakah luasnya dalam meter persegi (m²)?",
+            question: "![Ilustrasi Lapangan](https://image.pollinations.ai/prompt/a_rectangular_green_field_with_measurements?width=600&height=300&nologo=true)\n\nSebuah lapangan berbentuk **persegi panjang** memiliki panjang 5 meter lebih dari lebarnya. Jika kelilingnya 50 meter, berapakah luasnya dalam meter persegi (m²)?",
             hints: [
                 "Ingat rumus keliling persegi panjang: **K = 2 × (panjang + lebar)**. Coba tuliskan persamaannya menggunakan lebar sebagai *X*.",
                 "Jika lebar adalah *X*, maka panjang adalah *X* + 5. Keliling = 2 × (*X* + *X* + 5) = 50. Cobalah pecahkan untuk mencari nilai *X*.",
