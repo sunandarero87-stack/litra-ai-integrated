@@ -273,7 +273,7 @@ window.checkMathAnswer = function() {
     
     if (isCorrect) {
         feedback.style.color = 'var(--success)';
-        feedback.innerHTML = '<i class="fas fa-check-circle"></i> Jawaban Benar! Hebat! <br><button class="btn btn-sm btn-success mt-2" onclick="renderTahap1Numerasi(document.getElementById(\\'main-content\\'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>';
+        feedback.innerHTML = `<i class="fas fa-check-circle"></i> Jawaban Benar! Hebat! <br><button class="btn btn-sm btn-success mt-2" onclick="renderTahap1Numerasi(document.getElementById('main-content'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>`;
     } else {
         feedback.style.color = 'var(--danger)';
         feedback.innerHTML = '<i class="fas fa-times-circle"></i> Jawaban masih kurang tepat, coba periksa lagi.';
