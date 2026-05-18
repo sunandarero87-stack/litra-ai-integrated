@@ -200,17 +200,35 @@ window.renderTahap1Numerasi = function(main) {
         <h2 style="font-size:1.75rem; font-weight:800; color:white; margin-bottom: 1rem;">Pilih Topik Numerasi</h2>
         <p class="text-muted" style="margin-bottom: 2rem;">Silakan pilih topik matematika yang ingin kamu asah hari ini.</p>
         
-        <select id="numerasi-topic-select" class="form-input" style="max-width: 300px; padding: 0.8rem; border-radius: 8px; font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+        <select id="numerasi-topic-select" class="form-input" style="max-width: 300px; padding: 0.8rem; border-radius: 8px; font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);" onchange="updateTopicDescription()">
             <option value="Bilangan" style="color: black;">Bilangan</option>
             <option value="Geometri" style="color: black;">Geometri</option>
             <option value="Pengukuran" style="color: black;">Pengukuran</option>
         </select>
+        
+        <div id="topic-description" style="font-size: 1rem; color: #aaa; margin-bottom: 2rem; max-width: 400px; line-height: 1.5;">
+            <strong>Bilangan:</strong> Belajar berhitung, pecahan, perkalian, pembagian, dan teka-teki angka seru.
+        </div>
         
         <button class="btn btn-primary" onclick="generateMathByTopic()" style="padding: 1rem 2rem; font-size: 1.1rem; border-radius: 12px; font-weight: bold;">
             <i class="fas fa-magic"></i> Generate Soal
         </button>
     </div>
     `;
+}
+
+window.updateTopicDescription = function() {
+    const topicSelect = document.getElementById('numerasi-topic-select');
+    const descDiv = document.getElementById('topic-description');
+    if (!topicSelect || !descDiv) return;
+    
+    const descriptions = {
+        'Bilangan': '<strong>Bilangan:</strong> Belajar berhitung, pecahan, perkalian, pembagian, dan teka-teki angka seru.',
+        'Geometri': '<strong>Geometri:</strong> Mengenal bentuk bangun datar (segitiga, persegi) dan bangun ruang (kubus, tabung) lewat gambar menarik.',
+        'Pengukuran': '<strong>Pengukuran:</strong> Belajar tentang waktu (jam), panjang, berat, luas, keliling, dan volume benda di sekitar kita.'
+    };
+    
+    descDiv.innerHTML = descriptions[topicSelect.value] || '';
 }
 
 window.generateMathByTopic = async function() {
@@ -286,13 +304,16 @@ window.showMathProblemUI = function(main) {
         </div>
 
         <div style="margin-bottom: 2rem;">
-            <button id="btn-hint" class="btn btn-outline" style="border-radius: 20px; border: 1px solid white; background: transparent; color: white; padding: 0.5rem 1.5rem; font-weight: 600; cursor: pointer;" onclick="showNextHint()">
-                HINT BERTAHAP
+            <button id="btn-hint" class="btn btn-outline" style="border-radius: 20px; border: 1px solid var(--accent); background: rgba(230,126,34,0.1); color: var(--accent); padding: 0.6rem 1.8rem; font-weight: 600; cursor: pointer; transition: all 0.3s;" onclick="showNextHint()">
+                <i class="fas fa-lightbulb"></i> BANTUAN BERTAHAP (1/3)
             </button>
         </div>
 
+        <div style="margin-bottom: 1rem; color: #aaa; font-size: 0.95rem;">
+            <i class="fas fa-info-circle"></i> Tuliskan jawaban akhirmu berupa **angka saja** tanpa satuan (contoh: 150)
+        </div>
         <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; max-width: 400px; margin: 0 auto;">
-            <input type="number" id="math-answer-input" class="form-input" placeholder="Jawaban (Angka)" style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.8rem; border-radius: 8px;">
+            <input type="number" id="math-answer-input" class="form-input" placeholder="Tulis Angka..." style="flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 0.8rem; border-radius: 8px;">
             <button class="btn btn-primary" onclick="checkMathAnswer()" style="padding: 0.8rem 1.5rem; border-radius: 8px;">Jawab</button>
         </div>
         <div id="math-feedback" style="margin-top: 1rem; font-weight: 600;"></div>
@@ -310,12 +331,15 @@ window.showNextHint = function() {
         const hintRaw = currentMathProblem.hints[currentHintIndex];
         const hintHtml = typeof marked !== 'undefined' ? marked.parse(hintRaw) : hintRaw;
 
-        hintDiv.innerHTML = '<strong style="color:var(--accent); display:block; margin-bottom: 0.5rem;">Hint ' + (currentHintIndex + 1) + ':</strong> <div class="math-content">' + hintHtml + '</div>';
+        hintDiv.innerHTML = '<strong style="color:var(--accent); display:block; margin-bottom: 0.5rem;">Bantuan ' + (currentHintIndex + 1) + ':</strong> <div class="math-content">' + hintHtml + '</div>';
         hintContainer.appendChild(hintDiv);
         currentHintIndex++;
         
+        const btnHint = document.getElementById('btn-hint');
         if (currentHintIndex >= currentMathProblem.hints.length) {
-            document.getElementById('btn-hint').style.display = 'none';
+            btnHint.style.display = 'none';
+        } else {
+            btnHint.innerHTML = `<i class="fas fa-lightbulb"></i> BANTUAN BERIKUTNYA (${currentHintIndex + 1}/3)`;
         }
     }
 }
