@@ -635,7 +635,7 @@ async function viewMaterial(id, type) {
             <iframe src="${urlObj}" style="width:100%; flex:1; border:none; background: white;"></iframe>
             <div id="scroll-chatbot-hint" style="display:none; padding:1rem 1.5rem; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-top:2px solid var(--primary-light); text-align:center; animation: slideUp 0.4s ease;">
                 <p style="color:white;font-size:0.88rem;font-weight:600;margin:0 0 0.5rem;">✅ Selesai membaca? Lanjut ke tahap berikutnya!</p>
-                <p style="color:rgba(255,255,255,0.85);font-size:0.82rem;margin:0;">👇 Klik tombol <strong>NARA-AI</strong> di kanan bawah untuk masuk ke Mode Penguatan Literasi & Numerasi Tahap 1</p>
+                <p style="color:rgba(255,255,255,0.85);font-size:0.82rem;margin:0;">👇 Klik tombol <strong>NARA-AI</strong> di kanan bawah untuk masuk ke Mode Penguatan Literasi</p>
             </div>`;
         // Untuk PDF, tampilkan hint setelah 10 detik (karena tidak bisa detect scroll iframe)
         setTimeout(() => showScrollChatbotHint(), 10000);
@@ -682,7 +682,7 @@ async function viewMaterial(id, type) {
                     <div class="material-text-content">${htmlContent}</div>
                     <div id="scroll-chatbot-hint" style="display:none; margin-top:2rem; padding:1.25rem 1.5rem; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; text-align:center; animation: slideUp 0.4s ease;">
                         <div style="font-size:1.8rem;margin-bottom:0.5rem;">🎯</div>
-                        <p style="color:white;font-size:0.95rem;font-weight:700;margin:0 0 0.4rem;">Masuk ke Mode Penguatan Literasi & Numerasi Tahap 1</p>
+                        <p style="color:white;font-size:0.95rem;font-weight:700;margin:0 0 0.4rem;">Masuk ke Mode Penguatan Literasi</p>
                         <p style="color:rgba(255,255,255,0.88);font-size:0.83rem;margin:0;">Diskusi dengan NARA-AI untuk menguji pemahamanmu tentang materi ini 💬</p>
                         <div style="margin-top:1rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; color:rgba(255,255,255,0.9); font-size:0.82rem;">
                             <i class="fas fa-arrow-down" style="animation:bounce-arrow 1s infinite;"></i>
@@ -726,7 +726,7 @@ async function viewMaterial(id, type) {
                     <div class="material-text-content">${formattedHTML}</div>
                     <div id="scroll-chatbot-hint" style="display:none; margin-top:2rem; padding:1.25rem 1.5rem; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:12px; text-align:center; animation: slideUp 0.4s ease;">
                         <div style="font-size:1.8rem;margin-bottom:0.5rem;">🎯</div>
-                        <p style="color:white;font-size:0.95rem;font-weight:700;margin:0 0 0.4rem;">Masuk ke Mode Penguatan Literasi &amp; Numerasi Tahap 1</p>
+                        <p style="color:white;font-size:0.95rem;font-weight:700;margin:0 0 0.4rem;">Masuk ke Mode Penguatan Literasi</p>
                         <p style="color:rgba(255,255,255,0.88);font-size:0.83rem;margin:0;">Diskusi dengan NARA-AI untuk menguji pemahamanmu tentang materi ini 💬</p>
                         <div style="margin-top:1rem; display:flex; align-items:center; justify-content:center; gap:0.5rem; color:rgba(255,255,255,0.9); font-size:0.82rem;">
                             <i class="fas fa-arrow-down" style="animation:bounce-arrow 1s infinite;"></i>
@@ -882,7 +882,7 @@ function showScrollChatbotHint() {
     arrow.style.cssText = 'position:fixed; bottom:90px; right:16px; width:165px; pointer-events:none; z-index:100001; text-align:center;';
     arrow.innerHTML = `
         <div style="background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; border-radius:12px; padding:8px 12px; font-size:0.78rem; font-weight:700; line-height:1.5; box-shadow:0 4px 20px rgba(99,102,241,0.5); margin-bottom:8px;">
-            🎯 Masuk ke Mode<br>Penguatan Literasi &amp;<br>Numerasi Tahap 1<br><span style="font-size:0.7rem;opacity:0.9;font-weight:400;">Diskusi dengan NARA-AI</span>
+            🎯 Masuk ke Mode<br>Penguatan Literasi<br><span style="font-size:0.7rem;opacity:0.9;font-weight:400;">Diskusi dengan NARA-AI</span>
         </div>
         <div style="color:var(--primary-light); animation:bounce-arrow 1s infinite; font-size:2rem;"><i class="fas fa-arrow-down"></i></div>
     `;
