@@ -135,8 +135,8 @@ exports.handleChat = async (req, res) => {
 
 exports.generateMath = async (req, res) => {
     try {
-        const { username } = req.body;
-        const problem = await aiService.generateMathProblem(username);
+        const { username, topic } = req.body;
+        const problem = await aiService.generateMathProblem(username, topic || 'Bilangan');
         res.json({ success: true, problem });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -192,11 +192,36 @@ function renderTahap1(main) {
 let currentMathProblem = null;
 let currentHintIndex = 0;
 
-window.renderTahap1Numerasi = async function(main) {
+window.renderTahap1Numerasi = function(main) {
+    main.innerHTML = `
+    <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background: #12141d; border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg); min-height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative;">
+        <button onclick="renderTahap1(document.getElementById('main-content'))" style="position: absolute; top: 1.5rem; left: 1.5rem; background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <div class="tahap-icon" style="background:var(--accent-light);color:var(--accent); margin-bottom: 1rem; width: 80px; height: 80px; font-size: 2.5rem; display: flex; justify-content: center; align-items: center; border-radius: 50%;"><i class="fas fa-calculator"></i></div>
+        <h2 style="font-size:1.75rem; font-weight:800; color:white; margin-bottom: 1rem;">Pilih Topik Numerasi</h2>
+        <p class="text-muted" style="margin-bottom: 2rem;">Silakan pilih topik matematika yang ingin kamu asah hari ini.</p>
+        
+        <select id="numerasi-topic-select" class="form-input" style="max-width: 300px; padding: 0.8rem; border-radius: 8px; font-size: 1.1rem; text-align: center; margin-bottom: 1.5rem; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2);">
+            <option value="Bilangan" style="color: black;">Bilangan</option>
+            <option value="Geometri" style="color: black;">Geometri</option>
+            <option value="Pengukuran" style="color: black;">Pengukuran</option>
+        </select>
+        
+        <button class="btn btn-primary" onclick="generateMathByTopic()" style="padding: 1rem 2rem; font-size: 1.1rem; border-radius: 12px; font-weight: bold;">
+            <i class="fas fa-magic"></i> Generate Soal
+        </button>
+    </div>
+    `;
+}
+
+window.generateMathByTopic = async function() {
+    const main = document.getElementById('main-content');
+    const topicSelect = document.getElementById('numerasi-topic-select');
+    const topic = topicSelect ? topicSelect.value : 'Bilangan';
+
     main.innerHTML = `
     <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background: #12141d; border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg); min-height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
         <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
-        <h3 style="color: white;">NARA-AI Sedang Menyiapkan Soal...</h3>
+        <h3 style="color: white;">NARA-AI Sedang Menyiapkan Soal ${topic}...</h3>
         <p class="text-muted">Tunggu sebentar ya, soalnya dibuat khusus untukmu!</p>
     </div>
     `;
@@ -205,7 +230,7 @@ window.renderTahap1Numerasi = async function(main) {
         const res = await fetch('/api/chat/generate-math', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username })
+            body: JSON.stringify({ username: currentUser.username, topic: topic })
         });
         const data = await res.json();
         if (data.success && data.problem) {
@@ -213,21 +238,24 @@ window.renderTahap1Numerasi = async function(main) {
             currentHintIndex = 0;
             showMathProblemUI(main);
         } else {
-            main.innerHTML = `<div style="color:var(--danger); padding: 2rem;">Gagal membuat soal. Silakan coba lagi.</div>`;
+            main.innerHTML = `<div style="color:var(--danger); padding: 2rem;">Gagal membuat soal. Silakan coba lagi. <br><br><button class="btn btn-outline" onclick="renderTahap1Numerasi(document.getElementById('main-content'))">Kembali</button></div>`;
         }
     } catch (err) {
-        main.innerHTML = `<div style="color:var(--danger); padding: 2rem;">Terjadi kesalahan koneksi.</div>`;
+        main.innerHTML = `<div style="color:var(--danger); padding: 2rem;">Terjadi kesalahan koneksi. <br><br><button class="btn btn-outline" onclick="renderTahap1Numerasi(document.getElementById('main-content'))">Kembali</button></div>`;
     }
 }
 
 window.showMathProblemUI = function(main) {
+    // Gunakan marked.parse jika tersedia, jika tidak gunakan string asli
+    const questionHtml = typeof marked !== 'undefined' ? marked.parse(currentMathProblem.question) : currentMathProblem.question;
+
     main.innerHTML = `
     <div style="background-color: #12141d; color: white; padding: 4rem 2rem; border-radius: 16px; text-align: center; font-family: 'Inter', sans-serif; position: relative; min-height: 70vh;">
-        <button onclick="renderTahap1(document.getElementById('main-content'))" style="position: absolute; top: 1.5rem; left: 1.5rem; background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-arrow-left"></i> Kembali</button>
+        <button onclick="renderTahap1Numerasi(document.getElementById('main-content'))" style="position: absolute; top: 1.5rem; left: 1.5rem; background: none; border: none; color: #aaa; cursor: pointer; font-size: 1.1rem;"><i class="fas fa-arrow-left"></i> Kembali</button>
         <h2 style="font-size: 1.2rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1.5rem; color: #fff;">SOAL:</h2>
-        <p style="font-size: 1.15rem; line-height: 1.8; max-width: 600px; margin: 0 auto 3rem auto; font-weight: 400;">
-            ${currentMathProblem.question}
-        </p>
+        <div style="font-size: 1.15rem; line-height: 1.8; max-width: 600px; margin: 0 auto 3rem auto; font-weight: 400; text-align: left; background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
+            ${questionHtml}
+        </div>
         
         <div id="hint-container" style="margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left;">
         </div>
@@ -253,7 +281,11 @@ window.showNextHint = function() {
         const hintContainer = document.getElementById('hint-container');
         const hintDiv = document.createElement('div');
         hintDiv.style.cssText = "background: rgba(255,255,255,0.05); border-left: 4px solid var(--accent); padding: 1rem; margin-bottom: 0.5rem; border-radius: 4px; animation: slideUp 0.3s ease;";
-        hintDiv.innerHTML = `<strong style="color:var(--accent)">Hint ${currentHintIndex + 1}:</strong> ${currentMathProblem.hints[currentHintIndex]}`;
+        
+        const hintRaw = currentMathProblem.hints[currentHintIndex];
+        const hintHtml = typeof marked !== 'undefined' ? marked.parse(hintRaw) : hintRaw;
+
+        hintDiv.innerHTML = '<strong style="color:var(--accent); display:block; margin-bottom: 0.5rem;">Hint ' + (currentHintIndex + 1) + ':</strong> <div>' + hintHtml + '</div>';
         hintContainer.appendChild(hintDiv);
         currentHintIndex++;
         
@@ -272,11 +304,27 @@ window.checkMathAnswer = function() {
     const isCorrect = parseFloat(input) === parseFloat(currentMathProblem.answer);
     
     if (isCorrect) {
+        const praises = [
+            "Luar biasa! Analisismu sangat tajam!",
+            "Brilian! Jawabanmu tepat sekali!",
+            "Wah, kamu jenius! Teruskan kerja bagusmu!",
+            "Tepat! Pemahaman logikamu sangat baik!"
+        ];
+        const randomPraise = praises[Math.floor(Math.random() * praises.length)];
+        
         feedback.style.color = 'var(--success)';
-        feedback.innerHTML = `<i class="fas fa-check-circle"></i> Jawaban Benar! Hebat! <br><button class="btn btn-sm btn-success mt-2" onclick="renderTahap1Numerasi(document.getElementById('main-content'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>`;
+        feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${randomPraise} <br><button class="btn btn-sm btn-success mt-2" onclick="renderTahap1Numerasi(document.getElementById('main-content'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>`;
     } else {
+        const motivations = [
+            "Belum tepat. Ayo coba periksa kembali hitunganmu!",
+            "Jangan menyerah! Baca kembali soalnya perlahan-lahan.",
+            "Sedikit lagi! Gunakan hint jika kamu merasa kesulitan.",
+            "Salah itu wajar saat belajar. Yuk, evaluasi lagi langkah kerjamu!"
+        ];
+        const randomMotivation = motivations[Math.floor(Math.random() * motivations.length)];
+
         feedback.style.color = 'var(--danger)';
-        feedback.innerHTML = '<i class="fas fa-times-circle"></i> Jawaban masih kurang tepat, coba periksa lagi.';
+        feedback.innerHTML = '<i class="fas fa-times-circle"></i> ' + randomMotivation;
     }
 }
 
