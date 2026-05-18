@@ -246,8 +246,9 @@ window.generateMathByTopic = async function() {
 }
 
 window.showMathProblemUI = function(main) {
-    // Gunakan marked.parse jika tersedia, jika tidak gunakan string asli
-    const questionHtml = typeof marked !== 'undefined' ? marked.parse(currentMathProblem.question) : currentMathProblem.question;
+    // Bersihkan gambar markdown jika ada agar tidak terender
+    const cleanQuestion = currentMathProblem.question ? currentMathProblem.question.replace(/!\[.*?\]\(.*?\)/g, '') : '';
+    const questionHtml = typeof marked !== 'undefined' ? marked.parse(cleanQuestion) : cleanQuestion;
 
     let svgHtml = '';
     if (currentMathProblem.svg && currentMathProblem.svg.trim() !== '') {
