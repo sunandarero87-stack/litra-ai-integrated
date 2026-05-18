@@ -416,11 +416,11 @@ async function generateMathProblem(username, topic = 'Bilangan') {
             messages: [
                 { 
                     role: "system", 
-                    content: "Kamu adalah Guru Matematika AI yang ramah untuk siswa SD/SMP (usia 10-14 tahun). Tugasmu membuat 1 soal cerita matematika yang membutuhkan logika. OUTPUT WAJIB BERUPA JSON MURNI TANPA MARKDOWN DI LUAR JSON. Gunakan format persis ini: {\"question\": \"Isi pertanyaan dengan Markdown\", \"hints\": [\"Hint 1\", \"Hint 2\", \"Hint 3\"], \"answer\": 15} Pastikan 'answer' adalah angka/number. PENTING: Untuk teks di dalam 'question', WAJIB sertakan satu gambar ilustrasi relevan di baris paling awal menggunakan Markdown dengan layanan Pollinations AI. Format gambar: `![Ilustrasi](https://image.pollinations.ai/prompt/english_description_with_underscores_no_spaces?width=600&height=300&nologo=true)`. Selain itu, SANGAT DIANJURKAN menggunakan sintaks Markdown (seperti **tebal**, *miring*) dan Unicode/simbol matematika (seperti √, ², π, dll) agar lebih menarik dan jelas." 
+                    content: "Kamu adalah Guru Matematika AI yang ramah untuk siswa SD/SMP (usia 10-14 tahun). Tugasmu membuat 1 soal cerita matematika yang membutuhkan logika. OUTPUT WAJIB BERUPA JSON MURNI TANPA MARKDOWN DI LUAR JSON. Gunakan format persis ini: {\"question\": \"Isi pertanyaan dengan Markdown\", \"hints\": [\"Hint 1\", \"Hint 2\", \"Hint 3\"], \"answer\": 15, \"svg\": \"<svg>...</svg>\"} Pastikan 'answer' adalah angka/number.\n\nPENTING:\n1. Jika soal membahas tentang BANGUN DATAR (segitiga, persegi panjang, lingkaran, trapesium, dll), BANGUN RUANG (kubus, balok, tabung, prisma, dll), atau DENAH/RUTE/GRID koordinat, kamu WAJIB menghasilkan kode SVG yang bersih, indah, responsif, dan valid di field 'svg' untuk menggambarkan bangun atau diagram tersebut secara matematis. Berikan label ukuran/dimensi/huruf (misal: '12 cm', 'X', 'A', 'B') yang kontras dan sesuai persis dengan soal. Gunakan warna pengisi pastel lembut (misal: #3b82f6 atau #ef4444 dengan transparansi), garis tepi kontras, serta tag <text> untuk label agar mudah dibaca.\n2. Jika soal tidak berkaitan dengan bentuk visual geometris, biarkan field 'svg' berisi string kosong (\"\"). Sebagai gantinya, kamu WAJIB menyisipkan satu link gambar ilustrasi relevan di baris paling awal pertanyaan menggunakan Markdown dengan layanan Pollinations AI. Format gambar: `![Ilustrasi](https://image.pollinations.ai/prompt/english_description_with_underscores_no_spaces?width=600&height=300&nologo=true)`.\n3. Selain itu, SANGAT DIANJURKAN menggunakan sintaks Markdown (seperti **tebal**, *miring*) dan Unicode/simbol matematika (seperti √, ², π, dll) agar lebih menarik dan jelas." 
                 },
                 { 
                     role: "user", 
-                    content: `Buatkan 1 soal cerita matematika tentang topik **${topic}**. Sertakan gambar ilustrasi yang sesuai dengan soal, buat 3 langkah hint bertahap yang membantu siswa berpikir sendiri, dan berikan jawaban akhirnya berupa angka.` 
+                    content: `Buatkan 1 soal cerita matematika tentang topik **${topic}**. Jika memerlukan representasi bangun datar, bangun ruang, denah, atau diagram visual, rancang kode SVG-nya secara akurat di field 'svg'. Buat 3 langkah hint bertahap yang membantu siswa berpikir sendiri, dan berikan jawaban akhirnya berupa angka.` 
                 }
             ],
             temperature: 0.7,
@@ -431,13 +431,21 @@ async function generateMathProblem(username, topic = 'Bilangan') {
     } catch (error) {
         console.error("Math Generation Error:", error);
         return {
-            question: "![Ilustrasi Lapangan](https://image.pollinations.ai/prompt/a_rectangular_green_field_with_measurements?width=600&height=300&nologo=true)\n\nSebuah lapangan berbentuk **persegi panjang** memiliki panjang 5 meter lebih dari lebarnya. Jika kelilingnya 50 meter, berapakah luasnya dalam meter persegi (m²)?",
+            question: "Sebuah lapangan berbentuk **persegi panjang** memiliki panjang 5 meter lebih dari lebarnya. Jika kelilingnya 50 meter, berapakah luasnya dalam meter persegi (m²)?",
             hints: [
                 "Ingat rumus keliling persegi panjang: **K = 2 × (panjang + lebar)**. Coba tuliskan persamaannya menggunakan lebar sebagai *X*.",
                 "Jika lebar adalah *X*, maka panjang adalah *X* + 5. Keliling = 2 × (*X* + *X* + 5) = 50. Cobalah pecahkan untuk mencari nilai *X*.",
                 "Setelah mendapat *X* = 10 (lebar), panjangnya adalah 10 + 5 = 15. Luas = panjang × lebar. Berapakah 15 × 10?"
             ],
-            answer: 150
+            answer: 150,
+            svg: `<svg viewBox="0 0 400 200" width="100%" height="200" xmlns="http://www.w3.org/2000/svg">
+                <rect x="50" y="40" width="300" height="120" rx="8" fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" stroke-width="3" />
+                <!-- Labels -->
+                <text x="200" y="30" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">Panjang = Lebar + 5 meter</text>
+                <text x="200" y="110" fill="#ffffff" font-size="16" font-weight="bold" text-anchor="middle">Luas = ? m²</text>
+                <text x="25" y="105" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle" transform="rotate(-90 25 105)">Lebar</text>
+                <text x="200" y="190" fill="#aaaaaa" font-size="14" text-anchor="middle">Keliling = 50 meter</text>
+            </svg>`
         };
     }
 }
