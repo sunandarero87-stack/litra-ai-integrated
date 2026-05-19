@@ -253,17 +253,32 @@ function renderStudentResults(main) {
     const students = users.filter(u => u.role === 'siswa');
     const results = getAssessmentResults();
 
+    const progressData = getStudentProgress();
+
     // AI Analysis summary
     let totalLit = 0, totalNum = 0, totalAll = 0, count = 0;
     students.forEach(s => {
         const r = results[s.username];
-        if (r) { totalLit += (r.literasi / r.litTotal) * 100; totalNum += (r.numerasi / r.numTotal) * 100; totalAll += r.pct; count++; }
+        const p = progressData[s.username] || {};
+        if (r) { 
+            let litT1 = p.tahap1LiterasiScore || 0;
+            let numT1 = p.tahap1NumerasiScore || 0;
+            let litT3 = (r.literasi / r.litTotal) * 100;
+            let numT3 = (r.numerasi / r.numTotal) * 100;
+            
+            let avgLit = (litT1 + litT3) / 2;
+            let avgNum = (numT1 + numT3) / 2;
+            let avgAll = (avgLit + avgNum) / 2;
+
+            totalLit += avgLit; 
+            totalNum += avgNum; 
+            totalAll += avgAll; 
+            count++; 
+        }
     });
     const avgLit = count ? Math.round(totalLit / count) : 0;
     const avgNum = count ? Math.round(totalNum / count) : 0;
     const avgAll = count ? Math.round(totalAll / count) : 0;
-
-    const progressData = getStudentProgress();
 
     main.innerHTML = `
     <div class="analysis-grid">

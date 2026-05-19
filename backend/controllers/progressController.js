@@ -322,6 +322,24 @@ exports.analyzeStudentCompetency = async (req, res) => {
         const p = await Progress.findOne({ username });
         if (!p) return res.status(404).json({ error: 'Data progres siswa tidak ditemukan' });
 
+        let avgLit = 0, avgNum = 0, totalSkor = 0, lulus = false;
+        
+        let litT1 = p.tahap1LiterasiScore || 0;
+        let numT1 = p.tahap1NumerasiScore || 0;
+
+        if (p.assessmentResult) {
+            let litT3 = Math.round((p.assessmentResult.literasi / p.assessmentResult.litTotal) * 100);
+            let numT3 = Math.round((p.assessmentResult.numerasi / p.assessmentResult.numTotal) * 100);
+            
+            avgLit = Math.round((litT1 + litT3) / 2);
+            avgNum = Math.round((numT1 + numT3) / 2);
+            totalSkor = Math.round((p.assessmentResult.score / p.assessmentResult.total) * 100);
+            lulus = p.assessmentResult.pass;
+        } else {
+            avgLit = litT1;
+            avgNum = numT1;
+        }
+
         const dataToAnalyze = {
             username: p.username,
             tahap1_Membaca: p.tahap1Complete ? "Selesai" : "Belum",
@@ -331,10 +349,10 @@ exports.analyzeStudentCompetency = async (req, res) => {
                 siapUji: p.isReady
             },
             tahap3_Uji_Pemahaman: p.assessmentResult ? {
-                total_skor: Math.round((p.assessmentResult.score / p.assessmentResult.total) * 100),
-                literasi_skor: Math.round((p.assessmentResult.literasi / p.assessmentResult.litTotal) * 100),
-                numerasi_skor: Math.round((p.assessmentResult.numerasi / p.assessmentResult.numTotal) * 100),
-                lulus: p.assessmentResult.pass
+                total_skor: totalSkor,
+                literasi_skor: avgLit,
+                numerasi_skor: avgNum,
+                lulus: lulus
             } : "Belum Asesmen"
         };
 
