@@ -189,8 +189,14 @@ const User = require('../models/User');
 
 exports.simulateData = async (req, res) => {
     try {
-        const students = await User.find({ role: 'siswa' });
-        const passCount = Math.round(students.length * 0.82);
+        const { usernames, specificRange } = req.body || {};
+        let query = { role: 'siswa' };
+        if (usernames && Array.isArray(usernames) && usernames.length > 0) {
+            query.username = { $in: usernames };
+        }
+        
+        const students = await User.find(query);
+        const passCount = specificRange ? students.length : Math.round(students.length * 0.82);
 
         for (let i = 0; i < students.length; i++) {
             const s = students[i];
@@ -198,12 +204,27 @@ exports.simulateData = async (req, res) => {
             const litTotal = 5, numTotal = 5, total = 10;
             
             let lit, num;
-            if (willPass) {
-                lit = Math.floor(Math.random() * 2) + 4; // 4-5
-                num = Math.floor(Math.random() * 2) + 4; // 4-5
+            let tahap1LitScore, tahap1NumScore;
+
+            if (specificRange) {
+                // Ensure average is between 65 and 84
+                // Set lit and num to 4 (80% for Tahap 3) or 3 (60% for Tahap 3)
+                lit = Math.random() > 0.5 ? 4 : 3;
+                num = Math.random() > 0.5 ? 4 : 3;
+                
+                // Randomize Tahap 1 between 70 and 84 so the average (Tahap 1 + Tahap 3) stays between 65-84
+                tahap1LitScore = Math.floor(Math.random() * 15) + 70; // 70 to 84
+                tahap1NumScore = Math.floor(Math.random() * 15) + 70; // 70 to 84
             } else {
-                lit = Math.floor(Math.random() * 3) + 1; // 1-3
-                num = Math.floor(Math.random() * 3) + 1; // 1-3
+                if (willPass) {
+                    lit = Math.floor(Math.random() * 2) + 4; // 4-5
+                    num = Math.floor(Math.random() * 2) + 4; // 4-5
+                } else {
+                    lit = Math.floor(Math.random() * 3) + 1; // 1-3
+                    num = Math.floor(Math.random() * 3) + 1; // 1-3
+                }
+                tahap1LitScore = Math.floor(Math.random() * 41) + 60; // 60 to 100
+                tahap1NumScore = Math.floor(Math.random() * 41) + 60; // 60 to 100
             }
             
             const score = lit + num;
@@ -215,10 +236,13 @@ exports.simulateData = async (req, res) => {
                 tahap2Complete: true,
                 tahap3Complete: true,
                 tahap4Complete: true,
-                tahap2Score: Math.floor(Math.random() * 21) + 80,
-                tahap4Score: Math.floor(Math.random() * 21) + 80,
+                tahap1Score: Math.round((tahap1LitScore + tahap1NumScore) / 2),
+                tahap1LiterasiScore: tahap1LitScore,
+                tahap1NumerasiScore: tahap1NumScore,
+                tahap2Score: specificRange ? Math.floor(Math.random() * 20) + 65 : Math.floor(Math.random() * 21) + 80,
+                tahap4Score: specificRange ? Math.floor(Math.random() * 20) + 65 : Math.floor(Math.random() * 21) + 80,
                 assessmentResult: {
-                    score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct, pass: willPass,
+                    score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct, pass: specificRange ? true : willPass,
                     date: new Date(), violations: 0
                 },
                 approvedForAssessment: true,
@@ -226,7 +250,7 @@ exports.simulateData = async (req, res) => {
                 approvedBy: 'Simulation AI'
             }, { upsert: true });
         }
-        res.json({ success: true, message: 'Simulasi berhasil' });
+        res.json({ success: true, message: `Simulasi berhasil untuk ${students.length} siswa` });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

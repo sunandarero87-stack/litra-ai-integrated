@@ -3543,12 +3543,44 @@ async function clearAllViolations() {
 }
 
 async function triggerDataSimulation() {
-    if (!confirm('Apakah Anda yakin ingin men-generate data simulasi? Ini akan mengubah data penilaian semua siswa agar sesuai target (82% Lulus, Rata-rata >80%).')) return;
+    const classFilter = document.getElementById('results-class-filter').value;
+    
+    // Collect visible student usernames
+    const rows = document.querySelectorAll('#table-student-results tbody tr');
+    let targetUsernames = [];
+    rows.forEach(row => {
+        if (row.style.display !== 'none' && row.cells.length > 3) {
+            const cb = row.querySelector('.check-result');
+            if (cb && cb.value) {
+                targetUsernames.push(cb.value);
+            }
+        }
+    });
+
+    if (targetUsernames.length === 0) {
+        alert("Tidak ada siswa yang ditampilkan untuk disimulasi.");
+        return;
+    }
+
+    const isPerClass = classFilter !== 'all';
+    const confirmMsg = isPerClass 
+        ? `Apakah Anda yakin ingin men-generate data simulasi untuk ${targetUsernames.length} siswa kelas ${classFilter}? (Nilai akan diatur di antara 65 - 84)`
+        : 'Apakah Anda yakin ingin men-generate data simulasi untuk SEMUA siswa? Ini akan mengubah data penilaian agar sesuai target (82% Lulus).';
+
+    if (!confirm(confirmMsg)) return;
+    
     try {
-        const res = await fetch('/api/progress/simulate', { method: 'POST' });
+        const res = await fetch('/api/progress/simulate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                usernames: isPerClass ? targetUsernames : null,
+                specificRange: isPerClass
+            })
+        });
         const data = await res.json();
         if (res.ok) {
-            alert('? Berhasil! Data penilaian telah diperbarui sesuai target.');
+            alert('✅ Berhasil! Data penilaian telah disimulasikan.');
             await syncData();
             renderStudentResults(document.getElementById('main-content'));
         } else {
