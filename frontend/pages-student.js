@@ -169,6 +169,9 @@ function escapeHtml(text) {
 }
 
 function renderTahap1(main) {
+    const progress = getProgress(currentUser.username);
+    const hasLiterasiScore = progress.tahap1LiterasiScore !== undefined && progress.tahap1LiterasiScore >= 50;
+
     main.innerHTML = `
     <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background:linear-gradient(145deg, var(--bg-card), #0f172a); border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg);">
         <h2 style="font-size:1.75rem; font-weight:800; color:white; margin-bottom: 1rem;">Pilih Mode Belajar Tahap 1</h2>
@@ -179,11 +182,20 @@ function renderTahap1(main) {
                 <h3 style="margin-bottom: 0.5rem;">Penguatan Literasi</h3>
                 <p>Eksplorasi Materi Guru</p>
             </div>
+            
+            ${hasLiterasiScore ? `
             <div class="tahap-card unlocked" onclick="renderTahap1Numerasi(document.getElementById('main-content'))" style="cursor: pointer; width: 250px; background: var(--bg-card); border: 2px solid var(--accent); display: flex; flex-direction: column; align-items: center;">
                 <div class="tahap-icon" style="background:var(--accent-light);color:var(--accent); margin-bottom: 1rem;"><i class="fas fa-calculator"></i></div>
                 <h3 style="margin-bottom: 0.5rem;">Penguatan Numerasi</h3>
                 <p>Uji Nalar Matematika AI</p>
             </div>
+            ` : `
+            <div class="tahap-card locked" onclick="alert('⚠️ Kamu harus menyelesaikan Penguatan Literasi terlebih dahulu sebelum bisa mengakses Penguatan Numerasi.')" style="cursor: not-allowed; width: 250px; background: var(--bg-card); border: 2px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; opacity: 0.7;">
+                <div class="tahap-icon" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.4); margin-bottom: 1rem;"><i class="fas fa-lock"></i></div>
+                <h3 style="margin-bottom: 0.5rem; color: rgba(255,255,255,0.6);">Penguatan Numerasi</h3>
+                <p style="color: rgba(255,255,255,0.4);">Selesaikan Literasi Dulu</p>
+            </div>
+            `}
         </div>
     </div>
     `;

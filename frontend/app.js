@@ -431,11 +431,31 @@ function handleStageTimeout(page) {
     }
 }
 
-// Global visibility change listener (tidak ada anti-cheat di sini)
+// Global visibility change listener (Anti-Cheat Exambrowser)
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
         if (currentUser && currentUser.role === 'siswa') {
-            console.log('User left the tab...');
+            alert('⚠️ PELANGGARAN TERDETEKSI: Kamu telah membuka tab atau aplikasi lain!\n\nLayar akan dikembalikan ke Mode Full Screen (Exambrowser) demi menjaga fokus dan integritas pengerjaan.');
+            
+            // Catat pelanggaran ke backend
+            fetch('/api/progress/violation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: currentUser.username,
+                    type: 'tab_out',
+                    timestamp: new Date().toISOString()
+                })
+            }).catch(err => console.error('Gagal mencatat pelanggaran:', err));
+        }
+    } else if (document.visibilityState === 'visible') {
+        // Saat kembali ke tab, pastikan fullscreen kembali aktif
+        if (currentUser && currentUser.role === 'siswa') {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            }
         }
     }
 });
@@ -660,6 +680,12 @@ function closeStudentOnboarding() {
         overlay.style.transition = 'opacity 0.3s ease';
         setTimeout(() => {
             overlay.remove();
+            // Masuk ke Mode Exambrowser (Full Screen)
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch((err) => {
+                    console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            }
         }, 300);
     }
 }

@@ -99,11 +99,10 @@ FORMAT JAWABAN:
 - Gunakan **cetak tebal** untuk kata-kata penting.
 - Berikan contoh dari kehidupan nyata yang dekat dengan anak-anak.
 - LARANGAN: Jangan tanya "Apa kamu paham?" atau "Ada lagi?" di akhir penjelasan rutin.
-- WAJIB: Jika siswa menyatakan siap diuji ("Ya", "Siap", "Boleh", dll.), langsung berikan DUA soal uji pemahaman secara BERTAHAP:
+- WAJIB: Jika siswa menyatakan siap diuji ("Ya", "Siap", "Boleh", dll.), langsung berikan SATU soal uji pemahaman:
   * Soal 1: **[UJI LITERASI]** - pertanyaan tentang pemahaman isi/konsep dari materi (mudah dipahami anak 10 tahun)
-  * Soal 2: **[UJI NUMERASI]** - pertanyaan tentang angka, data, atau logika dari materi (mudah dipahami anak 10 tahun)
-  Tandai dengan jelas setiap soal menggunakan label **[UJI LITERASI]** dan **[UJI NUMERASI]**.
-- CATATAN: Kalau siswa bilang siap diuji, LANGSUNG kasih dua soal itu tanpa basa-basi panjang! Langsung tuliskan Soal 1 [UJI LITERASI] lalu Soal 2 [UJI NUMERASI].
+  Tandai dengan jelas soal tersebut menggunakan label **[UJI LITERASI]**.
+- CATATAN: Kalau siswa bilang siap diuji, LANGSUNG kasih soal itu tanpa basa-basi panjang! Langsung tuliskan Soal 1 [UJI LITERASI].
 KONTEKS: ${materialContext}
 TAHAP: ${stage}`;
 
