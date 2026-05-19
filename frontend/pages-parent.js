@@ -86,6 +86,13 @@ function renderParentDashboard(container) {
         }
     }
 
+    // Fallback for legacy data missing Literasi & Numerasi breakdown
+    let litScore = progress.tahap1LiterasiScore || 0;
+    let numScore = progress.tahap1NumerasiScore || 0;
+    if (litScore === 0 && numScore === 0 && progress.tahap1Score > 0) {
+        litScore = progress.tahap1Score;
+    }
+
     container.innerHTML = `
         <div class="dashboard-parent" style="max-width: 1100px; margin: 0 auto; animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);">
             
@@ -163,8 +170,8 @@ function renderParentDashboard(container) {
                             </span>
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; gap: 10px;">
-                            <span style="background: rgba(26, 115, 232, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(26, 115, 232, 0.2);">Literasi: <strong>${progress.tahap1LiterasiScore || 0}%</strong></span>
-                            <span style="background: rgba(0, 188, 212, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0, 188, 212, 0.2);">Numerasi: <strong>${progress.tahap1NumerasiScore || 0}%</strong></span>
+                            <span style="background: rgba(26, 115, 232, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(26, 115, 232, 0.2);">Literasi: <strong>${litScore}%</strong></span>
+                            <span style="background: rgba(0, 188, 212, 0.1); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(0, 188, 212, 0.2);">Numerasi: <strong>${numScore}%</strong></span>
                         </div>
                         <div class="progress-bar" style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px;">
                             <div class="progress-fill" style="width: ${progress.tahap1Score || 0}%; background: ${progress.tahap1Score >= 80 ? 'var(--gradient-success)' : (progress.tahap1Score >= 50 ? 'var(--gradient-accent)' : 'var(--gradient-danger)')}; border-radius: 5px; box-shadow: 0 0 10px ${progress.tahap1Score >= 80 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'};"></div>
