@@ -457,6 +457,34 @@ async function generateMathProblem(username, topic = 'Bilangan', materialContext
     }
 }
 
+async function generateStage3Assessment(materialContent) {
+    const payload = {
+        messages: [
+            { 
+                role: "system", 
+                content: `Kamu adalah AI pembuat lembar soal objektif (Pilihan Ganda) berstandar HOTS (Higher Order Thinking Skills).
+OUTPUT WAJIB BERUPA JSON ARRAY YANG VALID YANG BERISI TEPAT 10 OBJEK SOAL.
+5 SOAL PERTAMA WAJIB BENTUK LITERASI (membaca, memahami, menganalisis teks).
+5 SOAL TERAKHIR WAJIB BENTUK NUMERASI (menghitung, logika matematika, pola, data yang berkaitan dengan teks).
+Setiap objek soal dalam array HARUS memiliki format properti berikut persis:
+{
+  "question": "teks pertanyaan soal HOTS...",
+  "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+  "correct": 0, // Indeks jawaban yang benar (0 untuk Opsi A, 1 untuk Opsi B, 2 untuk Opsi C, 3 untuk Opsi D)
+  "explanation": "Pembahasan/penjelasan jawaban yang mendalam...",
+  "type": "literasi" // atau "numerasi" sesuai jenis soalnya
+}
+Jangan gunakan nama properti bahasa Indonesia seperti "soal", "opsi", "kunci", atau "pembahasan". Gunakan persis kunci bahasa Inggris di atas!`
+            },
+            { role: "user", content: `Buat TEPAT 10 buah soal pilihan ganda (5 Literasi dan 5 Numerasi) dari materi berikut: ${materialContent.substring(0, 20000)}` }
+        ],
+        max_tokens: 4000,
+        temperature: 0.6
+    };
+    const response = await requestWithFallback(payload, [MODEL_HEAVY, "llama-3.1-70b-versatile"]);
+    return JSON.parse(cleanJson(response.data.choices[0].message.content));
+}
+
 module.exports = {
     generateMathProblem,
     generateResponse,
@@ -466,6 +494,7 @@ module.exports = {
     analyzeHabits,
     generateBankSoal,
     generateBankSoalFromMaterial,
+    generateStage3Assessment,
     analyzeUnderstanding,
     generateLearningMaterial,
     analyzeCompetency,

@@ -2157,10 +2157,18 @@ window.startRemedialMandiri = async function () {
     }
 
     try {
-        const genRes = await fetch('/api/assessment/generate-from-bank', {
+        let endpoint = '/api/assessment/generate-from-bank';
+        let bodyPayload = { username: currentUser.username, amount: amount };
+
+        if (settings.remedialMode === 'mandiri') {
+            endpoint = '/api/assessment/generate-ai-tahap3';
+            bodyPayload = { username: currentUser.username };
+        }
+
+        const genRes = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username, amount })
+            body: JSON.stringify(bodyPayload)
         });
 
         if (!genRes.ok) {
@@ -2212,10 +2220,18 @@ async function startAssessment() {
 
     try {
         const settings = getAssessmentSettings();
-        const res = await fetch('/api/assessment/generate-from-bank', {
+        let endpoint = '/api/assessment/generate-from-bank';
+        let bodyPayload = { username: currentUser.username, amount: settings.questionAmount || 10 };
+
+        if (settings.remedialMode === 'mandiri') {
+            endpoint = '/api/assessment/generate-ai-tahap3';
+            bodyPayload = { username: currentUser.username };
+        }
+
+        const res = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username, amount: settings.questionAmount || 10 })
+            body: JSON.stringify(bodyPayload)
         });
         const data = await res.json();
 

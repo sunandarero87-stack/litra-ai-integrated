@@ -1,4 +1,7 @@
 const QuestionBank = require('../models/QuestionBank');
+const aiService = require('../services/aiService');
+const ChatLog = require('../models/ChatLog');
+const Material = require('../models/Material');
 
 exports.generateFromBank = async (req, res) => {
     try {
@@ -78,6 +81,52 @@ exports.generateFromBank = async (req, res) => {
         res.json({ success: true, questions });
     } catch (error) {
         console.error('Generate From Bank Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.generateAITahap3 = async (req, res) => {
+    try {
+        const { username } = req.body;
+        let materialContext = "";
+
+        // Find the last selected material from chat logs
+        const lastChat = await ChatLog.findOne({ username, 'metadata.selectedMaterial': { $exists: true, $ne: null } }).sort({ timestamp: -1 });
+
+        if (lastChat && lastChat.metadata && lastChat.metadata.selectedMaterial) {
+            const material = await Material.findOne({ name: lastChat.metadata.selectedMaterial });
+            if (material) {
+                materialContext = `Judul Materi: ${material.name}\nInti Materi: ${material.content || material.description || ""}`;
+            } else {
+                materialContext = `Judul Materi: ${lastChat.metadata.selectedMaterial}`;
+            }
+        }
+
+        // Fallback if no specific material context is found
+        if (!materialContext) {
+            const materials = await Material.find({ active: true });
+            materialContext = materials.map(m => `Judul Materi ${m.name}:\n${m.content || m.description || ""}`).join('\n\n');
+        }
+
+        const questions = await aiService.generateStage3Assessment(materialContext);
+        
+        // Shuffle options to ensure randomness
+        const shuffledQuestions = (questions || []).map(q => {
+            if (!q.options || q.options.length === 0) return q;
+            const originalCorrectText = q.options[q.correct];
+            const shuffledOptions = [...q.options];
+            for (let i = shuffledOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+            }
+            q.options = shuffledOptions;
+            q.correct = shuffledOptions.indexOf(originalCorrectText);
+            return q;
+        });
+
+        res.json({ success: true, questions: shuffledQuestions });
+    } catch (error) {
+        console.error('Generate AI Tahap 3 Error:', error);
         res.status(500).json({ error: error.message });
     }
 };

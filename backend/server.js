@@ -73,6 +73,7 @@ app.post('/api/chat/end-session', chatController.endChatSession);
 // New Routes for Stage 2 & 3
 app.post('/api/reflections', chatController.handleReflections);
 app.post('/api/assessment/generate-from-bank', assessmentController.generateFromBank);
+app.post('/api/assessment/generate-ai-tahap3', assessmentController.generateAITahap3);
 app.post('/api/assessment/analyze', chatController.handleAnalysis);
 app.post('/api/assessment/analyze-habits', chatController.handleHabitAnalysis);
 
