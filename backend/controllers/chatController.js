@@ -135,8 +135,30 @@ exports.handleChat = async (req, res) => {
 
 exports.generateMath = async (req, res) => {
     try {
-        const { username, topic } = req.body;
-        const problem = await aiService.generateMathProblem(username, topic || 'Bilangan');
+        const { username, topic, materialName } = req.body;
+        
+        let materialContext = "";
+        if (materialName) {
+            const material = await Material.findOne({ name: materialName });
+            if (material) {
+                materialContext = `Judul Materi: ${material.name}\nInti Materi: ${material.content ? material.content.substring(0, 800) : material.description || ""}`;
+            } else {
+                materialContext = `Judul Materi: ${materialName}`;
+            }
+        } else {
+            // Coba ambil dari riwayat chat jika materialName tidak dikirim frontend
+            const lastChat = await ChatLog.findOne({ username, 'metadata.selectedMaterial': { $exists: true, $ne: null } }).sort({ timestamp: -1 });
+            if (lastChat && lastChat.metadata && lastChat.metadata.selectedMaterial) {
+                const material = await Material.findOne({ name: lastChat.metadata.selectedMaterial });
+                if (material) {
+                    materialContext = `Judul Materi: ${material.name}\nInti Materi: ${material.content ? material.content.substring(0, 800) : material.description || ""}`;
+                } else {
+                    materialContext = `Judul Materi: ${lastChat.metadata.selectedMaterial}`;
+                }
+            }
+        }
+
+        const problem = await aiService.generateMathProblem(username, topic || 'Bilangan', materialContext);
         res.json({ success: true, problem });
     } catch (error) {
         res.status(500).json({ error: error.message });

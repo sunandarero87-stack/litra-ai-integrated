@@ -236,6 +236,13 @@ window.generateMathByTopic = async function() {
     const topicSelect = document.getElementById('numerasi-topic-select');
     const topic = topicSelect ? topicSelect.value : 'Bilangan';
 
+    let materialName = null;
+    const materials = getMaterials();
+    const currMat = materials.find(m => m._id === currentMaterial || m.name === currentMaterial);
+    if (currMat) {
+        materialName = currMat.name;
+    }
+
     main.innerHTML = `
     <div class="card" style="text-align:center; padding:4rem 2rem; border-radius:24px; background: #12141d; border:1px solid rgba(255,255,255,0.05); box-shadow:var(--shadow-lg); min-height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
         <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--accent); margin-bottom: 1rem;"></i>
@@ -248,7 +255,11 @@ window.generateMathByTopic = async function() {
         const res = await fetch('/api/chat/generate-math', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: currentUser.username, topic: topic })
+            body: JSON.stringify({
+                topic: topic,
+                username: currentUser.username,
+                materialName: materialName
+            })
         });
         const data = await res.json();
         if (data.success && data.problem) {

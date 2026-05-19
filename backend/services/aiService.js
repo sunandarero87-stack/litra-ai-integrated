@@ -410,8 +410,15 @@ async function analyzeCompetency(studentData) {
     }
 }
 
-async function generateMathProblem(username, topic = 'Bilangan') {
+async function generateMathProblem(username, topic = 'Bilangan', materialContext = "") {
     try {
+        let contentPrompt = `Buatkan 1 soal cerita matematika tentang topik **${topic}**.`;
+        if (materialContext) {
+            contentPrompt = `Siswa sebelumnya baru saja mempelajari materi Literasi berikut:\n"""\n${materialContext}\n"""\n\nBuatkan 1 soal cerita matematika tentang topik **${topic}** yang TEMANYA SANGAT BERKAITAN ERAT dengan materi di atas. Buat semenarik mungkin. Jika memerlukan representasi bangun datar, bangun ruang, denah, atau diagram visual, rancang kode SVG-nya secara akurat di field 'svg'. Dilarang menyisipkan gambar markdown di dalam pertanyaan. Buat 3 langkah hint bertahap yang sangat ramah dan mudah dimengerti anak 10 tahun, dan berikan jawaban akhirnya berupa angka.`;
+        } else {
+            contentPrompt = `Buatkan 1 soal cerita matematika tentang topik **${topic}**. Jika memerlukan representasi bangun datar, bangun ruang, denah, atau diagram visual, rancang kode SVG-nya secara akurat di field 'svg'. Dilarang menyisipkan gambar markdown di dalam pertanyaan. Buat 3 langkah hint bertahap yang sangat ramah dan mudah dimengerti anak 10 tahun, dan berikan jawaban akhirnya berupa angka.`;
+        }
+
         const payload = {
             messages: [
                 { 
@@ -420,7 +427,7 @@ async function generateMathProblem(username, topic = 'Bilangan') {
                 },
                 { 
                     role: "user", 
-                    content: `Buatkan 1 soal cerita matematika tentang topik **${topic}**. Jika memerlukan representasi bangun datar, bangun ruang, denah, atau diagram visual, rancang kode SVG-nya secara akurat di field 'svg'. Dilarang menyisipkan gambar markdown di dalam pertanyaan. Buat 3 langkah hint bertahap yang sangat ramah dan mudah dimengerti anak 10 tahun, dan berikan jawaban akhirnya berupa angka.` 
+                    content: contentPrompt 
                 }
             ],
             temperature: 0.7,
