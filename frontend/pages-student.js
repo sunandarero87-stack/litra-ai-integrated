@@ -362,8 +362,11 @@ window.checkMathAnswer = function() {
         const randomPraise = praises[Math.floor(Math.random() * praises.length)];
         
         const progress = getProgress(currentUser.username);
-        let numScore = 100 - (currentHintIndex * 10);
-        if (numScore < 50) numScore = 50;
+        let numScore = 100;
+        if (currentHintIndex === 1) numScore = 90;
+        else if (currentHintIndex === 2) numScore = 80;
+        else if (currentHintIndex >= 3) numScore = 65;
+        
         let litScore = progress.tahap1LiterasiScore || 0;
         let avgScore = Math.round((litScore + numScore) / 2);
         
