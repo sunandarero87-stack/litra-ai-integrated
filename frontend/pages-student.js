@@ -361,8 +361,23 @@ window.checkMathAnswer = function() {
         ];
         const randomPraise = praises[Math.floor(Math.random() * praises.length)];
         
+        const progress = getProgress(currentUser.username);
+        let numScore = 100 - (currentHintIndex * 10);
+        if (numScore < 50) numScore = 50;
+        let litScore = progress.tahap1LiterasiScore || 0;
+        let avgScore = Math.round((litScore + numScore) / 2);
+        
+        updateProgress(currentUser.username, {
+            tahap1NumerasiScore: numScore,
+            tahap1Score: avgScore
+        });
+
         feedback.style.color = 'var(--success)';
-        feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${randomPraise} <br><button class="btn btn-sm btn-success mt-2" onclick="renderTahap1Numerasi(document.getElementById('main-content'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>`;
+        feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${randomPraise} <br>
+        <div style="margin-top: 10px;">
+            <button class="btn btn-sm btn-success mt-2" onclick="completeTahap1()"><i class="fas fa-arrow-right"></i> Lanjut ke Tahap 2</button>
+            <button class="btn btn-sm btn-outline mt-2" onclick="renderTahap1Numerasi(document.getElementById('main-content'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>
+        </div>`;
     } else {
         const motivations = [
             "Belum tepat. Ayo coba periksa kembali hitunganmu!",
@@ -466,11 +481,6 @@ window.renderTahap1Literasi = function(main) {
                     Silakan pelajari dengan seksama dan gunakan Asisten NARA-AI di kanan bawah jika ada pertanyaan atau ingin berdiskusi.
                 </div>
             </div>
-        </div>
-        <div class="chat-complete-btn mt-2" style="text-align: right; padding: 0 1rem 1rem;">
-            <button id="btn-lanjut-tahap2" class="btn btn-success" style="display:${localStorage.getItem('tahap1_ready_' + currentUser.username) === 'true' ? 'inline-block' : 'none'};" onclick="completeTahap1()">
-                <i class="fas fa-check"></i> Selesai Belajar - Lanjut ke Tahap 2
-            </button>
         </div>
     </div>
 
@@ -1158,12 +1168,12 @@ function showGagalButtons(score = 0) {
         </button>
     `;
 
-    // Jika skor >= 50, tambahkan opsi tombol Lanjut ke Tahap 2
+    // Jika skor >= 50, tambahkan opsi tombol Lanjut ke Penguatan Numerasi
     if (score >= 50) {
         html += `
-        <button id="btn-inline-lanjut" class="btn btn-success btn-sm" onclick="window.location.href='index.html?stage=2'"
+        <button id="btn-inline-lanjut" class="btn btn-success btn-sm" onclick="closeMaterialViewer(); renderTahap1Numerasi(document.getElementById('main-content'))"
             style="padding:0.4rem 0.9rem;font-size:0.85rem;background:var(--success);">
-            <i class="fas fa-arrow-right"></i> Lanjut Tahap 2
+            <i class="fas fa-calculator"></i> Ke Penguatan Numerasi
         </button>
         `;
     }
@@ -1266,15 +1276,17 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
                 
                 // Simpan progres ke server
+                const progress = getProgress(currentUser.username);
+                const numScore = progress.tahap1NumerasiScore || 0;
                 updateProgress(currentUser.username, { 
-                    tahap1Score: score, 
-                    tahap1Complete: true 
+                    tahap1LiterasiScore: score,
+                    tahap1Score: Math.round((score + numScore) / 2)
                 });
 
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#166534,#22c55e);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(34,197,94,0.3);">
                     <i class="fas fa-check-circle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
-                    <div style="font-size:1.1rem;font-weight:800;">Luar Biasa! Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Pemahamanmu sangat matang. Menuju Tahap 2 dalam beberapa detik... 🎉</div>
+                    <div style="font-size:1.1rem;font-weight:800;">Luar Biasa! Skor Literasi: ${score}%</div>
+                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Pemahamanmu sangat matang. Silakan selesaikan Penguatan Numerasi! 🎉</div>
                 </div>`;
 
                 setTimeout(() => {
@@ -1288,15 +1300,17 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
 
                 // Simpan progres ke server (Bisa lanjut)
+                const progress = getProgress(currentUser.username);
+                const numScore = progress.tahap1NumerasiScore || 0;
                 updateProgress(currentUser.username, { 
-                    tahap1Score: score, 
-                    tahap1Complete: true 
+                    tahap1LiterasiScore: score,
+                    tahap1Score: Math.round((score + numScore) / 2)
                 });
 
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#a16207,#eab308);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(234,179,8,0.3);">
                     <i class="fas fa-exclamation-triangle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
-                    <div style="font-size:1.1rem;font-weight:800;">Skor Pemahaman: ${score}%</div>
-                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Pemahamanmu sudah cukup. Kamu bisa lanjut ke Tahap 2 sekarang, atau tetap di sini untuk mengulang materi dan uji ulang agar lebih maksimal.</div>
+                    <div style="font-size:1.1rem;font-weight:800;">Skor Literasi: ${score}%</div>
+                    <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Pemahamanmu sudah cukup. Silakan selesaikan Penguatan Numerasi, atau tetap di sini untuk mengulang materi dan uji ulang agar lebih maksimal.</div>
                 </div>`;
 
                 setTimeout(() => {
@@ -1310,14 +1324,16 @@ async function sendUnderstandingAnswer(studentAnswer, teacherPhoto) {
                 localStorage.removeItem('tahap1_ready_' + currentUser.username);
 
                 // Tetap simpan skor merah agar terpantau orang tua
+                const progress = getProgress(currentUser.username);
+                const numScore = progress.tahap1NumerasiScore || 0;
                 updateProgress(currentUser.username, { 
-                    tahap1Score: score, 
-                    tahap1Complete: false 
+                    tahap1LiterasiScore: score,
+                    tahap1Score: Math.round((score + numScore) / 2)
                 });
 
                 feedbackText += `<br><br><div style="background:linear-gradient(135deg,#991b1b,#ef4444);border-radius:12px;padding:1rem;color:white;text-align:center;margin-top:0.5rem;box-shadow:0 4px 12px rgba(239,68,68,0.3);">
                     <i class="fas fa-times-circle" style="font-size:1.8rem;margin-bottom:0.5rem;display:block;"></i>
-                    <div style="font-size:1.1rem;font-weight:800;">Skor Pemahaman: ${score}%</div>
+                    <div style="font-size:1.1rem;font-weight:800;">Skor Literasi: ${score}%</div>
                     <div style="font-size:0.85rem;opacity:0.9;margin-top:0.3rem;">Mari kita pelajari kembali bagian ini. Tenang, NARA-AI akan membantumu memahami inti materinya sebelum uji ulang. 💪</div>
                 </div>`;
 
@@ -1521,9 +1537,9 @@ function startChatbotCountdown(score) {
         <div style="animation: scaleIn 0.3s ease;">
             <i class="fas fa-robot" style="font-size:2.5rem; color:var(--primary-light); margin-bottom:0.75rem;"></i>
             <h3 style="margin-bottom:0.3rem; font-size:1.1rem; font-weight:700;">Verifikasi Berhasil! 🎉</h3>
-            <p style="opacity:0.8; margin-bottom:1rem; font-size:0.8rem;">Menuju Tahap 2 dalam:</p>
+            <p style="opacity:0.8; margin-bottom:1rem; font-size:0.8rem;">Menuju Penguatan Numerasi dalam:</p>
             <div id="countdown-number" style="font-size:3.5rem; font-weight:800; color:var(--success); line-height:1; text-shadow:0 0 20px rgba(34,197,94,0.5);">${seconds}</div>
-            <p style="margin-top:1rem; font-size:0.7rem; color:var(--text-secondary); font-style:italic;">Siap lanjut ke Tahap 2</p>
+            <p style="margin-top:1rem; font-size:0.7rem; color:var(--text-secondary); font-style:italic;">Siap lanjut ke Numerasi</p>
         </div>
     `;
 
@@ -1550,52 +1566,15 @@ function startChatbotCountdown(score) {
                 if (chatPanel.style.display !== 'none') {
                     toggleChatbot(); // Close chatbot
                 }
-                showTahap2Pointer(); // Show arrow
+                showTahap2Pointer(); // Redirect to Numerasi
             }, 300);
         }
     }, 1000);
 }
 
 function showTahap2Pointer() {
-    const btn = document.getElementById('btn-lanjut-tahap2');
-    if (!btn) return;
-
-    // Pastikan tombol terlihat
-    btn.style.display = 'inline-block';
-    localStorage.setItem('tahap1_ready_' + currentUser.username, 'true');
-
-    // Scroll ke tombol agar terlihat
-    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    // Hapus arrow lama jika ada
-    const existingArrow = document.getElementById('tahap2-arrow-pointer');
-    if (existingArrow) existingArrow.remove();
-
-    const arrow = document.createElement('div');
-    arrow.id = 'tahap2-arrow-pointer';
-    arrow.style.cssText = 'position: absolute; top: -75px; left: 50%; transform: translateX(-50%); width: 100px; pointer-events: none; z-index: 100;';
-    arrow.innerHTML = `
-        <div style="text-align: center; color: var(--success); animation: bounce-arrow 2s infinite;">
-            <i class="fas fa-arrow-down" style="font-size: 2.8rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></i>
-            <div style="font-weight: 800; font-size: 0.85rem; background: var(--success); color: white; padding: 4px 12px; border-radius: 20px; box-shadow: var(--shadow-md); margin-top: 5px; white-space: nowrap; text-transform: uppercase; letter-spacing: 1px;">Klik Sini!</div>
-        </div>
-    `;
-
-    // Pastikan parent punya position relative
-    const parent = btn.parentElement;
-    if (parent) {
-        parent.style.position = 'relative';
-        parent.appendChild(arrow);
-    }
-
-    // Tambahkan efek kilau pada tombol
-    btn.classList.add('pulse');
-
-    // Bersihkan setelah beberapa saat jika tidak diklik
-    setTimeout(() => {
-        if (arrow.parentElement) arrow.remove();
-        btn.classList.remove('pulse');
-    }, 15000);
+    closeMaterialViewer();
+    renderTahap1Numerasi(document.getElementById('main-content'));
 }
 
 function sendFloatingChat(quickMsg, isSilent = false) {
