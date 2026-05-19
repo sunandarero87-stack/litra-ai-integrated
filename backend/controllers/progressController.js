@@ -200,32 +200,19 @@ exports.simulateData = async (req, res) => {
 
         for (let i = 0; i < students.length; i++) {
             const s = students[i];
-            const willPass = i < passCount;
             const litTotal = 5, numTotal = 5, total = 10;
             
-            let lit, num;
-            let tahap1LitScore, tahap1NumScore;
+            // Generate a target average between 65 and 82 for both Literasi and Numerasi
+            const targetAvgLit = Math.floor(Math.random() * 18) + 65; // 65 to 82
+            const targetAvgNum = Math.floor(Math.random() * 18) + 65; // 65 to 82
 
-            if (specificRange) {
-                // Ensure average is between 65 and 84
-                // Set lit and num to 4 (80% for Tahap 3) or 3 (60% for Tahap 3)
-                lit = Math.random() > 0.5 ? 4 : 3;
-                num = Math.random() > 0.5 ? 4 : 3;
-                
-                // Randomize Tahap 1 between 70 and 84 so the average (Tahap 1 + Tahap 3) stays between 65-84
-                tahap1LitScore = Math.floor(Math.random() * 15) + 70; // 70 to 84
-                tahap1NumScore = Math.floor(Math.random() * 15) + 70; // 70 to 84
-            } else {
-                if (willPass) {
-                    lit = Math.floor(Math.random() * 2) + 4; // 4-5
-                    num = Math.floor(Math.random() * 2) + 4; // 4-5
-                } else {
-                    lit = Math.floor(Math.random() * 3) + 1; // 1-3
-                    num = Math.floor(Math.random() * 3) + 1; // 1-3
-                }
-                tahap1LitScore = Math.floor(Math.random() * 41) + 60; // 60 to 100
-                tahap1NumScore = Math.floor(Math.random() * 41) + 60; // 60 to 100
-            }
+            // Calculate Tahap 3 (lit/num) and Tahap 1 scores to match exactly the target average
+            // If target < 70, use lit/num = 3 (60%). Else use lit/num = 4 (80%).
+            const lit = targetAvgLit < 70 ? 3 : 4;
+            const tahap1LitScore = (targetAvgLit * 2) - (lit * 20);
+
+            const num = targetAvgNum < 70 ? 3 : 4;
+            const tahap1NumScore = (targetAvgNum * 2) - (num * 20);
             
             const score = lit + num;
             const pct = Math.round((score / total) * 100);
@@ -239,10 +226,10 @@ exports.simulateData = async (req, res) => {
                 tahap1Score: Math.round((tahap1LitScore + tahap1NumScore) / 2),
                 tahap1LiterasiScore: tahap1LitScore,
                 tahap1NumerasiScore: tahap1NumScore,
-                tahap2Score: specificRange ? Math.floor(Math.random() * 20) + 65 : Math.floor(Math.random() * 21) + 80,
-                tahap4Score: specificRange ? Math.floor(Math.random() * 20) + 65 : Math.floor(Math.random() * 21) + 80,
+                tahap2Score: Math.floor(Math.random() * 21) + 65, // 65 to 85
+                tahap4Score: Math.floor(Math.random() * 21) + 65, // 65 to 85
                 assessmentResult: {
-                    score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct, pass: specificRange ? true : willPass,
+                    score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct, pass: pct >= 70,
                     date: new Date(), violations: 0
                 },
                 approvedForAssessment: true,
