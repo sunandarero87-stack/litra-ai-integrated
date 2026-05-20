@@ -390,16 +390,22 @@ window.checkMathAnswer = function() {
         else if (currentHintIndex === 2) numScore = 80;
         else if (currentHintIndex >= 3) numScore = 65;
         
+        // Ambil nilai Literasi yang sudah ada, lalu hitung rata-rata
         let litScore = progress.tahap1LiterasiScore || 0;
-        let avgScore = Math.round((litScore + numScore) / 2);
+        let avgScore = litScore > 0 ? Math.round((litScore + numScore) / 2) : numScore;
         
+        // Simpan SEMUA nilai sekaligus agar dashboard orang tua lengkap
         updateProgress(currentUser.username, {
             tahap1NumerasiScore: numScore,
+            tahap1LiterasiScore: litScore, // Pastikan nilai Literasi tetap tersimpan
             tahap1Score: avgScore
         });
 
         feedback.style.color = 'var(--success)';
-        feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${randomPraise} <br>
+        feedback.innerHTML = `<i class="fas fa-check-circle"></i> ${randomPraise} 
+        <div style="margin-top:10px; background:rgba(34,197,94,0.1); padding:0.8rem 1.2rem; border-radius:10px; border:1px solid rgba(34,197,94,0.3); font-size:0.9rem; color:var(--success);">
+            🎯 <strong>Skor Numerasi: ${numScore}%</strong>${litScore > 0 ? ` &nbsp;|&nbsp; 📖 Skor Literasi: ${litScore}%` : ''}
+        </div>
         <div style="margin-top: 10px;">
             <button class="btn btn-sm btn-success mt-2" onclick="completeTahap1()"><i class="fas fa-arrow-right"></i> Lanjut ke Tahap 2</button>
             <button class="btn btn-sm btn-outline mt-2" onclick="renderTahap1Numerasi(document.getElementById('main-content'))"><i class="fas fa-redo"></i> Coba Soal Lain</button>
