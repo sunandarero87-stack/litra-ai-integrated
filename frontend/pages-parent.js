@@ -31,13 +31,35 @@ function renderParentDashboard(container) {
     }
 
     let aiReadinessText = progress.aiReadiness;
-    if (typeof aiReadinessText === 'string' && aiReadinessText.startsWith('{')) {
+
+    // Parsing berlapis: tangani semua kemungkinan format aiReadiness
+    if (typeof aiReadinessText === 'object' && aiReadinessText !== null) {
+        // Sudah object (bukan string) — ambil teks dari analysis
+        const a = aiReadinessText.analysis;
+        if (typeof a === 'object' && a !== null) {
+            aiReadinessText = a.umum || a.isi || a.penulisan || JSON.stringify(a);
+        } else if (typeof a === 'string') {
+            aiReadinessText = a;
+        } else {
+            aiReadinessText = aiReadinessText.recommendation || JSON.stringify(aiReadinessText);
+        }
+    } else if (typeof aiReadinessText === 'string' && aiReadinessText.trim().startsWith('{')) {
+        // String JSON — parse dulu
         try {
             const parsed = JSON.parse(aiReadinessText);
-            aiReadinessText = parsed.analysis ? (parsed.analysis.umum || parsed.analysis.isi || JSON.stringify(parsed.analysis)) : aiReadinessText;
-        } catch(e) {}
-    } else if (typeof aiReadinessText === 'object' && aiReadinessText !== null) {
-        aiReadinessText = aiReadinessText.analysis ? (aiReadinessText.analysis.umum || aiReadinessText.analysis.isi || JSON.stringify(aiReadinessText.analysis)) : JSON.stringify(aiReadinessText);
+            const a = parsed.analysis;
+            if (typeof a === 'object' && a !== null) {
+                aiReadinessText = a.umum || a.isi || a.penulisan || JSON.stringify(a);
+            } else if (typeof a === 'string') {
+                aiReadinessText = a;
+            } else {
+                aiReadinessText = parsed.recommendation || parsed.analysis || aiReadinessText;
+            }
+        } catch(e) { /* biarkan teks apa adanya jika gagal parse */ }
+    }
+    // Pastikan akhirnya adalah string
+    if (typeof aiReadinessText !== 'string') {
+        aiReadinessText = aiReadinessText ? JSON.stringify(aiReadinessText) : '';
     }
 
     // Menyusun Rekomendasi Komprehensif (Mewakili Tahap 1 - 4)
@@ -86,11 +108,13 @@ function renderParentDashboard(container) {
         }
     }
 
-    // Fallback for legacy data missing Literasi & Numerasi breakdown
+    // Fallback untuk data lama yang belum punya Literasi & Numerasi terpisah
     let litScore = progress.tahap1LiterasiScore || 0;
     let numScore = progress.tahap1NumerasiScore || 0;
+    // Jika keduanya 0 tapi tahap1Score ada, berarti data lama — isi keduanya dengan tahap1Score
     if (litScore === 0 && numScore === 0 && progress.tahap1Score > 0) {
         litScore = progress.tahap1Score;
+        numScore = progress.tahap1Score; // Tampilkan sama sebagai estimasi data lama
     }
 
     container.innerHTML = `
