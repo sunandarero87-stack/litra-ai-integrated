@@ -7,6 +7,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const chatController = require('./controllers/chatController');
 const authController = require('./controllers/authController');
@@ -26,6 +27,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/litra-
 
 // ---- Middleware ----
 app.use(cors());
+app.use(compression()); // Kompres respons HTTP (JSON/HTML) ~60-80% lebih kecil
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

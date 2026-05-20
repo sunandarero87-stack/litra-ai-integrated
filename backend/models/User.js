@@ -16,4 +16,8 @@ const userSchema = new mongoose.Schema({
     lastSeen: { type: Date, default: Date.now }
 });
 
+// Indexes untuk mempercepat query
+userSchema.index({ role: 1 });          // Untuk filter User.find({ role: 'siswa' })
+userSchema.index({ role: 1, kelas: 1 }); // Untuk filter per kelas
+
 module.exports = mongoose.model('User', userSchema);

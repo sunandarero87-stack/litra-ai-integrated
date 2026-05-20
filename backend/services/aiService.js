@@ -13,6 +13,10 @@ const MODEL_HEAVY = "llama-3.3-70b-versatile"; // Terbaik untuk Materi & Soal (1
 const MODEL_FAST = "llama-3.1-8b-instant";    // Terbaik untuk Chat sapaan
 const MODEL_FALLBACK = "mixtral-8x7b-32768";  // Cadangan menengah
 
+// Batas context untuk mencegah rate limit dan mempercepat response
+const MAX_CHAT_CONTEXT_CHARS = 4000;  // Maks karakter materialContext untuk chat biasa
+const MAX_MATERIAL_SNIPPET = 800;     // Maks karakter per materi saat fallback
+
 let currentKeyIndex = 0;
 
 function getNextApiKey() {
@@ -80,6 +84,11 @@ function cleanJson(text) {
 
 async function generateResponse(username, question, stage, materialContext, chatHistory, selectedMaterial = '', teacherName = 'Guru', studentName = '') {
     try {
+        // Batasi materialContext agar tidak melebihi batas wajar — cegah rate limit & percepat response
+        const trimmedContext = materialContext.length > MAX_CHAT_CONTEXT_CHARS
+            ? materialContext.substring(0, MAX_CHAT_CONTEXT_CHARS) + '\n...(materi dipotong untuk efisiensi)'
+            : materialContext;
+
         const systemInstructionText = `Kamu adalah NARA-AI, teman belajar yang menyenangkan untuk siswa kelas SD/SMP berusia sekitar 10 tahun. Tugas utamamu adalah menguji pemahaman siswa tentang materi: "${selectedMaterial}" dengan cara yang ramah, santai, dan mudah dipahami.
 Siswa tadi sudah membuka materi dan ditanya apakah siap diuji.
 Jika ada siswa yang bertanya kenapa namamu NARA-AI, jawab bahwa Pak Nandar terinspirasi dari NARA GEMILANG, siswa berprestasi SMP Negeri 1 Balikpapan.
@@ -103,7 +112,7 @@ FORMAT JAWABAN:
   * Soal 1: **[UJI LITERASI]** - pertanyaan tentang pemahaman isi/konsep dari materi (mudah dipahami anak 10 tahun)
   Tandai dengan jelas soal tersebut menggunakan label **[UJI LITERASI]**.
 - CATATAN: Kalau siswa bilang siap diuji, LANGSUNG kasih soal itu tanpa basa-basi panjang! Langsung tuliskan Soal 1 [UJI LITERASI].
-KONTEKS: ${materialContext}
+KONTEKS: ${trimmedContext}
 TAHAP: ${stage}`;
 
         let messages = [{ role: "system", content: systemInstructionText }];

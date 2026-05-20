@@ -94,9 +94,13 @@ exports.handleChat = async (req, res) => {
         }
 
         // Hanya fallback ke semua materi JIKA tidak ada materi yang dipilih secara spesifik
+        // Gunakan .select() dan batasi content agar tidak overload context AI
         if (!selectedMaterial && !materialContext) {
-            const materials = await Material.find();
-            materialContext = materials.map(m => `Materi ${m.name}:\n${m.content || ""}`).join('\n\n');
+            const materials = await Material.find({}, 'name content').lean();
+            materialContext = materials
+                .map(m => `Materi ${m.name}:\n${(m.content || "").substring(0, 500)}`)
+                .join('\n\n')
+                .substring(0, 3000); // Hard limit 3000 karakter untuk fallback
         }
 
         const historyLogs = await ChatLog.find({ username })
@@ -245,7 +249,11 @@ exports.handleAnalyzeUnderstanding = async (req, res) => {
 exports.getHistory = async (req, res) => {
     try {
         const { username } = req.params;
-        const historyLogs = await ChatLog.find({ username }).sort({ timestamp: 1 });
+        // Tambah limit(100) dan lean() untuk efisiensi — cukup untuk tampilan UI
+        const historyLogs = await ChatLog.find({ username })
+            .sort({ timestamp: 1 })
+            .limit(100)
+            .lean();
         const history = historyLogs.map(log => ({
             role: log.role,
             text: log.content,

@@ -14,4 +14,9 @@ const chatLogSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now }
 });
 
+// Indexes untuk mempercepat query
+chatLogSchema.index({ username: 1, timestamp: -1 }); // Paling sering dipakai: find by username, sort by time
+chatLogSchema.index({ username: 1, 'metadata.selectedMaterial': 1 }); // Untuk query fallback material
+chatLogSchema.index({ username: 1, 'metadata.type': 1 }); // Untuk query understanding test answer
+
 module.exports = mongoose.model('ChatLog', chatLogSchema);

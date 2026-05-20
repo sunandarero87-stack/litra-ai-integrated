@@ -9,8 +9,13 @@ exports.syncAll = async (req, res) => {
     try {
         const { username } = req.query;
         const query = username ? { username } : {};
-        // Use lean() for much better performance on large datasets
-        const progresses = await Progress.find(query).lean();
+
+        // Pilih field yang dibutuhkan saja — jangan load generatedAssessment (besar!) untuk sync semua siswa
+        const selectFields = username
+            ? '' // Kalau sync individual, ambil semua termasuk generatedAssessment
+            : '-generatedAssessment -tahap4Details -reflectionAnswers'; // Sync global: skip field besar
+
+        const progresses = await Progress.find(query).select(selectFields).lean();
         const settingsDoc = await Setting.findOne({ key: 'assessmentSettings' }).lean();
 
         const studentProgress = {};
@@ -195,48 +200,54 @@ exports.simulateData = async (req, res) => {
             query.username = { $in: usernames };
         }
         
-        const students = await User.find(query);
+        const students = await User.find(query).select('username').lean();
         const passCount = specificRange ? students.length : Math.round(students.length * 0.82);
 
-        for (let i = 0; i < students.length; i++) {
-            const s = students[i];
+        // Buat semua operasi update sekaligus dengan bulkWrite — jauh lebih cepat dari sequential await
+        const bulkOps = students.map((s) => {
             const litTotal = 5, numTotal = 5, total = 10;
-            
-            // Generate a target average between 65 and 82 for both Literasi and Numerasi
-            const targetAvgLit = Math.floor(Math.random() * 18) + 65; // 65 to 82
-            const targetAvgNum = Math.floor(Math.random() * 18) + 65; // 65 to 82
-
-            // Calculate Tahap 3 (lit/num) and Tahap 1 scores to match exactly the target average
-            // If target < 70, use lit/num = 3 (60%). Else use lit/num = 4 (80%).
+            const targetAvgLit = Math.floor(Math.random() * 18) + 65;
+            const targetAvgNum = Math.floor(Math.random() * 18) + 65;
             const lit = targetAvgLit < 70 ? 3 : 4;
             const tahap1LitScore = (targetAvgLit * 2) - (lit * 20);
-
             const num = targetAvgNum < 70 ? 3 : 4;
             const tahap1NumScore = (targetAvgNum * 2) - (num * 20);
-            
             const score = lit + num;
             const pct = Math.round((score / total) * 100);
 
-            await Progress.findOneAndUpdate({ username: s.username }, {
-                tahap: 4,
-                tahap1Complete: true,
-                tahap2Complete: true,
-                tahap3Complete: true,
-                tahap4Complete: true,
-                tahap1Score: Math.round((tahap1LitScore + tahap1NumScore) / 2),
-                tahap1LiterasiScore: tahap1LitScore,
-                tahap1NumerasiScore: tahap1NumScore,
-                tahap2Score: Math.floor(Math.random() * 21) + 65, // 65 to 85
-                tahap4Score: Math.floor(Math.random() * 21) + 65, // 65 to 85
-                assessmentResult: {
-                    score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct, pass: pct >= 70,
-                    date: new Date(), violations: 0
-                },
-                approvedForAssessment: true,
-                approvalDate: new Date(),
-                approvedBy: 'Simulation AI'
-            }, { upsert: true });
+            return {
+                updateOne: {
+                    filter: { username: s.username },
+                    update: {
+                        $set: {
+                            tahap: 4,
+                            tahap1Complete: true,
+                            tahap2Complete: true,
+                            tahap3Complete: true,
+                            tahap4Complete: true,
+                            tahap1Score: Math.round((tahap1LitScore + tahap1NumScore) / 2),
+                            tahap1LiterasiScore: tahap1LitScore,
+                            tahap1NumerasiScore: tahap1NumScore,
+                            tahap2Score: Math.floor(Math.random() * 21) + 65,
+                            tahap4Score: Math.floor(Math.random() * 21) + 65,
+                            assessmentResult: {
+                                score, total, literasi: lit, numerasi: num, litTotal, numTotal, pct,
+                                pass: pct >= 70, date: new Date(), violations: 0
+                            },
+                            approvedForAssessment: true,
+                            approvalDate: new Date(),
+                            approvedBy: 'Simulation AI'
+                        }
+                    },
+                    upsert: true
+                }
+            };
+        });
+
+        if (bulkOps.length > 0) {
+            await Progress.bulkWrite(bulkOps, { ordered: false });
         }
+
         res.json({ success: true, message: `Simulasi berhasil untuk ${students.length} siswa` });
     } catch (err) {
         res.status(500).json({ error: err.message });
