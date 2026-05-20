@@ -372,8 +372,21 @@ window.checkMathAnswer = function() {
     const feedback = document.getElementById('math-feedback');
     if (input === "") return;
     
-    // Bandingkan sebagai float untuk toleransi
-    const isCorrect = parseFloat(input) === parseFloat(currentMathProblem.answer);
+    // Fungsi bantuan untuk membersihkan format angka Indonesia (misal: "13.750.000" menjadi 13750000)
+    const parseIndoNumber = (val) => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'number') return val;
+        let str = val.toString().trim();
+        // Hapus semua titik (pemisah ribuan) dan ubah koma menjadi titik (desimal)
+        str = str.replace(/\./g, '').replace(/,/g, '.');
+        return parseFloat(str);
+    };
+
+    // Bandingkan dengan membersihkan format string yang mungkin di-generate oleh AI
+    const studentVal = parseIndoNumber(input);
+    const aiVal = parseIndoNumber(currentMathProblem.answer);
+    
+    const isCorrect = studentVal === aiVal;
     
     if (isCorrect) {
         const praises = [
