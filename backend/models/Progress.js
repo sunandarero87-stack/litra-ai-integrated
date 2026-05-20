@@ -40,7 +40,7 @@ const progressSchema = new mongoose.Schema({
 });
 
 // Indexes untuk mempercepat query
-progressSchema.index({ username: 1 }); // Sudah unique, tapi eksplisit agar optimal
+// Catatan: username sudah diindex otomatis oleh unique:true, tidak perlu diduplikasi
 progressSchema.index({ isChatting: 1, lastChatActivity: 1 }); // Untuk checkQueue & timeout cleanup
 progressSchema.index({ username: 1, isChatting: 1 }); // Untuk find + count aktif
 
