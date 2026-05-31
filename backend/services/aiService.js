@@ -482,15 +482,20 @@ Setiap objek soal dalam array HARUS memiliki format properti berikut persis:
   "explanation": "Pembahasan/penjelasan jawaban yang mendalam...",
   "type": "literasi" // atau "numerasi" sesuai jenis soalnya
 }
-Jangan gunakan nama properti bahasa Indonesia seperti "soal", "opsi", "kunci", atau "pembahasan". Gunakan persis kunci bahasa Inggris di atas!`
+Jangan gunakan nama properti bahasa Indonesia seperti "soal", "opsi", "kunci", atau "pembahasan". Gunakan persis kunci bahasa Inggris di atas! DILARANG KERAS MENGGUNAKAN KALIMAT PENOLAKAN. JIKA SULIT MEMAHAMI MATERI, BUAT SOAL UMUM TENTANG TOPIK TERSEBUT TETAP DALAM FORMAT JSON ARRAY!`
             },
             { role: "user", content: `Buat TEPAT 10 buah soal pilihan ganda (5 Literasi dan 5 Numerasi) dari materi berikut: ${materialContent.substring(0, 20000)}` }
         ],
         max_tokens: 4000,
         temperature: 0.6
     };
-    const response = await requestWithFallback(payload, [MODEL_HEAVY, "llama-3.1-70b-versatile"]);
-    return JSON.parse(cleanJson(response.data.choices[0].message.content));
+    try {
+        const response = await requestWithFallback(payload, [MODEL_HEAVY, "llama-3.1-70b-versatile"]);
+        return JSON.parse(cleanJson(response.data.choices[0].message.content));
+    } catch (e) {
+        console.error("Generate Stage 3 JSON Parse Error:", e.message);
+        throw new Error("Sistem AI gagal merumuskan soal (kemungkinan karena batasan panjang materi atau filter keamanan). Silakan coba lagi.");
+    }
 }
 
 module.exports = {
