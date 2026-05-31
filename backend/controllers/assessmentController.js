@@ -125,7 +125,7 @@ exports.generateAITahap3 = async (req, res) => {
                 explanation: q.explanation || '',
                 kelas: 'Semua Kelas',
                 topic: 'Asesmen Tahap 3 (AI Generated)',
-                difficulty: 'Sedang'
+                difficulty: 'MOTS'
             }));
             
             // Limit to max 50 total in the database
