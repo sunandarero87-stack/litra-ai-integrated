@@ -418,6 +418,39 @@ async function analyzeCompetency(studentData) {
     }
 }
 
+/**
+ * Verifies and recalculates the correct numeric answer for a math problem using AI.
+ * This is a second pass to avoid trusting the initial AI answer blindly.
+ */
+async function verifyMathAnswer(question) {
+    try {
+        const payload = {
+            messages: [
+                {
+                    role: "system",
+                    content: "Kamu adalah kalkulator matematis yang sangat akurat. Tugasmu HANYA menghitung jawaban dari soal matematika yang diberikan. OUTPUT WAJIB BERUPA JSON MURNI: {\"answer\": 123, \"steps\": \"penjelasan singkat langkah perhitungan\"}. 'answer' WAJIB berupa angka (number), BUKAN teks/string. Hitung dengan teliti step by step, gunakan metode compound (bertahap) jika persentase berlaku per periode."
+                },
+                {
+                    role: "user",
+                    content: `Hitung jawaban dari soal berikut secara matematis step-by-step. Jawab hanya dengan angka final:\n\n${question}`
+                }
+            ],
+            temperature: 0.0,
+            max_tokens: 512
+        };
+        const response = await requestWithFallback(payload, [MODEL_HEAVY, MODEL_FAST]);
+        const parsed = JSON.parse(cleanJson(response.data.choices[0].message.content));
+        if (typeof parsed.answer === 'number' && !isNaN(parsed.answer)) {
+            console.log(`[MathVerify] Question verified. AI answer: ${parsed.answer}. Steps: ${parsed.steps || 'N/A'}`);
+            return parsed.answer;
+        }
+        return null;
+    } catch (e) {
+        console.warn('[MathVerify] Could not verify math answer:', e.message);
+        return null;
+    }
+}
+
 async function generateMathProblem(username, topic = 'Bilangan', materialContext = "") {
     try {
         let contentPrompt = `Buatkan 1 soal cerita matematika tentang topik **${topic}**.`;
@@ -442,7 +475,21 @@ async function generateMathProblem(username, topic = 'Bilangan', materialContext
             max_tokens: 1024
         };
         const response = await requestWithFallback(payload, [MODEL_FAST, MODEL_HEAVY]);
-        return JSON.parse(cleanJson(response.data.choices[0].message.content));
+        const problem = JSON.parse(cleanJson(response.data.choices[0].message.content));
+
+        // --- MATHEMATICAL VERIFICATION PASS ---
+        // Re-calculate the answer independently to catch AI arithmetic errors
+        try {
+            const verifiedAnswer = await verifyMathAnswer(problem.question);
+            if (verifiedAnswer !== null && verifiedAnswer !== problem.answer) {
+                console.log(`[MathVerify] Answer corrected: ${problem.answer} → ${verifiedAnswer}`);
+                problem.answer = verifiedAnswer;
+            }
+        } catch (verifyErr) {
+            console.warn('[MathVerify] Verification skipped:', verifyErr.message);
+        }
+
+        return problem;
     } catch (error) {
         console.error("Math Generation Error:", error);
         return {
