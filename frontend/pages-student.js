@@ -2188,13 +2188,8 @@ window.startRemedialMandiri = async function () {
     }
 
     try {
-        let endpoint = '/api/assessment/generate-from-bank';
-        let bodyPayload = { username: currentUser.username, amount: amount };
-
-        if (settings.remedialMode === 'mandiri') {
-            endpoint = '/api/assessment/generate-ai-tahap3';
-            bodyPayload = { username: currentUser.username };
-        }
+        const endpoint = '/api/assessment/generate-ai-tahap3';
+        const bodyPayload = { username: currentUser.username, amount: amount };
 
         const genRes = await fetch(endpoint, {
             method: 'POST',
@@ -2251,13 +2246,8 @@ async function startAssessment() {
 
     try {
         const settings = getAssessmentSettings();
-        let endpoint = '/api/assessment/generate-from-bank';
-        let bodyPayload = { username: currentUser.username, amount: settings.questionAmount || 10 };
-
-        if (settings.remedialMode === 'mandiri') {
-            endpoint = '/api/assessment/generate-ai-tahap3';
-            bodyPayload = { username: currentUser.username };
-        }
+        const endpoint = '/api/assessment/generate-ai-tahap3';
+        const bodyPayload = { username: currentUser.username, amount: settings.questionAmount || 10 };
 
         const res = await fetch(endpoint, {
             method: 'POST',
