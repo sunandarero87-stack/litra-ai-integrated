@@ -494,7 +494,80 @@ Jangan gunakan nama properti bahasa Indonesia seperti "soal", "opsi", "kunci", a
         return JSON.parse(cleanJson(response.data.choices[0].message.content));
     } catch (e) {
         console.error("Generate Stage 3 JSON Parse Error:", e.message);
-        throw new Error("Sistem AI gagal merumuskan soal (kemungkinan karena batasan panjang materi atau filter keamanan). Silakan coba lagi.");
+        // Fallback Soal jika AI gagal (Rate limit / Filter konten / Context terlalu panjang)
+        // Ini memastikan aplikasi tidak error dan siswa tetap bisa mengerjakan asesmen
+        return [
+            {
+                "question": "Membaca pemahaman adalah proses untuk mengerti maksud sebuah teks. Jika kamu menemukan kata yang sulit dipahami, langkah apa yang paling tepat dilakukan?",
+                "options": ["Melewati kata tersebut dan lanjut membaca", "Menebak arti kata berdasarkan kalimat sebelumnya dan sesudahnya", "Berhenti membaca dan membuang buku", "Menghapus kata tersebut dari teks"],
+                "correct": 1,
+                "explanation": "Menebak arti kata dari konteks kalimat (kata sebelum dan sesudahnya) adalah strategi yang baik agar kita tidak kehilangan ide utama teks.",
+                "type": "literasi"
+            },
+            {
+                "question": "Dalam sebuah paragraf narasi, unsur apa yang paling penting untuk membangun sebuah cerita?",
+                "options": ["Data statistik yang akurat", "Tabel dan grafik harga barang", "Tokoh, latar tempat, dan urutan waktu peristiwa", "Daftar pustaka atau referensi"],
+                "correct": 2,
+                "explanation": "Teks narasi berisi cerita, sehingga sangat membutuhkan tokoh, latar (tempat, waktu, suasana), dan urutan peristiwa atau alur.",
+                "type": "literasi"
+            },
+            {
+                "question": "Bacalah kalimat berikut: 'Budi rajin menabung sejak kecil sehingga kini ia memiliki tabungan yang banyak.' Apa pesan moral atau informasi tersirat dari kalimat tersebut?",
+                "options": ["Uang saku Budi sangat banyak sejak kecil", "Menabung adalah kegiatan yang sia-sia", "Kebiasaan baik sejak dini akan membuahkan hasil di masa depan", "Budi suka menghabiskan uangnya"],
+                "correct": 2,
+                "explanation": "Kalimat tersebut mengajarkan bahwa dengan konsisten melakukan hal baik (rajin menabung), kita akan mendapatkan manfaatnya (tabungan banyak) di masa depan.",
+                "type": "literasi"
+            },
+            {
+                "question": "Gagasan pokok atau ide utama dalam sebuah paragraf biasanya dapat ditemukan pada...",
+                "options": ["Kalimat utama di awal atau di akhir paragraf", "Semua kalimat penjelas", "Judul buku", "Daftar isi teks"],
+                "correct": 0,
+                "explanation": "Gagasan pokok atau ide utama paragraf biasanya terdapat pada kalimat utama, yang bisa terletak di awal (deduktif) atau di akhir (induktif).",
+                "type": "literasi"
+            },
+            {
+                "question": "Manakah di bawah ini yang merupakan ciri-ciri teks prosedur?",
+                "options": ["Berisi opini penulis tentang suatu isu", "Menceritakan kisah fiksi tentang pahlawan", "Berisi langkah-langkah atau instruksi melakukan sesuatu", "Menyajikan data hasil penelitian ilmiah"],
+                "correct": 2,
+                "explanation": "Teks prosedur bertujuan memandu pembaca untuk melakukan atau membuat sesuatu, sehingga isinya selalu berupa langkah-langkah berurutan.",
+                "type": "literasi"
+            },
+            {
+                "question": "Siti memiliki 3 kantong plastik. Setiap kantong plastik berisi 15 buah apel. Berapa jumlah seluruh apel yang dimiliki Siti?",
+                "options": ["18", "45", "30", "50"],
+                "correct": 1,
+                "explanation": "Kita dapat menggunakan perkalian: 3 kantong × 15 apel = 45 apel.",
+                "type": "numerasi"
+            },
+            {
+                "question": "Jika harga satu buah pensil adalah Rp 2.500 dan Budi membeli 4 buah pensil, berapa uang yang harus dibayarkan oleh Budi?",
+                "options": ["Rp 7.500", "Rp 8.000", "Rp 10.000", "Rp 12.500"],
+                "correct": 2,
+                "explanation": "Harga 1 pensil = Rp 2.500. Jika Budi membeli 4 pensil, maka total harga adalah 4 × Rp 2.500 = Rp 10.000.",
+                "type": "numerasi"
+            },
+            {
+                "question": "Sebuah kereta api berangkat pukul 08:30 dan tiba di stasiun tujuan pukul 11:15. Berapa lama perjalanan kereta tersebut?",
+                "options": ["2 jam 15 menit", "2 jam 45 menit", "3 jam 15 menit", "3 jam 45 menit"],
+                "correct": 1,
+                "explanation": "Dari pukul 08:30 ke 11:30 adalah 3 jam. Karena kereta tiba pukul 11:15 (kurang 15 menit dari 3 jam), maka lama perjalanannya adalah 2 jam 45 menit.",
+                "type": "numerasi"
+            },
+            {
+                "question": "Di sebuah lapangan terdapat beberapa ayam dan kambing. Jika jumlah kepala adalah 10 dan jumlah kaki adalah 26, berapa jumlah kambing di lapangan tersebut?",
+                "options": ["3", "4", "6", "7"],
+                "correct": 0,
+                "explanation": "Kambing punya 4 kaki, ayam punya 2 kaki. Jika ada 3 kambing (12 kaki) dan 7 ayam (14 kaki), total = 10 kepala dan 12 + 14 = 26 kaki. Jadi jumlah kambing adalah 3.",
+                "type": "numerasi"
+            },
+            {
+                "question": "Luas sebuah persegi panjang adalah 48 cm². Jika panjangnya 8 cm, berapakah lebarnya?",
+                "options": ["5 cm", "6 cm", "8 cm", "10 cm"],
+                "correct": 1,
+                "explanation": "Luas persegi panjang = panjang × lebar. Jika Luas = 48 cm² dan panjang = 8 cm, maka lebar = 48 / 8 = 6 cm.",
+                "type": "numerasi"
+            }
+        ];
     }
 }
 
