@@ -372,14 +372,20 @@ window.checkMathAnswer = function() {
     const feedback = document.getElementById('math-feedback');
     if (input === "") return;
     
-    // Fungsi bantuan untuk membersihkan format angka Indonesia (misal: "13.750.000" menjadi 13750000)
+    // Fungsi bantuan untuk membersihkan format angka Indonesia dan mengekstrak angka dari teks AI
     const parseIndoNumber = (val) => {
-        if (val === null || val === undefined) return 0;
+        if (val === null || val === undefined) return NaN;
         if (typeof val === 'number') return val;
         let str = val.toString().trim();
         // Hapus semua titik (pemisah ribuan) dan ubah koma menjadi titik (desimal)
         str = str.replace(/\./g, '').replace(/,/g, '.');
-        return parseFloat(str);
+        
+        // Ekstrak angka menggunakan regex untuk menangani teks tambahan dari AI
+        const match = str.match(/-?\d+(\.\d+)?/);
+        if (match) {
+            return parseFloat(match[0]);
+        }
+        return NaN;
     };
 
     // Bandingkan dengan membersihkan format string yang mungkin di-generate oleh AI
