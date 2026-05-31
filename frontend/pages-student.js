@@ -2385,7 +2385,7 @@ function showAssessmentQuestion(main) {
             <div class="question-text ${q.image ? "mt-1" : ""}" style="white-space:pre-line">${q.question}</div>
             <div class="options-list">
                 ${q.options.map((opt, i) => `
-                    <div class="option-item ${assessmentAnswers[q.id || assessmentCurrentQ] === i ? 'selected' : ''}" onclick="selectAssessmentAnswer(${q.id || assessmentCurrentQ}, ${i})">
+                    <div class="option-item ${assessmentAnswers[q.id || assessmentCurrentQ] === i ? 'selected' : ''}" onclick="selectAssessmentAnswer('${q.id || assessmentCurrentQ}', ${i})">
                         <div class="option-radio"></div>
                         <span>${opt}</span>
                     </div>`).join('')}

@@ -89,30 +89,32 @@ exports.generateAITahap3 = async (req, res) => {
     try {
         const { username, amount = 10 } = req.body;
         
-        // Count existing questions in QuestionBank
-        const bankCount = await QuestionBank.countDocuments();
+        let materialContext = "";
+        let materialName = "Analisis Data"; // Default fallback
+
+        // Find the last selected material from chat logs
+        const lastChat = await ChatLog.findOne({ username, 'metadata.selectedMaterial': { $exists: true, $ne: null } }).sort({ timestamp: -1 });
+
+        if (lastChat && lastChat.metadata && lastChat.metadata.selectedMaterial) {
+            materialName = lastChat.metadata.selectedMaterial;
+            const material = await Material.findOne({ name: materialName });
+            if (material) {
+                materialContext = `Judul Materi: ${material.name}\nInti Materi: ${material.content || material.description || ""}`;
+            } else {
+                materialContext = `Judul Materi: ${materialName}`;
+            }
+        }
+
+        // Fallback if no specific material context is found
+        if (!materialContext) {
+            const materials = await Material.find({ active: true });
+            materialContext = materials.map(m => `Judul Materi ${m.name}:\n${m.content || m.description || ""}`).join('\n\n');
+        }
+
+        // Count existing questions in QuestionBank FOR THIS MATERIAL
+        const bankCount = await QuestionBank.countDocuments({ topic: materialName });
         
         if (bankCount < 50) {
-            let materialContext = "";
-
-            // Find the last selected material from chat logs
-            const lastChat = await ChatLog.findOne({ username, 'metadata.selectedMaterial': { $exists: true, $ne: null } }).sort({ timestamp: -1 });
-
-            if (lastChat && lastChat.metadata && lastChat.metadata.selectedMaterial) {
-                const material = await Material.findOne({ name: lastChat.metadata.selectedMaterial });
-                if (material) {
-                    materialContext = `Judul Materi: ${material.name}\nInti Materi: ${material.content || material.description || ""}`;
-                } else {
-                    materialContext = `Judul Materi: ${lastChat.metadata.selectedMaterial}`;
-                }
-            }
-
-            // Fallback if no specific material context is found
-            if (!materialContext) {
-                const materials = await Material.find({ active: true });
-                materialContext = materials.map(m => `Judul Materi ${m.name}:\n${m.content || m.description || ""}`).join('\n\n');
-            }
-
             // Generate questions using AI
             const generatedQuestions = await aiService.generateStage3Assessment(materialContext);
             
@@ -124,11 +126,11 @@ exports.generateAITahap3 = async (req, res) => {
                 type: q.type || 'literasi',
                 explanation: q.explanation || '',
                 kelas: 'Semua Kelas',
-                topic: 'Asesmen Tahap 3 (AI Generated)',
+                topic: materialName,
                 difficulty: 'MOTS'
             }));
             
-            // Limit to max 50 total in the database
+            // Limit to max 50 total in the database for this material
             const remainingSlots = 50 - bankCount;
             if (questionsToSave.length > remainingSlots) {
                 questionsToSave = questionsToSave.slice(0, remainingSlots);
@@ -139,19 +141,23 @@ exports.generateAITahap3 = async (req, res) => {
             }
         }
 
-        // After ensuring we have questions, fetch randomly from Bank Soal
+        // After ensuring we have questions, fetch randomly from Bank Soal MATCHING THE MATERIAL
         const queryLit = Math.ceil(amount / 2);
         const queryNum = amount - queryLit;
 
+        // If for some reason we still don't have questions for this material, fallback to any material
+        const finalBankCount = await QuestionBank.countDocuments({ topic: materialName });
+        const matchCondition = finalBankCount > 0 ? { topic: materialName } : {};
+
         const literasiQuestions = await QuestionBank.aggregate([
-            { $match: { type: 'literasi' } },
+            { $match: { type: 'literasi', ...matchCondition } },
             { $sample: { size: queryLit + 5 } },
             { $group: { _id: "$question", doc: { $first: "$$ROOT" } } },
             { $replaceRoot: { newRoot: "$doc" } }
         ]);
 
         const numerasiQuestions = await QuestionBank.aggregate([
-            { $match: { type: 'numerasi' } },
+            { $match: { type: 'numerasi', ...matchCondition } },
             { $sample: { size: queryNum + 5 } },
             { $group: { _id: "$question", doc: { $first: "$$ROOT" } } },
             { $replaceRoot: { newRoot: "$doc" } }
